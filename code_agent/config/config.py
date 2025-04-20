@@ -15,38 +15,45 @@ DEFAULT_CONFIG_PATH = DEFAULT_CONFIG_DIR / "config.yaml"
 
 # --- Pydantic Models for Validation ---
 
+
 class ApiKeys(BaseModel):
     # Allow extra fields for flexibility with different providers
     class Config:
-        extra = 'allow'
+        extra = "allow"
+
     openai: Optional[str] = None
+    ai_studio: Optional[str] = None
     groq: Optional[str] = None
     anthropic: Optional[str] = None
     # Other keys loaded will be accessible via model_extra
 
+
 class SettingsConfig(BaseModel):
-    default_provider: str = "openai"
-    default_model: str = "gpt-4o"
+    default_provider: str = "ai_studio"
+    default_model: str = "gemini-1.5-flash"
     api_keys: ApiKeys = Field(default_factory=ApiKeys)
     auto_approve_edits: bool = False
     auto_approve_native_commands: bool = False
     native_command_allowlist: List[str] = Field(default_factory=list)
     rules: List[str] = Field(default_factory=list)
 
+
 # --- Configuration Loading Logic ---
 
 _config: Optional[SettingsConfig] = None
+
 
 def load_config_from_file(config_path: Path = DEFAULT_CONFIG_PATH) -> Dict[str, Any]:
     """Loads configuration purely from a YAML file, returning a dict."""
     if not config_path.exists():
         return {}
     try:
-        with open(config_path, 'r') as f:
+        with open(config_path, "r") as f:
             return yaml.safe_load(f) or {}
     except Exception as e:
         print(f"Warning: Could not read config file at {config_path}. Error: {e}")
         return {}
+
 
 def build_effective_config(
     config_file_path: Path = DEFAULT_CONFIG_PATH,
@@ -63,43 +70,47 @@ def build_effective_config(
     # 2. Layer config file settings
     file_config_data = load_config_from_file(config_file_path)
     # Simple merge (consider deep merge for nested dicts like api_keys if needed)
-    if isinstance(file_config_data.get('api_keys'), dict):
-         # Merge api_keys separately to avoid overwriting entire dict
-         effective_config_data['api_keys'].update(file_config_data['api_keys'])
-         del file_config_data['api_keys'] # Remove so it's not overwritten below
+    if isinstance(file_config_data.get("api_keys"), dict):
+        # Merge api_keys separately to avoid overwriting entire dict
+        effective_config_data["api_keys"].update(file_config_data["api_keys"])
+        del file_config_data["api_keys"]  # Remove so it's not overwritten below
 
     effective_config_data.update(file_config_data)
 
     # 3. Layer Environment Variable Overrides (Focus on API keys for now)
     # TODO: Use pydantic-settings for more robust env var handling?
     if "OPENAI_API_KEY" in os.environ:
-        effective_config_data['api_keys']['openai'] = os.environ["OPENAI_API_KEY"]
+        effective_config_data["api_keys"]["openai"] = os.environ["OPENAI_API_KEY"]
+    if "AI_STUDIO_API_KEY" in os.environ:
+        effective_config_data["api_keys"]["ai_studio"] = os.environ["AI_STUDIO_API_KEY"]
     if "GROQ_API_KEY" in os.environ:
-        effective_config_data['api_keys']['groq'] = os.environ["GROQ_API_KEY"]
+        effective_config_data["api_keys"]["groq"] = os.environ["GROQ_API_KEY"]
     if "ANTHROPIC_API_KEY" in os.environ:
-        effective_config_data['api_keys']['anthropic'] = os.environ["ANTHROPIC_API_KEY"]
+        effective_config_data["api_keys"]["anthropic"] = os.environ["ANTHROPIC_API_KEY"]
     # Add more provider keys as needed
 
     # Environment variables for auto-approve flags
     if "CODE_AGENT_AUTO_APPROVE_EDITS" in os.environ:
-        effective_config_data['auto_approve_edits'] = (
-            os.environ["CODE_AGENT_AUTO_APPROVE_EDITS"].lower() == 'true'
+        effective_config_data["auto_approve_edits"] = (
+            os.environ["CODE_AGENT_AUTO_APPROVE_EDITS"].lower() == "true"
         )
     if "CODE_AGENT_AUTO_APPROVE_NATIVE_COMMANDS" in os.environ:
-        effective_config_data['auto_approve_native_commands'] = (
-            os.environ["CODE_AGENT_AUTO_APPROVE_NATIVE_COMMANDS"].lower() == 'true'
+        effective_config_data["auto_approve_native_commands"] = (
+            os.environ["CODE_AGENT_AUTO_APPROVE_NATIVE_COMMANDS"].lower() == "true"
         )
 
     # 4. Layer CLI Overrides (Highest priority)
     if cli_provider is not None:
-        effective_config_data['default_provider'] = cli_provider
+        effective_config_data["default_provider"] = cli_provider
     if cli_model is not None:
-        effective_config_data['default_model'] = cli_model
+        effective_config_data["default_model"] = cli_model
     # Check if CLI flag was explicitly passed (Typer sets it to True/False if present, None otherwise)
     if cli_auto_approve_edits is not None:
-        effective_config_data['auto_approve_edits'] = cli_auto_approve_edits
+        effective_config_data["auto_approve_edits"] = cli_auto_approve_edits
     if cli_auto_approve_native_commands is not None:
-        effective_config_data['auto_approve_native_commands'] = cli_auto_approve_native_commands
+        effective_config_data["auto_approve_native_commands"] = (
+            cli_auto_approve_native_commands
+        )
 
     # 5. Validate and return the final config object
     try:
@@ -113,6 +124,7 @@ def build_effective_config(
         print(f"Error creating final configuration: {e}")
         print("Falling back to default configuration.")
         return SettingsConfig()
+
 
 def initialize_config(
     config_file_path: Path = DEFAULT_CONFIG_PATH,
@@ -133,23 +145,29 @@ def initialize_config(
         )
     # else: config already initialized
 
+
 def get_config() -> SettingsConfig:
     """Returns the loaded configuration, raising error if not initialized."""
     if _config is None:
         # This should ideally not happen if initialize_config is called in main
-        print("[bold red]Error:[/bold red] Configuration accessed before initialization.")
+        print(
+            "[bold red]Error:[/bold red] Configuration accessed before initialization."
+        )
         # Initialize with defaults as a fallback, though this indicates a logic error
         initialize_config()
         # raise RuntimeError("Configuration accessed before initialization. Call initialize_config first.")
     return _config
 
+
 # --- Helper Functions (Example) ---
+
 
 def get_api_key(provider: str) -> Optional[str]:
     """Gets the API key for a specific provider from the loaded config."""
     config = get_config()
     # Access keys directly or via model_extra if using Pydantic v2 extra='allow'
     return config.api_keys.model_dump().get(provider)
+
 
 # Create default config directory if it doesn't exist
 # Moved initialization call to cli main
