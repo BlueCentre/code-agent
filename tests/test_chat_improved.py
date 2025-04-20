@@ -5,7 +5,7 @@ import pytest
 from typer.testing import CliRunner
 
 from code_agent.cli.main import app
-from code_agent.config import SettingsConfig, ApiKeys
+from code_agent.config import ApiKeys, SettingsConfig
 
 
 class MockAgent:
@@ -215,7 +215,7 @@ def test_history_saving_mechanism(runner, mock_agent_class, mock_config):
 
     # Create a timestamp for the test
     test_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    
+
     # Patch datetime and file operations
     with (
         patch("datetime.datetime") as mock_dt,
@@ -241,12 +241,12 @@ def test_history_saving_mechanism(runner, mock_agent_class, mock_config):
         file_handle = mock_file()
         # Verify writing happened at least once
         assert file_handle.write.call_count > 0
-        
+
         # Instead of checking call count, check that JSON-like content was written
         # by looking at some of the calls
         write_calls = [call[0][0] for call in file_handle.write.call_args_list]
-        json_parts = ''.join(write_calls)
-        
+        json_parts = "".join(write_calls)
+
         # Check basic JSON structure elements are present
         assert '"role": "user"' in json_parts
         assert '"content": "hello"' in json_parts

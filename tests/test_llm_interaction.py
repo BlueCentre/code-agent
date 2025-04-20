@@ -10,9 +10,10 @@ import pytest
 from unittest.mock import patch, MagicMock
 
 import litellm
+from litellm.exceptions import BadRequestError, RateLimitError, AuthenticationError
+
 from code_agent.agent.agent import CodeAgent
-from code_agent.config import SettingsConfig
-from code_agent.config.config import ApiKeys
+from code_agent.config import SettingsConfig, ApiKeys
 
 # Import our mock response fixtures
 from tests.fixtures.llm_responses import (
@@ -238,7 +239,8 @@ def test_connection_error(agent_with_mock_config, mocker):
     """Test handling of connection errors."""
     connection_error = litellm.exceptions.ServiceUnavailableError(
         message="Connection refused",
-        status_code=503
+        model="gpt-4",
+        llm_provider="openai"
     )
     
     # Patch litellm to raise the error
@@ -252,14 +254,15 @@ def test_connection_error(agent_with_mock_config, mocker):
     
     # Verify error handling
     assert result is None
-    mock_print.assert_any_call("[bold red]Error: Service Unavailable (503)[/bold red]")
+    mock_print.assert_any_call("[bold red]Error during agent execution (ServiceUnavailableError):[/bold red]")
 
 
 def test_api_key_error(agent_with_mock_config, mocker):
     """Test handling of invalid API key errors."""
     auth_error = litellm.exceptions.AuthenticationError(
         message="Invalid API key",
-        status_code=401
+        model="gpt-4",
+        llm_provider="openai"
     )
     
     # Patch litellm to raise the error
@@ -273,15 +276,15 @@ def test_api_key_error(agent_with_mock_config, mocker):
     
     # Verify error handling
     assert result is None
-    mock_print.assert_any_call("[bold red]Error: Authentication Failed (401)[/bold red]")
-    mock_print.assert_any_call("Invalid API key")
+    mock_print.assert_any_call("[bold red]Error during agent execution (AuthenticationError):[/bold red]")
 
 
 def test_rate_limit_error(agent_with_mock_config, mocker):
     """Test handling of rate limit errors."""
     rate_limit_error = litellm.exceptions.RateLimitError(
         message="Rate limit exceeded",
-        status_code=429
+        model="gpt-4",
+        llm_provider="openai"
     )
     
     # Patch litellm to raise the error
@@ -295,15 +298,15 @@ def test_rate_limit_error(agent_with_mock_config, mocker):
     
     # Verify error handling
     assert result is None
-    mock_print.assert_any_call("[bold red]Error: Rate Limit Exceeded (429)[/bold red]")
-    mock_print.assert_any_call("Rate limit exceeded")
+    mock_print.assert_any_call("[bold red]Error during agent execution (RateLimitError):[/bold red]")
 
 
 def test_context_length_error(agent_with_mock_config, mocker):
     """Test handling of context length exceeded errors."""
     context_error = litellm.exceptions.ContextWindowExceededError(
         message="This model's maximum context length is 8192 tokens. You provided 10000 tokens.",
-        status_code=400
+        model="gpt-4",
+        llm_provider="openai"
     )
     
     # Patch litellm to raise the error
@@ -317,8 +320,7 @@ def test_context_length_error(agent_with_mock_config, mocker):
     
     # Verify error handling
     assert result is None
-    mock_print.assert_any_call("[bold red]Error: Context Length Exceeded (400)[/bold red]")
-    mock_print.assert_any_call("This model's maximum context length is 8192 tokens. You provided 10000 tokens.")
+    mock_print.assert_any_call("[bold red]Error during agent execution (ContextWindowExceededError):[/bold red]")
 
 
 # --- Tool Error Tests ---

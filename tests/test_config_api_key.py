@@ -5,18 +5,15 @@ These tests ensure the agent correctly retrieves and uses API keys
 from the configuration system.
 """
 
-import os
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
-import litellm
-from litellm.exceptions import AuthenticationError
+import pytest
 
 from code_agent.agent.agent import CodeAgent
-from code_agent.config import SettingsConfig, ApiKeys, get_config
-from code_agent.agent.run import run_agent_turn
+from code_agent.config import ApiKeys, SettingsConfig, get_config
 
 # --- Fixtures ---
+
 
 @pytest.fixture
 def mock_config_with_keys():
@@ -28,11 +25,11 @@ def mock_config_with_keys():
             openai="test-openai-key",
             ai_studio="test-ai-studio-key",
             anthropic="test-anthropic-key",
-            groq="test-groq-key"
+            groq="test-groq-key",
         ),
         rules=["Be helpful"],
         auto_approve_edits=False,
-        auto_approve_native_commands=False
+        auto_approve_native_commands=False,
     )
     return config
 
@@ -46,23 +43,24 @@ def mock_config_missing_key():
         api_keys=ApiKeys(
             ai_studio="test-ai-studio-key",
             anthropic="test-anthropic-key",
-            groq="test-groq-key"
+            groq="test-groq-key",
         ),
         rules=["Be helpful"],
         auto_approve_edits=False,
-        auto_approve_native_commands=False
+        auto_approve_native_commands=False,
     )
     return config
 
 
 # --- Tests ---
 
+
 def test_agent_uses_correct_api_key_from_config(mock_config_with_keys, mocker):
     """Test that the agent retrieves the correct API key for the default provider."""
     # Patch the get_config function to return our mock
     with patch("code_agent.agent.agent.get_config") as mock_get_config:
         mock_get_config.return_value = mock_config_with_keys
-        
+
         # Patch litellm.completion to avoid actual API calls
         mock_completion = mocker.patch("code_agent.agent.agent.litellm.completion")
         mock_response = MagicMock()
@@ -71,11 +69,11 @@ def test_agent_uses_correct_api_key_from_config(mock_config_with_keys, mocker):
         mock_response.choices[0].message.content = "Test response"
         mock_response.choices[0].message.tool_calls = None
         mock_completion.return_value = mock_response
-        
+
         # Create agent and run a simple turn
         agent = CodeAgent()
         agent.run_turn("Test prompt")
-        
+
         # Check that litellm.completion was called with the correct API key
         # for the default provider (openai)
         args, kwargs = mock_completion.call_args
@@ -87,7 +85,7 @@ def test_agent_uses_override_provider_api_key(mock_config_with_keys, mocker):
     # Patch the get_config function to return our mock
     with patch("code_agent.agent.agent.get_config") as mock_get_config:
         mock_get_config.return_value = mock_config_with_keys
-        
+
         # Patch litellm.completion to avoid actual API calls
         mock_completion = mocker.patch("code_agent.agent.agent.litellm.completion")
         mock_response = MagicMock()
@@ -96,11 +94,11 @@ def test_agent_uses_override_provider_api_key(mock_config_with_keys, mocker):
         mock_response.choices[0].message.content = "Test response"
         mock_response.choices[0].message.tool_calls = None
         mock_completion.return_value = mock_response
-        
+
         # Create agent and run a turn with override provider
         agent = CodeAgent()
         agent.run_turn("Test prompt", provider="anthropic")
-        
+
         # Check that litellm.completion was called with the correct API key
         # for the overridden provider (anthropic)
         args, kwargs = mock_completion.call_args
@@ -112,15 +110,15 @@ def test_agent_falls_back_when_api_key_missing(mock_config_missing_key, mocker):
     # Patch the get_config function to return our mock
     with patch("code_agent.agent.agent.get_config") as mock_get_config:
         mock_get_config.return_value = mock_config_missing_key
-        
+
         # Patch native command execution for the fallback case
         mock_run_cmd = mocker.patch("code_agent.agent.agent.run_native_command")
         mock_run_cmd.return_value = "/home/user/project"
-        
+
         # Create agent and run a turn
         agent = CodeAgent()
         result = agent.run_turn("What is the current directory?")
-        
+
         # Verify that the result uses the fallback path and the native command was called
         assert "current working directory" in result
         mock_run_cmd.assert_called_once_with("pwd")
@@ -138,19 +136,19 @@ def test_agent_builds_correct_model_string(mock_config_with_keys, mocker):
         mock_response.choices[0].message.content = "Test response"
         mock_response.choices[0].message.tool_calls = None
         mock_completion.return_value = mock_response
-        
+
         # Test with default provider (openai)
         agent = CodeAgent()
         agent.run_turn("Test")
         args1, kwargs1 = mock_completion.call_args
         assert kwargs1["model"] == "gpt-4"
-        
+
         # Reset mock and test with ai_studio provider
         mock_completion.reset_mock()
         agent.run_turn("Test", provider="ai_studio", model="gemini-pro")
         args2, kwargs2 = mock_completion.call_args
         assert kwargs2["model"] == "vertex_ai/gemini-pro"
-        
+
         # Reset mock and test with another provider
         mock_completion.reset_mock()
         agent.run_turn("Test", provider="anthropic", model="claude-3-opus")
@@ -170,18 +168,18 @@ def test_custom_api_base_for_ai_studio(mock_config_with_keys, mocker):
         mock_response.choices[0].message.content = "Test response"
         mock_response.choices[0].message.tool_calls = None
         mock_completion.return_value = mock_response
-        
+
         # Test with ai_studio provider which should have a custom API base
         agent = CodeAgent()
         agent.run_turn("Test", provider="ai_studio")
-        
+
         # Verify api_base was set in the completion parameters
         args, kwargs = mock_completion.call_args
         assert "api_base" in kwargs
         assert kwargs["api_base"] == "https://api.ai.studio/v1"
-        
+
         # Reset mock and test with a provider that doesn't need custom base
         mock_completion.reset_mock()
         agent.run_turn("Test", provider="openai")
         args, kwargs = mock_completion.call_args
-        assert "api_base" not in kwargs 
+        assert "api_base" not in kwargs
