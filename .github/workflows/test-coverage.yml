@@ -41,14 +41,13 @@ jobs:
     #     fail_ci_if_error: true
 
     # We will use SonarCloud for code coverage reporting instead
-    # Example SonarCloud implementation:
-    # - name: SonarCloud Scan
-    #   uses: SonarSource/sonarcloud-github-action@master
-    #   env:
-    #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-    #   with:
-    #     args: >
-    #       -Dsonar.python.coverage.reportPaths=coverage.xml
-    #       -Dsonar.sources=code_agent
-    #       -Dsonar.tests=tests
+    - name: SonarCloud Scan
+      uses: SonarSource/sonarcloud-github-action@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      with:
+        args: >
+          -Dsonar.python.coverage.reportPaths=coverage.xml
+          -Dsonar.sources=code_agent
+          -Dsonar.tests=tests

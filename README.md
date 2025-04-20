@@ -1,5 +1,9 @@
 # Code Agent CLI
 
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=BlueCentre_code-agent&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=BlueCentre_code-agent)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=BlueCentre_code-agent&metric=coverage)](https://sonarcloud.io/summary/new_code?id=BlueCentre_code-agent)
+[![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=BlueCentre_code-agent&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=BlueCentre_code-agent)
+
 **Code Agent** is a versatile Command-Line Interface (CLI) tool designed to enhance developer productivity by leveraging AI language models directly within the terminal.
 
 It allows interaction with various AI providers (OpenAI, Groq, etc. via LiteLLM) and empowers the agent with capabilities to interact with the local environment, such as reading files, applying edits (with confirmation), and executing native commands (with confirmation and allowlisting).
