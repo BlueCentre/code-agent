@@ -31,7 +31,7 @@ build-backend = "poetry.core.masonry.api"
 # Ruff Configuration
 [tool.ruff]
 # Same as Black.
-line-length = 88
+line-length = 120
 # Assume Python 3.10+.
 target-version = "py310"
 
@@ -50,4 +50,4 @@ dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 
 # Configure isort
 [tool.ruff.lint.isort]
-known-first-party = ["code_agent"] # Tell ruff your own code directory 
+known-first-party = ["code_agent"] # Tell ruff your own code directory
