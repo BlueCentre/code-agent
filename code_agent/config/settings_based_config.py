@@ -1,15 +1,10 @@
-import os
 import shutil
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import yaml
 from pydantic import BaseModel, Field, ValidationError
-from pydantic_settings import SettingsConfigDict
-
-# Configuration management logic will go here
-# Placeholder for now
-pass
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Define the default config path
 DEFAULT_CONFIG_DIR = Path.home() / ".config" / "code-agent"
@@ -20,9 +15,9 @@ TEMPLATE_CONFIG_PATH = Path(__file__).parent / "template.yaml"
 
 
 class ApiKeys(BaseModel):
-    # Allow extra fields for flexibility with different providers
-    class Config:
-        extra = "allow"
+    """API keys for different providers."""
+
+    model_config = {"extra": "allow"}
 
     openai: Optional[str] = None
     ai_studio: Optional[str] = None
@@ -31,8 +26,12 @@ class ApiKeys(BaseModel):
     # Other keys loaded will be accessible via model_extra
 
 
-class SettingsConfig(BaseModel):
-    """Configuration settings for code-agent."""
+class SettingsConfig(BaseSettings):
+    """Configuration settings for code-agent using pydantic-settings.
+
+    This implementation leverages pydantic-settings for more robust
+    environment variable handling.
+    """
 
     # Default provider and model
     default_provider: str = "ai_studio"
@@ -48,6 +47,10 @@ class SettingsConfig(BaseModel):
         env_prefix="CODE_AGENT_",
         env_nested_delimiter="__",
         extra="allow",
+        env_file=".env",
+        env_file_encoding="utf-8",
+        validate_default=True,
+        # Special mappings for API keys that don't follow the prefix pattern
         env_mapping={
             "api_keys.openai": "OPENAI_API_KEY",
             "api_keys.ai_studio": "AI_STUDIO_API_KEY",
@@ -129,78 +132,52 @@ def build_effective_config(
     cli_auto_approve_edits: Optional[bool] = None,
     cli_auto_approve_native_commands: Optional[bool] = None,
 ) -> SettingsConfig:
-    """Builds the effective config by layering File > Env > CLI > Defaults."""
+    """Builds the effective config by layering File > Env > CLI > Defaults.
 
-    # 1. Start with defaults defined in the Pydantic model
-    effective_config_data = SettingsConfig().model_dump()
+    Using pydantic-settings for robust environment variable handling.
 
-    # 2. Layer config file settings
-    file_config_data = load_config_from_file(config_file_path)
+    Args:
+        config_file_path: Path to the config file
+        cli_provider: Provider override from CLI
+        cli_model: Model override from CLI
+        cli_auto_approve_edits: Auto-approve edits override from CLI
+        cli_auto_approve_native_commands: Auto-approve commands override from CLI
 
-    # Simple merge (consider deep merge for nested dicts like api_keys if needed)
-    if isinstance(file_config_data.get("api_keys"), dict):
-        # Merge api_keys separately to avoid overwriting entire dict
-        effective_config_data["api_keys"].update(file_config_data["api_keys"])
-        del file_config_data["api_keys"]  # Remove so it's not overwritten below
-
-    # Ensure list fields have proper defaults
-    for list_field in ["native_command_allowlist", "rules"]:
-        if list_field in file_config_data and file_config_data[list_field] is None:
-            file_config_data[list_field] = []
-
-    # Update the effective config with file data
-    effective_config_data.update({k: v for k, v in file_config_data.items() if v is not None})
-
-    # 3. Layer Environment Variable Overrides (Focus on API keys for now)
-    # Using pydantic-settings pattern for env var handling
-    if "OPENAI_API_KEY" in os.environ:
-        effective_config_data["api_keys"]["openai"] = os.environ["OPENAI_API_KEY"]
-    if "AI_STUDIO_API_KEY" in os.environ:
-        effective_config_data["api_keys"]["ai_studio"] = os.environ["AI_STUDIO_API_KEY"]
-    if "GROQ_API_KEY" in os.environ:
-        effective_config_data["api_keys"]["groq"] = os.environ["GROQ_API_KEY"]
-    if "ANTHROPIC_API_KEY" in os.environ:
-        effective_config_data["api_keys"]["anthropic"] = os.environ["ANTHROPIC_API_KEY"]
-    # Add more provider keys as needed
-
-    # Environment variables for auto-approve flags
-    if "CODE_AGENT_AUTO_APPROVE_EDITS" in os.environ:
-        effective_config_data["auto_approve_edits"] = os.environ["CODE_AGENT_AUTO_APPROVE_EDITS"].lower() == "true"
-    if "CODE_AGENT_AUTO_APPROVE_NATIVE_COMMANDS" in os.environ:
-        effective_config_data["auto_approve_native_commands"] = (
-            os.environ["CODE_AGENT_AUTO_APPROVE_NATIVE_COMMANDS"].lower() == "true"
-        )
-
-    # 4. Layer CLI Overrides (Highest priority)
-    if cli_provider is not None:
-        effective_config_data["default_provider"] = cli_provider
-    if cli_model is not None:
-        effective_config_data["default_model"] = cli_model
-    # Check if CLI flag was explicitly passed (Typer sets it to True/False if present, None otherwise)
-    if cli_auto_approve_edits is not None:
-        effective_config_data["auto_approve_edits"] = cli_auto_approve_edits
-    if cli_auto_approve_native_commands is not None:
-        effective_config_data["auto_approve_native_commands"] = cli_auto_approve_native_commands
-
-    # 5. Validate and return the final config object
+    Returns:
+        SettingsConfig instance with all settings applied
+    """
     try:
-        # Ensure list fields are properly initialized
-        if (
-            "native_command_allowlist" not in effective_config_data
-            or effective_config_data["native_command_allowlist"] is None
-        ):
-            effective_config_data["native_command_allowlist"] = []
-        if "rules" not in effective_config_data or effective_config_data["rules"] is None:
-            effective_config_data["rules"] = []
+        # 1. Load file settings as base values
+        file_config_data = load_config_from_file(config_file_path)
 
-        final_config = SettingsConfig(**effective_config_data)
-        return final_config
+        # 2. Preprocess file data to handle potential None values in lists
+        if "native_command_allowlist" in file_config_data and file_config_data["native_command_allowlist"] is None:
+            file_config_data["native_command_allowlist"] = []
+        if "rules" in file_config_data and file_config_data["rules"] is None:
+            file_config_data["rules"] = []
+
+        # 3. Create settings - this will automatically load values from environment variables
+        # based on the model_config settings
+        settings = SettingsConfig(**file_config_data)
+
+        # 4. Apply CLI overrides (highest priority)
+        if cli_provider is not None:
+            settings.default_provider = cli_provider
+        if cli_model is not None:
+            settings.default_model = cli_model
+        if cli_auto_approve_edits is not None:
+            settings.auto_approve_edits = cli_auto_approve_edits
+        if cli_auto_approve_native_commands is not None:
+            settings.auto_approve_native_commands = cli_auto_approve_native_commands
+
+        return settings
+
     except ValidationError as e:
-        print(f"Error: Invalid effective configuration:\n{e}")
+        print(f"Error: Invalid configuration:\n{e}")
         print("Falling back to default configuration.")
         return SettingsConfig()
     except Exception as e:
-        print(f"Error creating final configuration: {e}")
+        print(f"Error creating configuration: {e}")
         print("Falling back to default configuration.")
         return SettingsConfig()
 
@@ -243,32 +220,3 @@ def get_api_key(provider: str) -> Optional[str]:
     config = get_config()
     # Access keys directly using vars() instead of model_dump
     return vars(config.api_keys).get(provider)
-
-
-# Create default config directory if it doesn't exist
-# Moved initialization call to cli main
-# DEFAULT_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-
-# # Example usage (can be removed later)
-# if __name__ == "__main__":
-#     print("--- Testing Config Loading --- ")
-#     # 1. Initialize with defaults + potential env vars
-#     print("\n1. Initializing with defaults + env...")
-#     initialize_config()
-#     cfg1 = get_config()
-#     print(cfg1.model_dump_json(indent=2))
-#
-#     # 2. Reset and initialize with CLI overrides
-#     _config = None # Manually reset for testing
-#     print("\n2. Initializing with CLI overrides...")
-#     initialize_config(
-#         cli_provider="cli_groq",
-#         cli_model="cli_llama",
-#         cli_auto_approve_edits=True # Test override
-#     )
-#     cfg2 = get_config()
-#     print(cfg2.model_dump_json(indent=2))
-#     print(f"Provider should be cli_groq: {cfg2.default_provider}")
-#     print(f"Model should be cli_llama: {cfg2.default_model}")
-#     print(f"Auto Approve Edits should be True: {cfg2.auto_approve_edits}")
-#     print(f"OpenAI Key from config/env: {get_api_key('openai')}")
