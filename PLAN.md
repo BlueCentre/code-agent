@@ -1,6 +1,8 @@
 # Code Agent Project Plan
 
-> Note: This document has been superseded by `docs/implementation.md` which contains the current implementation status and roadmap. This file is retained for reference of the original vision and future enhancement ideas.
+> **Note**: Future enhancements from this document have been consolidated into the main task list at [docs/todo_priorities.md](docs/todo_priorities.md). Please refer to that file for the current list of planned improvements, prioritized tasks, and future enhancements.
+
+> This document has been partially superseded by `docs/implementation.md` which contains the current implementation status. The future enhancements section is now maintained in the consolidated priority list.
 
 ## 1. Introduction & Vision
 
@@ -15,37 +17,4 @@ Prioritize configuration settings: CLI flags > Environment Variables > config.ya
 
 ## 3. Future Enhancements
 
-For implementation progress, please refer to `docs/implementation.md`.
-
-These potential future enhancements could be considered after completing the core functionality:
-
-* **Advanced Memory Management**:
-  * Long-term conversation memory using vector databases
-  * Knowledge extraction and summarization for extended conversations
-  * Context windowing techniques for managing token limits
-
-* **Extended Tool Capabilities**:
-  * Dynamic tool discovery and registration system
-  * Git-specific tooling for repository management
-  * Project analysis tools (codebase understanding)
-  * Integration with code quality tools and test runners
-
-* **Enhanced Collaboration**:
-  * Session sharing between team members
-  * History export and import features
-  * Collaborative editing capabilities
-
-* **User Interface Improvements**:
-  * Optional TUI (Text User Interface) with interactive components
-  * Terminal-based code editor integration
-  * Syntax-highlighted diffs with interactive application
-
-* **Integration Possibilities**:
-  * Integration with IDEs via plugins/extensions
-  * Integration with version control systems
-  * CI/CD pipeline integration
-
-* **Customization**:
-  * Plugin architecture for community contributions
-  * Custom tool development framework
-  * Template system for common tasks
+> **Note**: All future enhancements have been moved to the consolidated priority task list at [docs/todo_priorities.md](docs/todo_priorities.md) under the "Future Enhancements" section.

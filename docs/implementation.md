@@ -1,8 +1,10 @@
-# Code Agent Implementation Plan & Roadmap
+# Code Agent Implementation Plan & Status
 
-This document outlines the implementation steps taken and the future roadmap.
+> **Note**: The roadmap and next steps have been consolidated into the main task list at [docs/todo_priorities.md](todo_priorities.md). Please refer to that file for the current list of planned improvements, prioritized tasks, and future enhancements.
 
-## Implementation Steps (Based on Initial Plan)
+This document outlines the implementation steps that have been completed for the Code Agent project.
+
+## Completed Implementation Steps
 
 *   [x] **Project Setup & Foundation:**
     *   [x] Create directory structure (`code-agent/cli`, `code-agent/agent`, `code-agent/config`, `code-agent/tools`, `tests/`).
@@ -71,28 +73,6 @@ This document outlines the implementation steps taken and the future roadmap.
     *   [x] Set up packaging using `pyproject.toml` and Poetry.
     *   [x] Create initial `docs` folder structure.
 
-## Roadmap / Next Steps
+## Next Steps
 
-*   **Testing:** ⟹ **CURRENT FOCUS**
-    *   [x] Improve test coverage, especially for edge cases in tools.
-    *   [x] Implement integration tests for the `chat` command (mocking input/output).
-    *   [🔄] Test LLM interaction with mocked responses/tool calls.
-*   **Error Handling:** Refine error handling and user feedback for API errors, tool failures, configuration issues, and LLM runtime errors.
-*   **Configuration Hierarchy:** Fully implement the CLI > Env > File hierarchy for all relevant configuration options (e.g., auto-approve flags, rules).
-*   **Provider Support:**
-    *   [x] Add provider-specific configuration commands (`code-agent config openai`, `config groq`, `config anthropic`, etc.)
-    *   [x] Enhance provider listing with detailed status information
-    *   Test integration with local models (Ollama)
-    *   Improve provider-specific configuration options
-*   **Tool Refinement:**
-    *   Enhance security checks for `apply_edit` and `run_native_command` (e.g., stricter path validation, absolute path handling, more robust allowlist matching).
-    *   Add size limits and pagination to `read_file`.
-*   **Chat History:** Add option to load specific history files.
-*   **Packaging & Distribution:** Finalize packaging for distribution (e.g., PyPI).
-*   **Advanced Features:** Explore optional enhancements like long-term memory, dynamic tool discovery, etc. (See `PLAN.md` section on "Future Enhancements").
-*   **Code Quality:**
-    *   Fix linting issues (line length, trailing whitespace, etc.)
-    *   Ensure consistent code style across the codebase
-    *   Set up CI/CD pipeline for automated testing and linting
-    *   Add contribution guidelines with code style requirements
-    *   Implement changelog tracking
+For current priorities, roadmap, and next steps, please refer to the consolidated task list at [docs/todo_priorities.md](todo_priorities.md).
