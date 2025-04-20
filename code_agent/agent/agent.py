@@ -34,8 +34,9 @@ class CodeAgent:
             "- read_file(path): Reads the content of a specified file path."
         )
         self.base_instruction_parts.append(
-            "- apply_edit(target_file, code_edit): Proposes changes to a file by providing the "
-            "new content. It will show a diff and ask for user confirmation before applying."
+            "- apply_edit(target_file, code_edit): Creates a new file or edits an existing file by providing the "
+            "complete content. It can create and modify files including documentation, code, or any text files. "
+            "It will show a diff and ask for user confirmation before applying unless auto_approve_edits is enabled."
         )
         self.base_instruction_parts.append(
             "- run_native_command(command): Executes a native terminal command after asking for "
@@ -53,6 +54,16 @@ class CodeAgent:
         self.base_instruction_parts.append(
             "- Never use simple 'ls' commands with wildcards like 'ls *.py' "
             "as they don't search recursively."
+        )
+
+        self.base_instruction_parts.append(
+            "When asked to create or update documentation:"
+        )
+        self.base_instruction_parts.append(
+            "- Use apply_edit to create or modify documentation files directly in the appropriate directory."
+        )
+        self.base_instruction_parts.append(
+            "- For user requests about documenting features or improvements, create a relevant markdown file in the 'docs/' directory."
         )
 
         self.base_instruction_parts.append(
