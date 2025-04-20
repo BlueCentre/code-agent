@@ -1,7 +1,7 @@
 from typing import Dict, List, Optional
 
 import litellm
-from myagent.config import get_api_key, get_config
+from code_agent.config import get_api_key, get_config
 from rich import print
 
 # Configure LiteLLM settings if needed (e.g., logging)

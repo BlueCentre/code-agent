@@ -12,7 +12,7 @@ from typing_extensions import Annotated
 from code_agent import __version__ as agent_version  # Updated import
 
 # Updated imports
-# from myagent.llm import get_llm_response # No longer needed here
+# from code_agent.llm import get_llm_response # No longer needed here
 from code_agent.agent.agent import CodeAgent  # Import the class
 from code_agent.config.config import DEFAULT_CONFIG_DIR, get_config, initialize_config
 
