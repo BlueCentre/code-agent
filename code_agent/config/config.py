@@ -106,13 +106,20 @@ def build_effective_config(
 
     # 2. Layer config file settings
     file_config_data = load_config_from_file(config_file_path)
+    
     # Simple merge (consider deep merge for nested dicts like api_keys if needed)
     if isinstance(file_config_data.get("api_keys"), dict):
         # Merge api_keys separately to avoid overwriting entire dict
         effective_config_data["api_keys"].update(file_config_data["api_keys"])
         del file_config_data["api_keys"]  # Remove so it's not overwritten below
 
-    effective_config_data.update(file_config_data)
+    # Ensure list fields have proper defaults
+    for list_field in ["native_command_allowlist", "rules"]:
+        if list_field in file_config_data and file_config_data[list_field] is None:
+            file_config_data[list_field] = []
+
+    # Update the effective config with file data
+    effective_config_data.update({k: v for k, v in file_config_data.items() if v is not None})
 
     # 3. Layer Environment Variable Overrides (Focus on API keys for now)
     # TODO: Use pydantic-settings for more robust env var handling?
@@ -151,6 +158,12 @@ def build_effective_config(
 
     # 5. Validate and return the final config object
     try:
+        # Ensure list fields are properly initialized
+        if "native_command_allowlist" not in effective_config_data or effective_config_data["native_command_allowlist"] is None:
+            effective_config_data["native_command_allowlist"] = []
+        if "rules" not in effective_config_data or effective_config_data["rules"] is None:
+            effective_config_data["rules"] = []
+            
         final_config = SettingsConfig(**effective_config_data)
         return final_config
     except ValidationError as e:

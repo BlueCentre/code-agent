@@ -80,7 +80,8 @@ This document outlines the implementation steps taken and the future roadmap.
 *   **Error Handling:** Refine error handling and user feedback for API errors, tool failures, configuration issues, and LLM runtime errors.
 *   **Configuration Hierarchy:** Fully implement the CLI > Env > File hierarchy for all relevant configuration options (e.g., auto-approve flags, rules).
 *   **Provider Support:**
-    *   Add support for more providers (Anthropic, Cohere, etc.)
+    *   [x] Add provider-specific configuration commands (`code-agent config openai`, `config groq`, `config anthropic`, etc.)
+    *   [x] Enhance provider listing with detailed status information
     *   Test integration with local models (Ollama)
     *   Improve provider-specific configuration options
 *   **Tool Refinement:**

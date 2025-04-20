@@ -147,9 +147,20 @@ Activate the virtual environment first: `source .venv/bin/activate`
     ```bash
     code-agent config show
     ```
+*   **View provider-specific configuration:**
+    ```bash
+    code-agent config aistudio  # Instructions for Google AI Studio
+    code-agent config openai    # Instructions for OpenAI
+    code-agent config groq      # Instructions for Groq
+    code-agent config anthropic # Instructions for Anthropic
+    ```
 *   **List providers:**
     ```bash
     code-agent providers list
+    ```
+*   **Reset to default configuration:**
+    ```bash
+    code-agent config reset
     ```
 
 **Other Options:**

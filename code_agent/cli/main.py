@@ -394,6 +394,246 @@ def config_aistudio():
     )
 
 
+@config_app.command("openai")
+def config_openai():
+    """
+    Show information about using OpenAI as a provider.
+    """
+    config = get_config()
+    api_key = config.api_keys.model_dump().get("openai")
+
+    console = Console()
+    console.print("[bold]OpenAI Configuration[/bold]", style="green")
+    console.print("=" * 50)
+
+    # Status information
+    console.print("[bold]Current Status:[/bold]")
+    if config.default_provider == "openai":
+        console.print(
+            "✅ OpenAI is currently the [bold green]default provider[/bold green]."
+        )
+    else:
+        console.print(
+            f"❌ OpenAI is [yellow]NOT[/yellow] the default provider (currently using: [bold]{config.default_provider}[/bold])."
+        )
+
+    if api_key:
+        console.print("✅ OpenAI API key is [bold green]configured[/bold green].")
+    else:
+        console.print(
+            "❌ No OpenAI API key [red]found[/red] in config or environment."
+        )
+
+    # Setup instructions
+    console.print("\n[bold]Setup Instructions:[/bold]")
+    console.print(
+        "1. Visit [link]https://platform.openai.com/api-keys[/link] to access OpenAI API keys"
+    )
+    console.print("2. Create an account or sign in")
+    console.print("3. Create a new API key with appropriate permissions")
+    console.print("4. Your API key will start with 'sk-'")
+
+    # Configuration options
+    console.print("\n[bold]Configuration Options:[/bold]")
+    console.print("[bold yellow]Option 1:[/bold yellow] Set environment variable")
+    console.print("  export OPENAI_API_KEY=sk-your-key-here")
+
+    console.print("[bold yellow]Option 2:[/bold yellow] Add to config file")
+    console.print("  Edit ~/code-agent/config.yaml and add:")
+    console.print("  api_keys:")
+    console.print('    openai: "sk-your-key-here"')
+
+    # Available models
+    console.print("\n[bold]Available Models:[/bold]")
+    console.print(
+        "- [bold]gpt-4o[/bold]: Latest advanced model with vision capabilities"
+    )
+    console.print(
+        "- [bold]gpt-4-turbo[/bold]: High-performance model for complex tasks"
+    )
+    console.print(
+        "- [bold]gpt-3.5-turbo[/bold]: Fast, cost-effective for simpler tasks"
+    )
+
+    # Usage examples
+    console.print("\n[bold]Usage Examples:[/bold]")
+    console.print("# Use OpenAI as provider")
+    console.print('code-agent --provider openai run "What\'s the current Python version?"')
+
+    console.print("\n# Specify an OpenAI model")
+    console.print('code-agent --provider openai --model gpt-4o run "Explain quantum computing"')
+
+    console.print("\n# Set OpenAI as default provider in config.yaml:")
+    console.print("default_provider: \"openai\"")
+    console.print("default_model: \"gpt-4o\"")
+
+    console.print(
+        "\n[italic]For more information, see https://platform.openai.com/docs/api-reference[/italic]"
+    )
+
+
+@config_app.command("groq")
+def config_groq():
+    """
+    Show information about using Groq as a provider.
+    """
+    config = get_config()
+    api_key = config.api_keys.model_dump().get("groq")
+
+    console = Console()
+    console.print("[bold]Groq Configuration[/bold]", style="magenta")
+    console.print("=" * 50)
+
+    # Status information
+    console.print("[bold]Current Status:[/bold]")
+    if config.default_provider == "groq":
+        console.print(
+            "✅ Groq is currently the [bold green]default provider[/bold green]."
+        )
+    else:
+        console.print(
+            f"❌ Groq is [yellow]NOT[/yellow] the default provider (currently using: [bold]{config.default_provider}[/bold])."
+        )
+
+    if api_key:
+        console.print("✅ Groq API key is [bold green]configured[/bold green].")
+    else:
+        console.print(
+            "❌ No Groq API key [red]found[/red] in config or environment."
+        )
+
+    # Setup instructions
+    console.print("\n[bold]Setup Instructions:[/bold]")
+    console.print(
+        "1. Visit [link]https://console.groq.com/keys[/link] to access Groq API keys"
+    )
+    console.print("2. Create an account or sign in")
+    console.print("3. Create a new API key from the console")
+    console.print("4. Your API key will start with 'gsk-'")
+
+    # Configuration options
+    console.print("\n[bold]Configuration Options:[/bold]")
+    console.print("[bold yellow]Option 1:[/bold yellow] Set environment variable")
+    console.print("  export GROQ_API_KEY=gsk-your-key-here")
+
+    console.print("[bold yellow]Option 2:[/bold yellow] Add to config file")
+    console.print("  Edit ~/code-agent/config.yaml and add:")
+    console.print("  api_keys:")
+    console.print('    groq: "gsk-your-key-here"')
+
+    # Available models
+    console.print("\n[bold]Available Models:[/bold]")
+    console.print(
+        "- [bold]llama3-70b-8192[/bold]: Meta's Llama 3 70B model with 8K context"
+    )
+    console.print(
+        "- [bold]llama3-8b-8192[/bold]: Lighter Llama 3 variant, faster response"
+    )
+    console.print(
+        "- [bold]mixtral-8x7b-32768[/bold]: Mixtral model with 32K context window"
+    )
+    console.print(
+        "- [bold]gemma-7b-it[/bold]: Google's Gemma model for instruction-following"
+    )
+
+    # Usage examples
+    console.print("\n[bold]Usage Examples:[/bold]")
+    console.print("# Use Groq as provider")
+    console.print('code-agent --provider groq run "What\'s the current Python version?"')
+
+    console.print("\n# Specify a Groq model")
+    console.print('code-agent --provider groq --model llama3-70b-8192 run "Explain quantum computing"')
+
+    console.print("\n# Set Groq as default provider in config.yaml:")
+    console.print("default_provider: \"groq\"")
+    console.print("default_model: \"llama3-70b-8192\"")
+
+    console.print(
+        "\n[italic]For more information, see https://console.groq.com/docs/quickstart[/italic]"
+    )
+
+
+@config_app.command("anthropic")
+def config_anthropic():
+    """
+    Show information about using Anthropic as a provider.
+    """
+    config = get_config()
+    api_key = config.api_keys.model_dump().get("anthropic")
+
+    console = Console()
+    console.print("[bold]Anthropic Configuration[/bold]", style="cyan")
+    console.print("=" * 50)
+
+    # Status information
+    console.print("[bold]Current Status:[/bold]")
+    if config.default_provider == "anthropic":
+        console.print(
+            "✅ Anthropic is currently the [bold green]default provider[/bold green]."
+        )
+    else:
+        console.print(
+            f"❌ Anthropic is [yellow]NOT[/yellow] the default provider (currently using: [bold]{config.default_provider}[/bold])."
+        )
+
+    if api_key:
+        console.print("✅ Anthropic API key is [bold green]configured[/bold green].")
+    else:
+        console.print(
+            "❌ No Anthropic API key [red]found[/red] in config or environment."
+        )
+
+    # Setup instructions
+    console.print("\n[bold]Setup Instructions:[/bold]")
+    console.print(
+        "1. Visit [link]https://console.anthropic.com/[/link] to access Anthropic's console"
+    )
+    console.print("2. Create an account or sign in")
+    console.print("3. Navigate to the API keys section and create a new key")
+    console.print("4. Your API key will start with 'sk-ant-'")
+
+    # Configuration options
+    console.print("\n[bold]Configuration Options:[/bold]")
+    console.print("[bold yellow]Option 1:[/bold yellow] Set environment variable")
+    console.print("  export ANTHROPIC_API_KEY=sk-ant-your-key-here")
+
+    console.print("[bold yellow]Option 2:[/bold yellow] Add to config file")
+    console.print("  Edit ~/code-agent/config.yaml and add:")
+    console.print("  api_keys:")
+    console.print('    anthropic: "sk-ant-your-key-here"')
+
+    # Available models
+    console.print("\n[bold]Available Models:[/bold]")
+    console.print(
+        "- [bold]claude-3-5-sonnet[/bold]: Latest, most capable model"
+    )
+    console.print(
+        "- [bold]claude-3-opus[/bold]: Most powerful model for complex tasks"
+    )
+    console.print(
+        "- [bold]claude-3-sonnet[/bold]: Balanced performance and speed"
+    )
+    console.print(
+        "- [bold]claude-3-haiku[/bold]: Fastest, most efficient model"
+    )
+
+    # Usage examples
+    console.print("\n[bold]Usage Examples:[/bold]")
+    console.print("# Use Anthropic as provider")
+    console.print('code-agent --provider anthropic run "What\'s the current Python version?"')
+
+    console.print("\n# Specify an Anthropic model")
+    console.print('code-agent --provider anthropic --model claude-3-sonnet run "Explain quantum computing"')
+
+    console.print("\n# Set Anthropic as default provider in config.yaml:")
+    console.print("default_provider: \"anthropic\"")
+    console.print("default_model: \"claude-3-sonnet\"")
+
+    console.print(
+        "\n[italic]For more information, see https://docs.anthropic.com/claude/reference/getting-started-with-the-api[/italic]"
+    )
+
+
 # --- Provider Commands ---
 provider_app = typer.Typer(name="providers", help="Manage providers.")
 app.add_typer(provider_app)
@@ -405,16 +645,94 @@ def providers_list():
     List available/configured providers based on effective config.
     """
     config = get_config()
-    print("[bold cyan]Configured Providers (based on effective API keys):[/bold cyan]")
-    found = False
-    for provider, key in config.api_keys.model_dump().items():
-        if key:  # Only list if a key is potentially configured (env var or file)
-            print(f"- {provider}")
-            found = True
-    if not found:
-        print("No providers found with configured API keys.")
-    print(f"\nDefault Provider: {config.default_provider}")
-    print(f"Default Model: {config.default_model}")
+    console = Console()
+    
+    console.print("[bold cyan]Configured LLM Providers:[/bold cyan]")
+    console.print("=" * 50)
+    
+    # Define provider details
+    providers = {
+        "ai_studio": {
+            "name": "Google AI Studio",
+            "style": "blue",
+            "config_cmd": "code-agent config aistudio",
+            "models": ["gemini-1.5-flash", "gemini-1.5-pro"],
+            "key_prefix": "aip-",
+            "env_var": "AI_STUDIO_API_KEY",
+        },
+        "openai": {
+            "name": "OpenAI",
+            "style": "green",
+            "config_cmd": "code-agent config openai",
+            "models": ["gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"],
+            "key_prefix": "sk-",
+            "env_var": "OPENAI_API_KEY",
+        },
+        "groq": {
+            "name": "Groq",
+            "style": "magenta",
+            "config_cmd": "code-agent config groq",
+            "models": ["llama3-70b-8192", "mixtral-8x7b-32768"],
+            "key_prefix": "gsk-",
+            "env_var": "GROQ_API_KEY",
+        },
+        "anthropic": {
+            "name": "Anthropic",
+            "style": "cyan",
+            "config_cmd": "code-agent config anthropic",
+            "models": ["claude-3-5-sonnet", "claude-3-opus", "claude-3-sonnet", "claude-3-haiku"],
+            "key_prefix": "sk-ant-",
+            "env_var": "ANTHROPIC_API_KEY",
+        },
+    }
+    
+    found_configured = False
+    
+    # Current default indicator
+    console.print(f"[bold]Current Default:[/bold] {config.default_provider} / {config.default_model}")
+    console.print()
+    
+    # List all providers with their status
+    console.print("[bold]Available Providers:[/bold]")
+    for provider_id, details in providers.items():
+        api_key = config.api_keys.model_dump().get(provider_id)
+        name = details["name"]
+        style = details["style"]
+        
+        if api_key:
+            status = f"[bold green]✓ Configured[/bold green]"
+            found_configured = True
+        else:
+            status = f"[yellow]✗ Not configured[/yellow]"
+        
+        # Is this the default?
+        default_marker = ""
+        if provider_id == config.default_provider:
+            default_marker = " [bold green](DEFAULT)[/bold green]"
+            
+        console.print(f"[bold {style}]{name}[/bold {style}]: {status}{default_marker}")
+        
+        # Show configuration command
+        console.print(f"  Setup command: [dim]{details['config_cmd']}[/dim]")
+        
+        # Show example model if it's configured
+        if api_key and details["models"]:
+            example_model = details["models"][0]
+            console.print(f"  Example: [dim]code-agent --provider {provider_id} --model {example_model} run \"...\"[/dim]")
+        
+        console.print()
+    
+    if not found_configured:
+        console.print("\n[bold yellow]No providers found with configured API keys.[/bold yellow]")
+        console.print("Run one of the following commands to set up a provider:")
+        for provider_id, details in providers.items():
+            console.print(f"  [dim]{details['config_cmd']}[/dim]")
+    
+    # Usage tips section
+    console.print("\n[bold]Quick Usage Tips:[/bold]")
+    console.print("- Override provider for one command: [dim]--provider <provider> --model <model>[/dim]")
+    console.print("- Set default provider in config: [dim]code-agent config show[/dim] to see current config")
+    console.print("- Reset config to defaults: [dim]code-agent config reset[/dim]")
 
 
 if __name__ == "__main__":
