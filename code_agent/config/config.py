@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field, ValidationError
 pass
 
 # Define the default config path
-DEFAULT_CONFIG_DIR = Path.home() / "code-agent"
+DEFAULT_CONFIG_DIR = Path.home() / ".config" / "code-agent"
 DEFAULT_CONFIG_PATH = DEFAULT_CONFIG_DIR / "config.yaml"
 TEMPLATE_CONFIG_PATH = Path(__file__).parent / "template.yaml"
 
@@ -52,6 +52,19 @@ def load_config_from_file(config_path: Path = DEFAULT_CONFIG_PATH) -> Dict[str, 
     """Loads configuration purely from a YAML file, returning a dict."""
     # Ensure config directory exists
     config_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Check for config at old location (~/.code-agent/config.yaml) and migrate if needed
+    old_config_dir = Path.home() / "code-agent"
+    old_config_path = old_config_dir / "config.yaml"
+    if old_config_path.exists() and not config_path.exists():
+        try:
+            print(f"Migrating config from {old_config_path} to {config_path}")
+            # Copy old config to new location
+            config_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(old_config_path, config_path)
+            print(f"Successfully migrated configuration to {config_path}")
+        except Exception as e:
+            print(f"Warning: Could not migrate config. Error: {e}")
 
     # If config file doesn't exist, create it from template
     if not config_path.exists():
@@ -141,9 +154,7 @@ def build_effective_config(
     if "GROQ_API_KEY" in os.environ:
         effective_config_data["api_keys"]["groq"] = os.environ["GROQ_API_KEY"]
     if "ANTHROPIC_API_KEY" in os.environ:
-        effective_config_data["api_keys"]["anthropic"] = (
-            os.environ["ANTHROPIC_API_KEY"]
-        )
+        effective_config_data["api_keys"]["anthropic"] = os.environ["ANTHROPIC_API_KEY"]
     # Add more provider keys as needed
 
     # Environment variables for auto-approve flags

@@ -365,7 +365,7 @@ def config_aistudio():
     console.print("  export AI_STUDIO_API_KEY=aip-your-key-here")
 
     console.print("[bold yellow]Option 2:[/bold yellow] Add to config file")
-    console.print("  Edit ~/code-agent/config.yaml and add:")
+    console.print("  Edit ~/.config/code-agent/config.yaml and add:")
     console.print("  api_keys:")
     console.print('    ai_studio: "aip-your-key-here"')
 
@@ -446,7 +446,7 @@ def config_openai():
     console.print("  export OPENAI_API_KEY=sk-your-key-here")
 
     console.print("[bold yellow]Option 2:[/bold yellow] Add to config file")
-    console.print("  Edit ~/code-agent/config.yaml and add:")
+    console.print("  Edit ~/.config/code-agent/config.yaml and add:")
     console.print("  api_keys:")
     console.print('    openai: "sk-your-key-here"')
 
@@ -536,7 +536,7 @@ def config_groq():
     console.print("  export GROQ_API_KEY=gsk-your-key-here")
 
     console.print("[bold yellow]Option 2:[/bold yellow] Add to config file")
-    console.print("  Edit ~/code-agent/config.yaml and add:")
+    console.print("  Edit ~/.config/code-agent/config.yaml and add:")
     console.print("  api_keys:")
     console.print('    groq: "gsk-your-key-here"')
 
@@ -627,9 +627,9 @@ def config_anthropic():
     console.print("  export ANTHROPIC_API_KEY=sk-ant-your-key-here")
 
     console.print("[bold yellow]Option 2:[/bold yellow] Add to config file")
-    console.print("  Edit ~/code-agent/config.yaml and add:")
+    console.print("  Edit ~/.config/code-agent/config.yaml and add:")
     console.print("  api_keys:")
-    console.print('    anthropic: "sk-ant-your-key-here"')
+    console.print('    anthropic: "claude-api-key-here"')
 
     # Available models
     console.print("\n[bold]Available Models:[/bold]")
@@ -732,7 +732,9 @@ def providers_list():
     # List all providers with their status
     console.print("[bold]Available Providers:[/bold]")
     for provider_id, details in providers.items():
-        api_key = vars(config.api_keys).get(provider_id)  # Access directly through vars()
+        api_key = vars(config.api_keys).get(
+            provider_id
+        )  # Access directly through vars()
         name = details["name"]
         style = details["style"]
 

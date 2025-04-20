@@ -11,7 +11,7 @@ This document outlines the implementation steps taken and the future roadmap.
     *   [x] Create virtual environment (`.venv`).
     *   [x] Install base dependencies (`typer`, `litellm`, `pyyaml`, `rich`, `pydantic`).
 *   [x] **Configuration Management:**
-    *   [x] Define `config.yaml` structure (`~/code-agent/config.yaml`).
+    *   [x] Define `config.yaml` structure (`~/.config/code-agent/config.yaml`).
     *   [x] Implement `config.py` to load settings (File > Env > Defaults - *Note: CLI override not fully implemented yet*).
     *   [x] Implement validation using Pydantic.
 *   [x] **Basic CLI Structure (Typer):**

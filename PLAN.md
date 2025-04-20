@@ -11,7 +11,7 @@ This document outlines the plan for building a versatile Command-Line Interface 
 **Core Goal:** Provide a unified interface to interact with multiple AI model providers (supporting the OpenAI API standard) and empower the agent with capabilities to interact with the user's local environment (files, terminal commands) in a controlled and secure manner.
 
 ## 2. Configuration Hierarchy
-Prioritize configuration settings: CLI flags > Environment Variables > config.yaml file (e.g., ~/code-agent/config.yaml).
+Prioritize configuration settings: CLI flags > Environment Variables > config.yaml file (e.g., ~/.config/code-agent/config.yaml).
 
 ## 3. Future Enhancements
 

@@ -32,7 +32,7 @@ This document outlines the requirements for the Code Agent Command-Line Interfac
 ### 2.3 Model Provider Management
 
 *   **Multi-Provider Integration:** Utilize LiteLLM to connect to any OpenAI API-compatible endpoint.
-*   **Configuration Hierarchy:** Prioritize configuration settings: CLI flags > Environment Variables > config.yaml file (e.g., `~/code-agent/config.yaml`).
+*   **Configuration Hierarchy:** Prioritize configuration settings: CLI flags > Environment Variables > config.yaml file (e.g., `~/.config/code-agent/config.yaml`).
 *   **Provider/Model Selection:** Allow users to specify the provider and model per request using CLI flags (e.g., `--provider ollama --model llama3`), falling back to configured defaults.
 *   **List Providers:** Include a command to list currently configured providers (`code-agent providers list`).
 
@@ -72,4 +72,4 @@ This document outlines the requirements for the Code Agent Command-Line Interfac
 
 *   **File System Access:** Modifying local files carries inherent risks. The `apply_edit` tool must default to requiring user confirmation, showing a clear diff beforehand. The `--auto-approve` flag (or `auto_approve_edits` config) should be used with extreme caution.
 *   **Command Execution:** Executing arbitrary terminal commands suggested by an LLM is highly dangerous. The `run_native_command` tool must default to requiring user confirmation. A configurable `native_command_allowlist` is strongly recommended. Input sanitization (via `shlex.split`) is used. `--auto-approve` for native commands (`auto_approve_native_commands` config) should be used with extreme caution.
-*   **API Keys:** Sensitive credentials should be handled securely, preferably loaded from environment variables or a config file with restricted permissions (`~/code-agent/config.yaml`), not hardcoded. 
+*   **API Keys:** Sensitive credentials should be handled securely, preferably loaded from environment variables or a config file with restricted permissions (`~/.config/code-agent/config.yaml`), not hardcoded.
