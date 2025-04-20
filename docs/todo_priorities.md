@@ -45,6 +45,7 @@ This document consolidates all tasks, improvements, and future enhancements for 
   - 🔄 Fix linting issues (line length, trailing whitespace, etc.) [from implementation.md]
   - 🔄 Ensure consistent code style across the codebase [from implementation.md]
   - 🔄 Set up CI/CD pipeline for automated testing and linting [from implementation.md]
+  - 🔄 Implement hermetic build system to ensure consistency between local and CI environments [from hermetic_builds.md]
 
 ## Low Priority
 
