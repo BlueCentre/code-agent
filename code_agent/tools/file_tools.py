@@ -1,7 +1,9 @@
 import difflib
 from pathlib import Path
-from typing import Annotated
+from typing import Dict, Optional, Union, Any
 
+from google.adk.tools.function_tool import FunctionTool
+from pydantic import BaseModel, Field
 from rich import print
 from rich.console import Console
 from rich.prompt import Confirm  # For user confirmation
@@ -12,9 +14,9 @@ console = Console()
 # Define a max file size limit (e.g., 1MB)
 MAX_FILE_SIZE_BYTES = 1 * 1024 * 1024
 
-# --- Tool Input Schema (Removed) ---
-# class ReadFileArgs(BaseModel):
-#     path: str = Field(..., description="The relative or absolute path to the file to read.")
+# --- Tool Input Schema ---
+class ReadFileArgs(BaseModel):
+    path: str = Field(..., description="The path to the file to read.")
 
 # --- Helper for Path Validation ---
 def is_path_within_cwd(path_str: str) -> bool:
@@ -27,9 +29,9 @@ def is_path_within_cwd(path_str: str) -> bool:
         return False
 
 # --- Tool Implementation ---
-# Remove @function_tool decorator
-def read_file(path: Annotated[str, "The relative or absolute path to the file to read."]) -> str:
+def read_file(args: ReadFileArgs) -> str:
     """Reads the entire content of a file at the given path, restricted to CWD."""
+    path = args.path
     if not is_path_within_cwd(path):
         # Break long f-string
         return (
@@ -68,19 +70,17 @@ def read_file(path: Annotated[str, "The relative or absolute path to the file to
     except Exception as e:
         return f"Error reading file {path}: {e}"
 
-# --- Apply Edit Tool ---
+# Create tool objects using the FunctionTool class
+read_file_tool = FunctionTool.from_function(
+    read_file,
+    name="read_file",
+    description="Reads the content of a specified file path."
+)
 
-# ApplyEditArgs class removed in previous steps, ensure it stays removed
-# class ApplyEditArgs(BaseModel):
-#     path: str = Field(
-#         ...,
-#         description="The relative or absolute path to the file to edit."
-#     )
-#     proposed_content: str = Field(
-#         ...,
-#         description="The full proposed content of the file."
-#     )
-#     # TODO: Consider adding an optional 'reason' field for the LLM to explain the change.
+# --- Apply Edit Tool Input Schema ---
+class ApplyEditArgs(BaseModel):
+    target_file: str = Field(..., description="The path to the file to edit.")
+    code_edit: str = Field(..., description="The proposed content to apply to the file.")
 
 # _is_path_safe helper should remain as introduced by previous edits
 def _is_path_safe(base_path: Path, target_path: Path) -> bool:
@@ -93,17 +93,12 @@ def _is_path_safe(base_path: Path, target_path: Path) -> bool:
         return False
 
 # apply_edit signature should remain as modified previously
-def apply_edit(
-    target_file: Annotated[str, "The target file to modify."],
-    code_edit: Annotated[
-        str, "The proposed content to apply to the file."
-    ]
-):
+def apply_edit(args: ApplyEditArgs) -> str:
     """Applies proposed content changes to a file after showing a diff and requesting user confirmation. Restricted to CWD."""
-    from ..config import get_config
+    from code_agent.config.config import get_config
     config = get_config()
-    file_path_str = target_file
-    proposed_content = code_edit
+    file_path_str = args.target_file
+    proposed_content = args.code_edit
 
     if not _is_path_safe(Path.cwd(), Path(file_path_str)):
         # Break long f-string
@@ -121,14 +116,14 @@ def apply_edit(
         if file_path.is_file():
             current_content = file_path.read_text()
         elif file_path.exists():
-            return f"Error: Path exists but is not a regular file: {target_file}"
+            return f"Error: Path exists but is not a regular file: {args.target_file}"
 
         # --- Calculate and Display Diff ---
         diff = list(difflib.unified_diff(
             current_content.splitlines(keepends=True),
             proposed_content.splitlines(keepends=True),
-            fromfile=f"a/{target_file}",
-            tofile=f"b/{target_file}",
+            fromfile=f"a/{args.target_file}",
+            tofile=f"b/{args.target_file}",
             lineterm='\n'
         ))
 
@@ -149,7 +144,7 @@ def apply_edit(
         else:
             # Break long Confirm.ask call
             confirmed = Confirm.ask(
-                f"Apply these changes to {target_file}?", default=False
+                f"Apply these changes to {args.target_file}?", default=False
             )
 
         # --- Apply Changes if Confirmed ---
@@ -158,9 +153,9 @@ def apply_edit(
                 # Ensure parent directory exists
                 file_path.parent.mkdir(parents=True, exist_ok=True)
                 file_path.write_text(proposed_content)
-                return f"Edit applied successfully to {target_file}."
+                return f"Edit applied successfully to {args.target_file}."
             except Exception as write_e:
-                return f"Error writing changes to file {target_file}: {write_e}"
+                return f"Error writing changes to file {args.target_file}: {write_e}"
         else:
             return "Edit cancelled by user."
 
@@ -169,9 +164,20 @@ def apply_edit(
         # If the intention is to create a new file, the logic handles it.
         pass # Let the diff/write logic handle file creation
     except PermissionError:
-        return f"Error: Permission denied when accessing file: {target_file}"
+        return f"Error: Permission denied when accessing file: {args.target_file}"
     except Exception as e:
-        return f"Error applying edit to {target_file}: {e}"
+        return f"Error applying edit to {args.target_file}: {e}"
+
+# Create the apply_edit tool
+apply_edit_tool = FunctionTool.from_function(
+    apply_edit,
+    name="apply_edit",
+    description="Proposes changes to a file by providing the new content."
+)
+
+# For compatibility with imports elsewhere, map the tool objects to their original names
+read_file = read_file_tool
+apply_edit = apply_edit_tool
 
 # Example usage (can be removed later)
 if __name__ == "__main__":
@@ -180,12 +186,12 @@ if __name__ == "__main__":
     dummy_path.write_text("This is a test file.\nIt has two lines.")
 
     print("Testing read_file tool:")
-    # Update read_file call to pass path directly
-    result_good = read_file(path="dummy_read_test.txt")
+    # Use the updated tool with args object
+    result_good = read_file(ReadFileArgs(path="dummy_read_test.txt"))
     print(f"Reading existing file:\n---\n{result_good}\n---")
 
-    # Update read_file call to pass path directly
-    result_bad = read_file(path="non_existent_file.txt")
+    # Use the updated tool with args object
+    result_bad = read_file(ReadFileArgs(path="non_existent_file.txt"))
     print(f"Reading non-existent file:\n---\n{result_bad}\n---")
 
     # Clean up dummy file
@@ -199,22 +205,22 @@ if __name__ == "__main__":
 
     # Test Case 1: Apply a change (requires user confirmation in terminal)
     print("\nTest 1: Modify existing file (confirm in prompt)")
-    # apply_edit call remains the same as it was already updated
-    result_1 = apply_edit(
+    # Use the updated tool with args object
+    result_1 = apply_edit(ApplyEditArgs(
         target_file="dummy_edit_test.txt",
         code_edit="Line 1\nLine 2 - Modified\nLine 3\n"
-    )
+    ))
     print(f"Result 1: {result_1}")
     print(f"Current content:\n{edit_path.read_text()}")
 
     # Test Case 2: Create a new file (requires user confirmation)
     print("\nTest 2: Create new file (confirm in prompt)")
     new_file_path = "dummy_new_file.txt"
-    # apply_edit call remains the same
-    result_2 = apply_edit(
+    # Use the updated tool with args object
+    result_2 = apply_edit(ApplyEditArgs(
         target_file=new_file_path,
         code_edit="This is a new file.\n"
-    )
+    ))
     print(f"Result 2: {result_2}")
     new_file = Path(new_file_path)
     if new_file.exists():

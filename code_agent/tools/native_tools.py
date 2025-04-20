@@ -1,7 +1,7 @@
 import shlex  # For safely splitting command strings
 import subprocess
 
-from google.adk.tools import function_tool
+from google.adk.tools.function_tool import FunctionTool
 from pydantic import BaseModel, Field
 from rich import print
 from rich.prompt import Confirm
@@ -16,12 +16,11 @@ class RunNativeCommandArgs(BaseModel):
     # TODO: Consider adding timeout, working directory options?
 
 # --- Tool Implementation ---
-@function_tool
 def run_native_command(args: RunNativeCommandArgs) -> str:
     """Executes a native terminal command after checking allowlist and requesting 
     user confirmation."""
     # Import get_config here
-    from code_agent.config import get_config
+    from code_agent.config.config import get_config
     config = get_config()
     command_str = args.command.strip() # Ensure no leading/trailing whitespace
     if not command_str:
@@ -99,6 +98,16 @@ def run_native_command(args: RunNativeCommandArgs) -> str:
          return f"Error: Command not found: {command_parts[0]}"
     except Exception as e:
         return f"Error executing command '{command_str}': {e}"
+
+# Create the native command tool
+run_native_command_tool = FunctionTool.from_function(
+    run_native_command,
+    name="run_native_command",
+    description="Executes a native terminal command after requesting confirmation."
+)
+
+# For compatibility with imports elsewhere
+run_native_command = run_native_command_tool
 
 # Example usage (can be removed later)
 if __name__ == "__main__":

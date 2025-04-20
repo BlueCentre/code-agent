@@ -12,9 +12,8 @@ from code_agent import __version__ as agent_version  # Updated import
 
 # Updated imports
 # from myagent.llm import get_llm_response # No longer needed here
-from code_agent.agent.agent import run_agent_turn  # Updated import
-from code_agent.config import DEFAULT_CONFIG_DIR, get_config, initialize_config
-from code_agent.config import config as config_module
+from code_agent.agent.agent import CodeAgent # Import the class
+from code_agent.config.config import DEFAULT_CONFIG_DIR, get_config, initialize_config
 
 app = typer.Typer(
     name="code-agent", # Updated app name
@@ -99,17 +98,9 @@ def run(prompt: Annotated[str, typer.Argument(help="The prompt to send to the LL
     """
     print(f"[bold blue]Prompt:[/bold blue] {prompt}")
 
-    # Use the ADK agent runner
-    # Provider/model overrides are now handled during config initialization
-    # We retrieve the effective config which includes any overrides
-    effective_config = get_config()
-
-    response = run_agent_turn(
-        prompt=prompt,
-        provider=effective_config.default_provider, # Pass effective value
-        model=effective_config.default_model,     # Pass effective value
-        # History is handled separately
-    )
+    # Instantiate CodeAgent (gets config internally)
+    code_agent = CodeAgent()
+    response = code_agent.run_turn(prompt=prompt)
 
     if response:
         # Render response as Markdown
@@ -119,7 +110,7 @@ def run(prompt: Annotated[str, typer.Argument(help="The prompt to send to the LL
         print("[bold red]Failed to get response.[/bold red]")
 
 # --- History Saving/Loading Logic ---
-HISTORY_DIR = config_module.DEFAULT_CONFIG_DIR / "history"
+HISTORY_DIR = DEFAULT_CONFIG_DIR / "history"
 
 def save_history(session_id: str, history: List[Dict[str, str]]):
     """Saves chat history to a JSON file."""
@@ -174,10 +165,15 @@ def chat():
     print("[bold green]Starting interactive chat session...[/bold green]")
     print("Type 'quit' or 'exit' to end the session.")
 
-    # Load latest history OR start fresh
-    history = load_latest_history()
-    if history:
-        print(f"[grey50]Loaded {len(history)} messages from previous session.[/grey50]")
+    # Initialize the agent once for the session
+    print("[grey50]Initializing agent...[/grey50]")
+    code_agent = CodeAgent()
+
+    # Load latest history and assign it to the agent's history
+    loaded_history = load_latest_history()
+    if loaded_history:
+        code_agent.history = loaded_history
+        print(f"[grey50]Loaded {len(loaded_history)} messages from previous session.[/grey50]")
     else:
         print("[grey50]Starting new chat session.[/grey50]")
 
@@ -192,48 +188,33 @@ def chat():
 
             if user_input.lower() in ["quit", "exit"]:
                 print("[bold yellow]Exiting chat session.[/bold yellow]")
-                save_history(session_id, history)
+                save_history(session_id, code_agent.history) # Save agent's history
                 break
 
             if not user_input:
                 continue
 
-            # Append user message to history BEFORE calling agent
-            history.append({"role": "user", "content": user_input})
+            # Run agent turn (history is managed internally by the agent)
+            response = code_agent.run_turn(prompt=user_input)
 
-            # Use global state for provider/model overrides from initial call
-            # No longer needed - get effective config instead
-            # provider_override = state.provider
-            # model_override = state.model
-            effective_config = get_config()
-
-            # Call the agent runner with the current prompt and history
-            response = run_agent_turn(
-                prompt=user_input,
-                provider=effective_config.default_provider, # Pass effective value
-                model=effective_config.default_model,     # Pass effective value
-                history=history
-            )
-
-            print("\n[bold magenta]Agent[/bold magenta]: ", end="")
+            # Display response (agent's run_turn already handles history update)
             if response:
                 # Render response as Markdown
+                print("\n[bold yellow]Agent:[/bold yellow]")
                 print(Markdown(response))
-                # Append agent response to history AFTER getting it
-                history.append({"role": "assistant", "content": response})
             else:
-                print("[red]No response received.[/red]")
-                # Optionally remove the last user message if agent failed?
-                # history.pop()
+                print("[bold red]Failed to get response.[/bold red]")
 
         except KeyboardInterrupt:
-            print("\n[bold yellow]Exiting chat session (Ctrl+C).[/bold yellow]")
-            save_history(session_id, history)
+            print("\n[bold yellow]Chat interrupted. Exiting.[/bold yellow]")
+            save_history(session_id, code_agent.history) # Save history on interrupt
             break
-        except EOFError: # Handle Ctrl+D
-            print("\n[bold yellow]Exiting chat session (EOF).[/bold yellow]")
-            save_history(session_id, history)
-            break
+        except Exception as e:
+            print(f"[bold red]An unexpected error occurred:[/bold red] {e}")
+            save_history(session_id, code_agent.history) # Attempt to save history on error
+            # Consider adding a traceback here for debugging
+            # import traceback
+            # traceback.print_exc()
 
 # --- Config Commands ---
 config_app = typer.Typer(name="config", help="Manage configuration.")
