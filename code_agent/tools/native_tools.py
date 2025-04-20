@@ -26,6 +26,28 @@ def run_native_command(args: RunNativeCommandArgs) -> str:
     if not command_str:
         return "Error: Empty command string provided."
 
+    # --- Special handling for file listing requests ---
+    # Check if this is a file listing command, especially for Python files
+    command_lower = command_str.lower()
+    if (
+        ("list" in command_lower and "python" in command_lower and "file" in command_lower) or
+        ("find" in command_lower and "*.py" in command_lower) or
+        (command_lower.startswith("ls") and "*.py" in command_lower)
+    ):
+        # Extract the target directory from the command if possible
+        target_dir = "."  # Default to current directory
+        parts = command_str.split()
+        for i, part in enumerate(parts):
+            if i > 0 and not part.startswith("-") and not part.startswith("*"):
+                # This might be a directory path
+                target_dir = part
+                break
+            
+        # Use find command for better recursive listing of Python files
+        modified_command = f"find {target_dir} -type f -name '*.py' | sort"
+        print(f"[yellow]Enhanced file listing command:[/yellow] {modified_command}")
+        command_str = modified_command
+
     # Split command for analysis and execution
     try:
         command_parts = shlex.split(command_str)

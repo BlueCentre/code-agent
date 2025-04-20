@@ -40,6 +40,19 @@ class CodeAgent:
             "- run_native_command(command): Executes a native terminal command after asking for "
             "user confirmation (unless auto-approved or on allowlist). Use cautiously."
         )
+        
+        # Add specific guidance for file listing
+        self.base_instruction_parts.append(
+            "When asked to list files, especially Python files in directories:"
+        )
+        self.base_instruction_parts.append(
+            "- For listing Python files recursively in a directory, use: "
+            "run_native_command(command=\"find directory_path -type f -name '*.py' | sort\")"
+        )
+        self.base_instruction_parts.append(
+            "- Never use simple 'ls' commands with wildcards like 'ls *.py' as they don't search recursively."
+        )
+        
         self.base_instruction_parts.append(
             "Use these functions when necessary to fulfill the user's request."
         )
@@ -123,15 +136,38 @@ class CodeAgent:
                 return f"Here are the files in the current directory:\n\n{result}"
 
             elif "python files" in prompt.lower():
-                result = run_native_command("find . -type f -name '*.py' | sort")
+                # Extract directory path if specified
+                target_dir = "."
+                prompt_parts = prompt.lower().split()
+                dir_indicators = ["in", "from", "inside", "under", "within"]
+                
+                for i, part in enumerate(prompt_parts):
+                    if part in dir_indicators and i < len(prompt_parts) - 1:
+                        # Check for a directory name after an indicator word
+                        potential_dir = prompt_parts[i + 1].strip("\"'.,;:")
+                        if potential_dir != "the" and len(potential_dir) > 1:
+                            # If using more specific references like "code_agent directory"
+                            if "directory" in prompt_parts[i + 1:i + 3] and i + 2 < len(prompt_parts):
+                                target_dir = potential_dir
+                                break
+                            # Otherwise just use the word after the indicator
+                            target_dir = potential_dir
+                            break
+                
+                # If the target isn't a path already, make it one
+                if not target_dir.startswith("./") and not target_dir.startswith("/"):
+                    if target_dir != ".":
+                        target_dir = f"./{target_dir}"
+                
+                result = run_native_command(f"find {target_dir} -type f -name '*.py' | sort")
                 self.history.append({"role": "user", "content": prompt})
                 self.history.append(
                     {
                         "role": "assistant",
-                        "content": f"Here are the Python files in the project:\n\n{result}",
+                        "content": f"Here are the Python files in {target_dir}:\n\n{result}",
                     }
                 )
-                return f"Here are the Python files in the project:\n\n{result}"
+                return f"Here are the Python files in {target_dir}:\n\n{result}"
 
             else:
                 return "Sorry, I need an API key to process general requests. For this demo, I can only handle basic commands like asking about the current directory or listing files."
