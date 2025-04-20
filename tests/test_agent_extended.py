@@ -341,7 +341,8 @@ def test_tool_execution_with_arguments_parsing_error(agent_with_mock_config, moc
     response = MagicMock()
     response.choices = [choice]
 
-    # Set up litellm to return the response with invalid tool call first, then normal response
+    # Set up litellm to return the response with invalid tool call first,
+    # then normal response
     patch_litellm_completion(mocker, [response, create_text_response("Final response")])
 
     # Patch print to capture output
@@ -374,7 +375,8 @@ def test_unknown_tool_call_handling(agent_with_mock_config, mocker):
     response = MagicMock()
     response.choices = [choice]
 
-    # Set up litellm to return response with unknown tool call first, then normal response
+    # Set up litellm to return response with unknown tool call first,
+    # then normal response
     patch_litellm_completion(mocker, [response, create_text_response("Final response")])
 
     # Patch print to capture output
@@ -384,7 +386,7 @@ def test_unknown_tool_call_handling(agent_with_mock_config, mocker):
     # Check that the error was handled correctly
     assert result == "Final response"
     mock_print.assert_any_call(
-        "[bold red]Unknown tool 'unknown_function' " "requested by LLM[/bold red]"
+        "[bold red]Unknown tool 'unknown_function' " + "requested by LLM[/bold red]"
     )
 
 
@@ -423,7 +425,7 @@ def test_error_in_tool_execution(agent_with_mock_config, mocker):
     # Check that the error was handled correctly
     assert result == "Final response"
     mock_print.assert_any_call(
-        "[red]Error executing read_file: " "File not found[/red]"
+        "[red]Error executing read_file: " + "File not found[/red]"
     )
 
 
@@ -476,7 +478,8 @@ def test_skip_tool_call_history_in_messages(agent_with_mock_config, mocker):
     call_args = mock_completion.call_args[1]
     messages = call_args["messages"]
 
-    # The agent seems to include all messages - check none have both tool_calls and tool_call_id
+    # The agent seems to include all messages - check none have both
+    # tool_calls and tool_call_id
     for msg in messages:
         if msg["role"] != "system":  # Skip system message
             if "tool_calls" in msg:
