@@ -61,6 +61,11 @@ This document outlines the implementation steps taken and the future roadmap.
     *   [x] Add user feedback during processing (`rich.status`).
     *   [x] Write initial unit tests (`pytest`) for config and tools.
     *   [x] Write initial integration tests for CLI (`typer.testing.CliRunner`).
+*   [x] **Special Commands in Chat:**
+    *   [x] Implement `/help` to show available commands
+    *   [x] Implement `/clear` to clear conversation history
+    *   [x] Implement `/exit` and `/quit` commands
+    *   [x] Implement `/test` for automated testing purposes
 *   [x] **Documentation & Packaging:**
     *   [x] Create `README.md` with setup, config, usage.
     *   [x] Set up packaging using `pyproject.toml` and Poetry.
@@ -81,6 +86,6 @@ This document outlines the implementation steps taken and the future roadmap.
 *   **Tool Refinement:**
     *   Enhance security checks for `apply_edit` and `run_native_command` (e.g., stricter path validation, absolute path handling, more robust allowlist matching).
     *   Add size limits and pagination to `read_file`.
-*   **Chat History:** Add option to load specific history files or clear history.
+*   **Chat History:** Add option to load specific history files.
 *   **Packaging & Distribution:** Finalize packaging for distribution (e.g., PyPI).
 *   **Advanced Features:** Explore optional enhancements like long-term memory, dynamic tool discovery, etc. (See `PLAN.md` section on "Future Enhancements").

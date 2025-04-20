@@ -135,6 +135,12 @@ Activate the virtual environment first: `source .venv/bin/activate`
     ```
     (Type `quit` or `exit` to leave the chat)
 
+    **Special Commands in Chat Mode:**
+    - `/help` - Show available commands
+    - `/clear` - Clear the conversation history
+    - `/exit` or `/quit` - Exit the chat session
+    - `/test` - Special command used for automated testing
+
 **Configuration Management:**
 
 *   **Show current config:**
