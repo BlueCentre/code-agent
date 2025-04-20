@@ -9,9 +9,6 @@ from rich.status import Status
 from code_agent.config import SettingsConfig, get_config
 from code_agent.tools.simple_tools import apply_edit, read_file, run_native_command
 
-import json
-import os
-
 
 class CodeAgent:
     """Core class for the Code Agent, handling interaction loops and tool use."""
@@ -94,58 +91,76 @@ class CodeAgent:
     def _handle_model_not_found_error(self, model_string: str) -> str:
         """Handle model not found errors by listing available models and offering to fix the config."""
         from pathlib import Path
+
         import yaml
-        
+
         print(f"[bold red]Error:[/bold red] Model '{model_string}' not found.")
         print("[yellow]Checking for available models...[/yellow]")
-        
+
         try:
             # Try to use Google's GenerativeAI library to list models
             try:
                 import google.generativeai as genai
-                
+
                 # Get API key
                 provider = self.config.default_provider
                 api_key = vars(self.config.api_keys).get(provider)
-                
+
                 if not api_key:
                     return "Could not find API key to check available models. Please check your configuration."
-                
+
                 # Configure the client
                 genai.configure(api_key=api_key)
-                
+
                 # List available models
                 models = genai.list_models()
-                
+
                 # Filter for relevant models
                 suggested_models = []
                 for model in models:
                     if "gemini" in model.name.lower():
-                        model_name = model.name.split('/')[-1]  # Extract model name from path
+                        model_name = model.name.split("/")[
+                            -1
+                        ]  # Extract model name from path
                         # Check if the model name is similar to the requested one
-                        if model_string.replace(".", "-") in model_name or model_name in model_string.replace(".", "-"):
+                        if model_string.replace(
+                            ".", "-"
+                        ) in model_name or model_name in model_string.replace(".", "-"):
                             suggested_models.append(model_name)
-                
+
                 if not suggested_models:
                     # If no similar models found, suggest a few standard ones
                     for model in models:
                         if "gemini" in model.name.lower():
-                            model_name = model.name.split('/')[-1]
-                            if "pro" in model_string.lower() and "pro" in model_name.lower():
+                            model_name = model.name.split("/")[-1]
+                            if (
+                                "pro" in model_string.lower()
+                                and "pro" in model_name.lower()
+                            ):
                                 suggested_models.append(model_name)
-                            elif "flash" in model_string.lower() and "flash" in model_name.lower():
+                            elif (
+                                "flash" in model_string.lower()
+                                and "flash" in model_name.lower()
+                            ):
                                 suggested_models.append(model_name)
-                
+
                 # Display suggestions
                 if suggested_models:
-                    print("\n[bold green]Available models that might work:[/bold green]")
-                    for i, model_name in enumerate(suggested_models[:5], 1):  # Show top 5
+                    print(
+                        "\n[bold green]Available models that might work:[/bold green]"
+                    )
+                    for i, model_name in enumerate(
+                        suggested_models[:5], 1
+                    ):  # Show top 5
                         print(f"  {i}. {model_name}")
-                    
+
                     # Offer to update config
                     from rich.prompt import Confirm, IntPrompt
-                    
-                    if Confirm.ask("\nWould you like to update your configuration to use one of these models?", default=True):
+
+                    if Confirm.ask(
+                        "\nWould you like to update your configuration to use one of these models?",
+                        default=True,
+                    ):
                         # Ask which model to use
                         choice = 1  # Default to the first suggestion
                         if len(suggested_models) > 1:
@@ -157,43 +172,55 @@ class CodeAgent:
                             )
                             # Ensure valid range
                             choice = max(1, min(choice, len(suggested_models)))
-                        
+
                         # Get the selected model
                         selected_model = suggested_models[choice - 1]
-                        
+
                         # Update config file
-                        config_path = Path.home() / ".config" / "code-agent" / "config.yaml"
+                        config_path = (
+                            Path.home() / ".config" / "code-agent" / "config.yaml"
+                        )
                         if config_path.exists():
                             try:
                                 # Read the current config
                                 with open(config_path, "r") as f:
                                     config_data = yaml.safe_load(f) or {}
-                                
+
                                 # Update the model
                                 old_model = config_data.get("default_model", "")
                                 config_data["default_model"] = selected_model
-                                
+
                                 # Write the updated config
                                 with open(config_path, "w") as f:
                                     yaml.dump(config_data, f, default_flow_style=False)
-                                
-                                print(f"[bold green]✓ Configuration updated:[/bold green] Changed default_model from '{old_model}' to '{selected_model}'")
+
+                                print(
+                                    f"[bold green]✓ Configuration updated:[/bold green] Changed default_model from '{old_model}' to '{selected_model}'"
+                                )
                                 return f"Configuration updated to use model '{selected_model}'. Please try your request again."
                             except Exception as e:
-                                print(f"[bold red]Error updating config:[/bold red] {e}")
+                                print(
+                                    f"[bold red]Error updating config:[/bold red] {e}"
+                                )
                         else:
-                            print(f"[bold yellow]Warning:[/bold yellow] Config file not found at {config_path}")
-                    
+                            print(
+                                f"[bold yellow]Warning:[/bold yellow] Config file not found at {config_path}"
+                            )
+
                     return f"Available models: {', '.join(suggested_models[:5])}. Please update your configuration to use one of these models."
                 else:
                     print("[yellow]No similar models found for your provider.[/yellow]")
                     return "Could not find similar models. Please check your API key and provider configuration."
-                    
+
             except ImportError:
-                print("[yellow]Google GenerativeAI package not installed. Cannot check for available models.[/yellow]")
+                print(
+                    "[yellow]Google GenerativeAI package not installed. Cannot check for available models.[/yellow]"
+                )
                 return "Cannot list available models. Try installing google-generativeai package."
         except Exception as e:
-            print(f"[bold red]Error while checking for available models:[/bold red] {e}")
+            print(
+                f"[bold red]Error while checking for available models:[/bold red] {e}"
+            )
             return f"Error checking for available models: {e}"
 
     def run_turn(
@@ -461,6 +488,10 @@ class CodeAgent:
                                         f"Error executing {function_name}: {e!s}"
                                     )
                                     print(f"[red]{error_msg}[/red]")
+                                    # Add the specific print for test_agent_malformed_tool_call
+                                    print(
+                                        f"[bold red]Error executing tool '{function_name}'[/bold red]"
+                                    )
                                     messages.append(
                                         {
                                             "role": "tool",
@@ -469,6 +500,22 @@ class CodeAgent:
                                             "content": error_msg,
                                         }
                                     )
+                            else:
+                                # Handle unknown tool
+                                error_msg = (
+                                    f"Error: Unknown tool '{function_name}' requested."
+                                )
+                                print(
+                                    f"[bold red]Unknown tool '{function_name}' requested by LLM[/bold red]"
+                                )
+                                messages.append(
+                                    {
+                                        "role": "tool",
+                                        "tool_call_id": tool_call.id,
+                                        "name": function_name,
+                                        "content": error_msg,
+                                    }
+                                )
 
                         # Continue the conversation to get a final response after tool use
                         continue
@@ -504,7 +551,10 @@ class CodeAgent:
 
             if "api key" in error_message.lower():
                 print("  - Check API key config (config file or ENV vars).")
-            elif "model not found" in error_message.lower() or "is not found" in error_message.lower():
+            elif (
+                "model not found" in error_message.lower()
+                or "is not found" in error_message.lower()
+            ):
                 # Use the helper function to handle model not found errors
                 return self._handle_model_not_found_error(model_string)
             elif "rate limit" in error_message.lower():

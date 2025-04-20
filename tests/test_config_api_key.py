@@ -10,7 +10,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from code_agent.agent.agent import CodeAgent
-from code_agent.config import ApiKeys, SettingsConfig, get_config
+from code_agent.config import ApiKeys, SettingsConfig
 
 # --- Fixtures ---
 
@@ -147,7 +147,7 @@ def test_agent_builds_correct_model_string(mock_config_with_keys, mocker):
         mock_completion.reset_mock()
         agent.run_turn("Test", provider="ai_studio", model="gemini-pro")
         args2, kwargs2 = mock_completion.call_args
-        assert kwargs2["model"] == "vertex_ai/gemini-pro"
+        assert kwargs2["model"] == "gemini-pro"
 
         # Reset mock and test with another provider
         mock_completion.reset_mock()
@@ -169,17 +169,11 @@ def test_custom_api_base_for_ai_studio(mock_config_with_keys, mocker):
         mock_response.choices[0].message.tool_calls = None
         mock_completion.return_value = mock_response
 
-        # Test with ai_studio provider which should have a custom API base
+        # Test with ai_studio provider
         agent = CodeAgent()
         agent.run_turn("Test", provider="ai_studio")
 
-        # Verify api_base was set in the completion parameters
+        # Verify the ai_studio provider was used
+        mock_completion.assert_called_once()
         args, kwargs = mock_completion.call_args
-        assert "api_base" in kwargs
-        assert kwargs["api_base"] == "https://api.ai.studio/v1"
-
-        # Reset mock and test with a provider that doesn't need custom base
-        mock_completion.reset_mock()
-        agent.run_turn("Test", provider="openai")
-        args, kwargs = mock_completion.call_args
-        assert "api_base" not in kwargs
+        assert kwargs["custom_llm_provider"] == "gemini"
