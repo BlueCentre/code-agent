@@ -7,21 +7,21 @@ This document provides a high-level overview of the Code Agent system architectu
 This diagram shows the Code Agent system in relation to its users and the external systems it interacts with.
 
 ```mermaid
-C4Context
-    title System Context diagram for Code Agent CLI
+flowchart TD
+    title["System Context diagram for Code Agent CLI"]
 
-    Person(user, "Developer", "Uses the CLI agent for code assistance, file operations, command execution, etc.")
+    user["Developer<br>Uses the CLI agent for code assistance, file operations, command execution, etc."]
 
-    System_Ext(llm_providers, "LLM Providers", "e.g., OpenAI, Groq, Anthropic, Ollama (via LiteLLM)")
-    System_Ext(file_system, "Local File System", "Reads and writes files based on user prompts and confirmation.")
-    System_Ext(terminal, "Terminal Shell", "Executes native commands based on user prompts and confirmation.")
+    llm_providers["LLM Providers<br>e.g., OpenAI, Groq, Anthropic, Ollama (via LiteLLM)"]
+    file_system["Local File System<br>Reads and writes files based on user prompts and confirmation."]
+    terminal["Terminal Shell<br>Executes native commands based on user prompts and confirmation."]
 
-    System(code_agent_system, "Code Agent CLI", "Provides AI assistance and local interaction capabilities in the terminal.")
+    code_agent_system["Code Agent CLI<br>Provides AI assistance and local interaction capabilities in the terminal."]
 
-    Rel(user, code_agent_system, "Uses")
-    Rel(code_agent_system, llm_providers, "Gets completions from", "HTTPS/API")
-    Rel(code_agent_system, file_system, "Reads/Writes", "File I/O")
-    Rel(code_agent_system, terminal, "Executes commands in", "subprocess")
+    user --> |"Uses"| code_agent_system
+    code_agent_system --> |"Gets completions from<br>HTTPS/API"| llm_providers
+    code_agent_system --> |"Reads/Writes<br>File I/O"| file_system
+    code_agent_system --> |"Executes commands in<br>subprocess"| terminal
 ```
 
 ## Level 2: Container Diagram
@@ -29,36 +29,35 @@ C4Context
 This diagram decomposes the Code Agent system into its key deployable/runnable components (containers in the C4 sense).
 
 ```mermaid
-C4Container
-    title Container diagram for Code Agent CLI
+flowchart TD
+    title["Container diagram for Code Agent CLI"]
 
-    Person(user, "Developer", "Uses the CLI via terminal.")
-    System_Ext(llm_providers, "LLM Providers", "Handles language model requests.")
-    System_Ext(file_system, "Local File System", "Stores files and configuration.")
-    System_Ext(terminal, "Terminal Shell", "Runs native commands.")
+    user["Developer<br>Uses the CLI via terminal."]
+    llm_providers["LLM Providers<br>Handles language model requests."]
+    file_system["Local File System<br>Stores files and configuration."]
+    terminal["Terminal Shell<br>Runs native commands."]
 
-    System_Boundary(cli_boundary, "Code Agent System") {
-        Container(cli_app, "CLI Application", "Python (Typer)", "Handles user commands, arguments, input/output, history.")
-        Container(agent_core, "Agent Core", "Python (ADK)", "Orchestrates LLM calls, tool definitions, and tool execution logic.")
-        Container(config_loader, "Config Loader", "Python (PyYAML, Pydantic)", "Loads and validates configuration from file/env.")
-        Container(tool_executor, "Tool Executor", "Python (Functions)", "Contains implementations for file I/O and native command execution.")
-        ContainerDb(history_store, "History Store", "JSON Files", "Stores chat session history on the local file system.")
-    }
+    subgraph cli_boundary["Code Agent System"]
+        cli_app["CLI Application<br>Python (Typer)<br>Handles user commands, arguments, input/output, history."]
+        agent_core["Agent Core<br>Python (ADK)<br>Orchestrates LLM calls, tool definitions, and tool execution logic."]
+        config_loader["Config Loader<br>Python (PyYAML, Pydantic)<br>Loads and validates configuration from file/env."]
+        tool_executor["Tool Executor<br>Python (Functions)<br>Contains implementations for file I/O and native command execution."]
+        history_store[(History Store<br>JSON Files<br>Stores chat session history on the local file system.)]
+    end
 
-    Rel(user, cli_app, "Interacts with", "CLI (stdin/stdout)")
+    user --> |"Interacts with<br>CLI (stdin/stdout)"| cli_app
 
-    Rel(cli_app, agent_core, "Invokes agent turn with prompt/history", "Python API")
-    Rel(cli_app, config_loader, "Gets config for overrides (future)")
-    Rel(cli_app, history_store, "Saves/Loads History")
+    cli_app --> |"Invokes agent turn with prompt/history<br>Python API"| agent_core
+    cli_app --> |"Gets config for overrides (future)"| config_loader
+    cli_app --> |"Saves/Loads History"| history_store
 
-    Rel(agent_core, config_loader, "Gets config for agent behavior, tools, rules")
-    Rel(agent_core, llm_providers, "Sends requests via ADK/LiteLLM", "HTTPS/API")
-    Rel(agent_core, tool_executor, "Delegates tool execution based on LLM response", "Python API")
+    agent_core --> |"Gets config for agent behavior, tools, rules"| config_loader
+    agent_core --> |"Sends requests via ADK/LiteLLM<br>HTTPS/API"| llm_providers
+    agent_core --> |"Delegates tool execution based on LLM response<br>Python API"| tool_executor
 
-    Rel(tool_executor, config_loader, "Gets config for tool behavior (e.g., allowlist)")
-    Rel(tool_executor, file_system, "Reads/Writes files (apply_edit, read_file)")
-    Rel(tool_executor, terminal, "Executes commands (run_native_command)")
-
+    tool_executor --> |"Gets config for tool behavior (e.g., allowlist)"| config_loader
+    tool_executor --> |"Reads/Writes files (apply_edit, read_file)"| file_system
+    tool_executor --> |"Executes commands (run_native_command)"| terminal
 ```
 
 *Note: ADK itself handles some internal communication with LLM providers and potentially tool execution flow, which isn't fully detailed at this container level.*
@@ -68,26 +67,25 @@ C4Container
 This diagram provides a glimpse into the components within the `Agent Core` container.
 
 ```mermaid
-C4Component
-    title Component diagram for Agent Core
+flowchart TD
+    title["Component diagram for Agent Core"]
 
-    Container(cli_app, "CLI Application")
-    System_Ext(llm_providers, "LLM Providers")
-    Container(tool_executor, "Tool Executor")
-    Container(config_loader, "Config Loader")
+    cli_app["CLI Application"]
+    llm_providers["LLM Providers"]
+    tool_executor["Tool Executor"]
+    config_loader["Config Loader"]
 
-    Container_Boundary(agent_boundary, "Agent Core") {
-        Component(agent_runner, "Agent Runner", "agent.py", "Initializes ADK agent, passes history/prompt, invokes run.")
-        Component(adk_agent, "ADK Agent", "google.adk.agents.Agent", "Manages interaction cycle, LLM calls, tool dispatch.")
-        Component(adk_runtime, "ADK Runtime", "google.adk.runtime.phidata_runtime", "Executes the agent run cycle, handling async/sync logic.")
+    subgraph agent_boundary["Agent Core"]
+        agent_runner["Agent Runner<br>agent.py<br>Initializes ADK agent, passes history/prompt, invokes run."]
+        adk_agent["ADK Agent<br>google.adk.agents.Agent<br>Manages interaction cycle, LLM calls, tool dispatch."]
+        adk_runtime["ADK Runtime<br>google.adk.runtime.phidata_runtime<br>Executes the agent run cycle, handling async/sync logic."]
 
-        Rel(agent_runner, adk_runtime, "Uses to run agent")
-        Rel(agent_runner, config_loader, "Gets config for initialization")
-        Rel(adk_runtime, adk_agent, "Executes")
-        Rel(adk_agent, llm_providers, "Sends API requests")
-        Rel(adk_agent, tool_executor, "Requests tool execution") # ADK decides when to call tools
-    }
+        agent_runner --> |"Uses to run agent"| adk_runtime
+        agent_runner --> |"Gets config for initialization"| config_loader
+        adk_runtime --> |"Executes"| adk_agent
+        adk_agent --> |"Sends API requests"| llm_providers
+        adk_agent --> |"Requests tool execution"| tool_executor
+    end
 
-    Rel(cli_app, agent_runner, "Invokes run_agent_turn")
-
+    cli_app --> |"Invokes run_agent_turn"| agent_runner
 ``` 
