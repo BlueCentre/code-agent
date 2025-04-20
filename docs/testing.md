@@ -122,3 +122,83 @@ For more robust testing, consider implementing:
 2. Expanded chat mode testing with multi-turn interactions
 3. Edge case testing with invalid models and providers
 4. Performance benchmarking between different models
+
+## Advanced Use Case Tests
+
+These complex scenarios test multiple capabilities together and reflect real-world usage patterns.
+
+### 10. Code Analysis and Explanation
+
+```bash
+code-agent run "Analyze the code_agent/agent/agent.py file and explain what the CodeAgent class does, including its main methods and how it uses tools"
+```
+
+**Purpose**: Test the agent's ability to analyze more complex code structures, understand class relationships, and provide clear explanations.
+
+**Expected Result**: The agent should read the file, identify the key components of the CodeAgent class, explain the tool-calling mechanism, and provide a comprehensive overview of how the agent framework functions.
+
+### 11. Multi-Step File Operation
+
+```bash
+code-agent chat
+# Enter the following prompts:
+# 1. "Find Python files in the code_agent directory that import the 'rich' library"
+# 2. "For the files you found, identify which 'rich' components each file is using"
+# 3. "Create a summary report of rich library usage in our codebase and save it as docs/rich_usage.md"
+# 4. "/exit"
+```
+
+**Purpose**: Test sequential reasoning, memory of previous responses, and file creation.
+
+**Expected Result**: The agent should maintain context across multiple turns, execute searches for imports, analyze component usage patterns, and generate a structured markdown document with its findings.
+
+### 12. Code Refactoring Suggestion
+
+```bash
+code-agent run "Analyze our error handling in code_agent/tools/*.py files and suggest a consistent approach to improve error handling. Include a specific code example of how we could refactor one of the error handling sections."
+```
+
+**Purpose**: Test code analysis across multiple files, pattern recognition, and ability to generate improvement suggestions with concrete examples.
+
+**Expected Result**: The agent should identify current error handling patterns across the tool files, recognize inconsistencies or areas for improvement, and provide a specific refactoring example with code.
+
+### 13. Command Chain with Dynamic Inputs
+
+```bash
+code-agent run "Find all TODO comments in our codebase, create a prioritized list based on their context, and save it as docs/todo_priorities.md"
+```
+
+**Purpose**: Test the agent's ability to chain commands where the output of one operation feeds into another, requiring synthesis and reorganization of information.
+
+**Expected Result**: The agent should execute a grep-like search for TODOs, analyze the context of each to determine priority, organize them into a meaningful structure, and create a new markdown file.
+
+### 14. Configuration File Analysis and Modification
+
+```bash
+code-agent run "Analyze our config.yaml template and suggest two additional configuration options that would be useful based on how the codebase uses configuration. Then show me how you would modify the template to include these options."
+```
+
+**Purpose**: Test deep understanding of the configuration system, including how values are used throughout the codebase, and the ability to make meaningful extensions.
+
+**Expected Result**: The agent should analyze the configuration template, trace how configuration values are used in the codebase, suggest relevant additions, and demonstrate the YAML modifications needed.
+
+### 15. Interactive Documentation Generation
+
+```bash
+# Set auto_approve_edits to true for this test
+code-agent run "Create a comprehensive user guide for the 'code-agent config' command and all its subcommands. Include examples for each subcommand. Save it as docs/config_command_guide.md."
+```
+
+**Purpose**: Test the ability to gather information from multiple sources, synthesize documentation, and create a structured user guide.
+
+**Expected Result**: The agent should identify all config subcommands, extract their functionality from the code, generate appropriate examples, and create a well-formatted markdown file.
+
+### 16. Complex Error Simulation and Debugging
+
+```bash
+code-agent run "If I get the error 'Error during agent execution (AuthenticationError): Invalid API key', walk me through all the possible causes and debugging steps I should take to fix it."
+```
+
+**Purpose**: Test the agent's troubleshooting capabilities and knowledge of the system's error handling mechanisms.
+
+**Expected Result**: The agent should provide a comprehensive troubleshooting guide that covers various authentication scenarios, configuration locations, environment variables, and validation steps.
