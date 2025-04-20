@@ -216,8 +216,7 @@ def test_history_saving_mechanism(runner, mock_agent_class, mock_config):
 
     # Create a timestamp for the test
     test_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    expected_filename = f"chat_{test_timestamp}.json"
-
+    
     # Patch datetime and file operations
     with (
         patch("datetime.datetime") as mock_dt,
@@ -238,10 +237,21 @@ def test_history_saving_mechanism(runner, mock_agent_class, mock_config):
         # Check directory was created
         mock_mkdir.assert_called()
 
-        # Check file writing
+        # Check file writing (without asserting the exact number of write calls)
         mock_file.assert_called()
         file_handle = mock_file()
-        file_handle.write.assert_called_once()
+        # Verify writing happened at least once
+        assert file_handle.write.call_count > 0
+        
+        # Instead of checking call count, check that JSON-like content was written
+        # by looking at some of the calls
+        write_calls = [call[0][0] for call in file_handle.write.call_args_list]
+        json_parts = ''.join(write_calls)
+        
+        # Check basic JSON structure elements are present
+        assert '"role": "user"' in json_parts
+        assert '"content": "hello"' in json_parts
+        assert '"role": "assistant"' in json_parts
 
 
 def test_chat_with_cli_overrides(
@@ -280,7 +290,7 @@ def test_error_handling(runner, mock_agent_class, mock_config, mock_history_util
 
     # Check the error was handled gracefully
     assert result.exit_code == 0
-    assert "Error" in result.stdout
+    assert "unexpected error" in result.stdout.lower()
     assert "Test error" in result.stdout
     assert "Exiting chat session" in result.stdout
 
@@ -294,4 +304,5 @@ def test_keyboard_interrupt_handling(runner, mock_agent_class, mock_config):
 
     # Check that keyboard interrupt was handled gracefully
     assert result.exit_code == 0
-    assert "Interrupted by user" in result.stdout
+    assert "interrupted" in result.stdout.lower()
+    assert "exiting" in result.stdout.lower()

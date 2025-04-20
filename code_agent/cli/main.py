@@ -4,9 +4,9 @@ from typing import Dict, List, Optional
 
 import typer
 from rich import print  # Use rich print for better formatting
+from rich.console import Console  # Import Console for rich formatting
 from rich.markdown import Markdown  # Import Markdown renderer
 from rich.prompt import Prompt  # Use rich Prompt for better input
-from rich.console import Console  # Import Console for rich formatting
 from typing_extensions import Annotated
 
 from code_agent import __version__ as agent_version  # Updated import
@@ -82,12 +82,13 @@ def main(
     initialize_config(
         cli_provider=provider,
         cli_model=model,
-        cli_auto_approve_edits=auto_approve_edits,  # Pass CLI flag value
-        cli_auto_approve_native_commands=auto_approve_native_commands,  # Pass CLI flag value
+        cli_auto_approve_edits=auto_approve_edits,
+        cli_auto_approve_native_commands=auto_approve_native_commands,
     )
 
     # Store CLI options in state for potential direct use (optional)
-    # state.provider = provider # These might not be needed if get_config() is always used
+    # state.provider = provider
+    # These might not be needed if get_config() is always used
     # state.model = model
 
 
@@ -186,9 +187,8 @@ def chat():
     loaded_history = load_latest_history()
     if loaded_history:
         code_agent.history = loaded_history
-        print(
-            f"[grey50]Loaded {len(loaded_history)} messages from previous session.[/grey50]"
-        )
+        msg_count = len(loaded_history)
+        print(f"[grey50]Loaded {msg_count} messages from previous session.[/grey50]")
     else:
         print("[grey50]Starting new chat session.[/grey50]")
 
@@ -311,7 +311,8 @@ def config_reset():
     # Create default config file from template
     create_default_config_file(DEFAULT_CONFIG_PATH)
     print(
-        f"[bold green]Configuration reset to defaults at {DEFAULT_CONFIG_PATH}[/bold green]"
+        f"[bold green]Configuration reset to defaults at "
+        f"{DEFAULT_CONFIG_PATH}[/bold green]"
     )
     print(
         "Edit this file to add your API keys or set appropriate environment variables."
@@ -338,7 +339,8 @@ def config_aistudio():
         )
     else:
         console.print(
-            f"❌ AI Studio is [yellow]NOT[/yellow] the default provider (currently using: [bold]{config.default_provider}[/bold])."
+            f"❌ AI Studio is [yellow]NOT[/yellow] the default provider "
+            f"(currently using: [bold]{config.default_provider}[/bold])."
         )
 
     if api_key:
@@ -384,13 +386,16 @@ def config_aistudio():
     console.print("\n# Specify a different AI Studio model")
     console.print('code-agent --model gemini-1.5-pro run "Explain quantum computing"')
 
+    # Add usage examples for AI Studio
     console.print("\n# Switch to a different provider")
     console.print(
-        'code-agent --provider openai --model gpt-4o run "Compare Python and JavaScript"'
+        "code-agent --provider openai --model gpt-4o run "
+        '"Compare Python and JavaScript"'
     )
 
+    # Show documentation links for AI Studio
     console.print(
-        "\n[italic]For more information, see https://ai.google.dev/docs[/italic]"
+        "\n[italic]For more information, see " "https://ai.google.dev/docs[/italic]"
     )
 
 
@@ -414,20 +419,20 @@ def config_openai():
         )
     else:
         console.print(
-            f"❌ OpenAI is [yellow]NOT[/yellow] the default provider (currently using: [bold]{config.default_provider}[/bold])."
+            f"❌ OpenAI is [yellow]NOT[/yellow] the default provider "
+            f"(currently using: [bold]{config.default_provider}[/bold])."
         )
 
     if api_key:
         console.print("✅ OpenAI API key is [bold green]configured[/bold green].")
     else:
-        console.print(
-            "❌ No OpenAI API key [red]found[/red] in config or environment."
-        )
+        console.print("❌ No OpenAI API key [red]found[/red] in config or environment.")
 
     # Setup instructions
     console.print("\n[bold]Setup Instructions:[/bold]")
     console.print(
-        "1. Visit [link]https://platform.openai.com/api-keys[/link] to access OpenAI API keys"
+        "1. Visit [link]https://platform.openai.com/api-keys[/link] "
+        "to access OpenAI API keys"
     )
     console.print("2. Create an account or sign in")
     console.print("3. Create a new API key with appropriate permissions")
@@ -458,17 +463,30 @@ def config_openai():
     # Usage examples
     console.print("\n[bold]Usage Examples:[/bold]")
     console.print("# Use OpenAI as provider")
-    console.print('code-agent --provider openai run "What\'s the current Python version?"')
+    console.print(
+        "code-agent --provider openai run " '"What\'s the current Python version?"'
+    )
 
     console.print("\n# Specify an OpenAI model")
-    console.print('code-agent --provider openai --model gpt-4o run "Explain quantum computing"')
+    console.print(
+        "code-agent --provider openai --model gpt-4o run " '"Explain quantum computing"'
+    )
 
     console.print("\n# Set OpenAI as default provider in config.yaml:")
-    console.print("default_provider: \"openai\"")
-    console.print("default_model: \"gpt-4o\"")
+    console.print('default_provider: "openai"')
+    console.print('default_model: "gpt-4o"')
 
+    # Usage examples for other providers
+    console.print("\n# Switch to a different provider")
     console.print(
-        "\n[italic]For more information, see https://platform.openai.com/docs/api-reference[/italic]"
+        "code-agent --provider openai --model gpt-4o run "
+        '"Compare Python and JavaScript"'
+    )
+
+    # Documentation links
+    console.print(
+        "\n[italic]For more information, see "
+        "https://platform.openai.com/docs/api-reference[/italic]"
     )
 
 
@@ -492,15 +510,14 @@ def config_groq():
         )
     else:
         console.print(
-            f"❌ Groq is [yellow]NOT[/yellow] the default provider (currently using: [bold]{config.default_provider}[/bold])."
+            f"❌ Groq is [yellow]NOT[/yellow] the default provider "
+            f"(currently using: [bold]{config.default_provider}[/bold])."
         )
 
     if api_key:
         console.print("✅ Groq API key is [bold green]configured[/bold green].")
     else:
-        console.print(
-            "❌ No Groq API key [red]found[/red] in config or environment."
-        )
+        console.print("❌ No Groq API key [red]found[/red] in config or environment.")
 
     # Setup instructions
     console.print("\n[bold]Setup Instructions:[/bold]")
@@ -539,17 +556,25 @@ def config_groq():
     # Usage examples
     console.print("\n[bold]Usage Examples:[/bold]")
     console.print("# Use Groq as provider")
-    console.print('code-agent --provider groq run "What\'s the current Python version?"')
+    console.print(
+        'code-agent --provider groq run "What\'s the current Python version?"'
+    )
 
+    # Show examples for Groq
     console.print("\n# Specify a Groq model")
-    console.print('code-agent --provider groq --model llama3-70b-8192 run "Explain quantum computing"')
+    console.print(
+        "code-agent --provider groq --model llama3-70b-8192 run "
+        '"Explain quantum computing"'
+    )
 
     console.print("\n# Set Groq as default provider in config.yaml:")
-    console.print("default_provider: \"groq\"")
-    console.print("default_model: \"llama3-70b-8192\"")
+    console.print('default_provider: "groq"')
+    console.print('default_model: "llama3-70b-8192"')
 
+    # Show documentation links
     console.print(
-        "\n[italic]For more information, see https://console.groq.com/docs/quickstart[/italic]"
+        "\n[italic]For more information, see "
+        "https://console.groq.com/docs/quickstart[/italic]"
     )
 
 
@@ -573,7 +598,8 @@ def config_anthropic():
         )
     else:
         console.print(
-            f"❌ Anthropic is [yellow]NOT[/yellow] the default provider (currently using: [bold]{config.default_provider}[/bold])."
+            f"❌ Anthropic is [yellow]NOT[/yellow] the default provider "
+            f"(currently using: [bold]{config.default_provider}[/bold])."
         )
 
     if api_key:
@@ -586,7 +612,8 @@ def config_anthropic():
     # Setup instructions
     console.print("\n[bold]Setup Instructions:[/bold]")
     console.print(
-        "1. Visit [link]https://console.anthropic.com/[/link] to access Anthropic's console"
+        "1. Visit [link]https://console.anthropic.com/[/link] "
+        "to access Anthropic's console"
     )
     console.print("2. Create an account or sign in")
     console.print("3. Navigate to the API keys section and create a new key")
@@ -604,33 +631,33 @@ def config_anthropic():
 
     # Available models
     console.print("\n[bold]Available Models:[/bold]")
-    console.print(
-        "- [bold]claude-3-5-sonnet[/bold]: Latest, most capable model"
-    )
-    console.print(
-        "- [bold]claude-3-opus[/bold]: Most powerful model for complex tasks"
-    )
-    console.print(
-        "- [bold]claude-3-sonnet[/bold]: Balanced performance and speed"
-    )
-    console.print(
-        "- [bold]claude-3-haiku[/bold]: Fastest, most efficient model"
-    )
+    console.print("- [bold]claude-3-5-sonnet[/bold]: Latest, most capable model")
+    console.print("- [bold]claude-3-opus[/bold]: Most powerful model for complex tasks")
+    console.print("- [bold]claude-3-sonnet[/bold]: Balanced performance and speed")
+    console.print("- [bold]claude-3-haiku[/bold]: Fastest, most efficient model")
 
     # Usage examples
     console.print("\n[bold]Usage Examples:[/bold]")
     console.print("# Use Anthropic as provider")
-    console.print('code-agent --provider anthropic run "What\'s the current Python version?"')
+    console.print(
+        'code-agent --provider anthropic run "What\'s the current Python version?"'
+    )
 
+    # Show examples for Anthropic
     console.print("\n# Specify an Anthropic model")
-    console.print('code-agent --provider anthropic --model claude-3-sonnet run "Explain quantum computing"')
+    console.print(
+        "code-agent --provider anthropic --model claude-3-sonnet run "
+        '"Explain quantum computing"'
+    )
 
     console.print("\n# Set Anthropic as default provider in config.yaml:")
-    console.print("default_provider: \"anthropic\"")
-    console.print("default_model: \"claude-3-sonnet\"")
+    console.print('default_provider: "anthropic"')
+    console.print('default_model: "claude-3-sonnet"')
 
+    # Show documentation links for Anthropic
     console.print(
-        "\n[italic]For more information, see https://docs.anthropic.com/claude/reference/getting-started-with-the-api[/italic]"
+        "\n[italic]For more information, see "
+        "https://docs.anthropic.com/claude/reference/getting-started-with-the-api[/italic]"
     )
 
 
@@ -646,10 +673,10 @@ def providers_list():
     """
     config = get_config()
     console = Console()
-    
+
     console.print("[bold cyan]Configured LLM Providers:[/bold cyan]")
     console.print("=" * 50)
-    
+
     # Define provider details
     providers = {
         "ai_studio": {
@@ -680,58 +707,78 @@ def providers_list():
             "name": "Anthropic",
             "style": "cyan",
             "config_cmd": "code-agent config anthropic",
-            "models": ["claude-3-5-sonnet", "claude-3-opus", "claude-3-sonnet", "claude-3-haiku"],
+            "models": [
+                "claude-3-5-sonnet",
+                "claude-3-opus",
+                "claude-3-sonnet",
+                "claude-3-haiku",
+            ],
             "key_prefix": "sk-ant-",
             "env_var": "ANTHROPIC_API_KEY",
         },
     }
-    
+
     found_configured = False
-    
+
     # Current default indicator
-    console.print(f"[bold]Current Default:[/bold] {config.default_provider} / {config.default_model}")
+    console.print(
+        f"[bold]Current Default:[/bold] "
+        f"{config.default_provider} / {config.default_model}"
+    )
     console.print()
-    
+
     # List all providers with their status
     console.print("[bold]Available Providers:[/bold]")
     for provider_id, details in providers.items():
         api_key = config.api_keys.model_dump().get(provider_id)
         name = details["name"]
         style = details["style"]
-        
+
         if api_key:
-            status = f"[bold green]✓ Configured[/bold green]"
+            status = "[bold green]✓ Configured[/bold green]"
             found_configured = True
         else:
-            status = f"[yellow]✗ Not configured[/yellow]"
-        
+            status = "[yellow]✗ Not configured[/yellow]"
+
         # Is this the default?
         default_marker = ""
         if provider_id == config.default_provider:
             default_marker = " [bold green](DEFAULT)[/bold green]"
-            
+
         console.print(f"[bold {style}]{name}[/bold {style}]: {status}{default_marker}")
-        
+
         # Show configuration command
         console.print(f"  Setup command: [dim]{details['config_cmd']}[/dim]")
-        
+
         # Show example model if it's configured
         if api_key and details["models"]:
             example_model = details["models"][0]
-            console.print(f"  Example: [dim]code-agent --provider {provider_id} --model {example_model} run \"...\"[/dim]")
-        
+            cmd_example = (
+                f"code-agent --provider {provider_id} "
+                f'--model {example_model} run "..."'
+            )
+            console.print(f"  Example: [dim]{cmd_example}[/dim]")
+
         console.print()
-    
+
     if not found_configured:
-        console.print("\n[bold yellow]No providers found with configured API keys.[/bold yellow]")
+        console.print(
+            "\n[bold yellow]No providers found with configured API keys.[/bold yellow]"
+        )
         console.print("Run one of the following commands to set up a provider:")
-        for provider_id, details in providers.items():
+        for _, details in providers.items():
             console.print(f"  [dim]{details['config_cmd']}[/dim]")
-    
+
     # Usage tips section
     console.print("\n[bold]Quick Usage Tips:[/bold]")
-    console.print("- Override provider for one command: [dim]--provider <provider> --model <model>[/dim]")
-    console.print("- Set default provider in config: [dim]code-agent config show[/dim] to see current config")
+    console.print(
+        "- Override provider for one command: "
+        "[dim]--provider <provider> --model <model>[/dim]"
+    )
+    console.print(
+        "- Set default provider in config: "
+        "[dim]code-agent config show[/dim] to see current config"
+    )
     console.print("- Reset config to defaults: [dim]code-agent config reset[/dim]")
 
 

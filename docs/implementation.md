@@ -73,10 +73,10 @@ This document outlines the implementation steps taken and the future roadmap.
 
 ## Roadmap / Next Steps
 
-*   **Testing:**
-    *   Improve test coverage, especially for edge cases in tools.
-    *   Implement integration tests for the `chat` command (mocking input/output).
-    *   Test LLM interaction with mocked responses/tool calls.
+*   **Testing:** ⟹ **CURRENT FOCUS**
+    *   [x] Improve test coverage, especially for edge cases in tools.
+    *   [x] Implement integration tests for the `chat` command (mocking input/output).
+    *   [🔄] Test LLM interaction with mocked responses/tool calls.
 *   **Error Handling:** Refine error handling and user feedback for API errors, tool failures, configuration issues, and LLM runtime errors.
 *   **Configuration Hierarchy:** Fully implement the CLI > Env > File hierarchy for all relevant configuration options (e.g., auto-approve flags, rules).
 *   **Provider Support:**
@@ -90,3 +90,9 @@ This document outlines the implementation steps taken and the future roadmap.
 *   **Chat History:** Add option to load specific history files.
 *   **Packaging & Distribution:** Finalize packaging for distribution (e.g., PyPI).
 *   **Advanced Features:** Explore optional enhancements like long-term memory, dynamic tool discovery, etc. (See `PLAN.md` section on "Future Enhancements").
+*   **Code Quality:**
+    *   Fix linting issues (line length, trailing whitespace, etc.)
+    *   Ensure consistent code style across the codebase
+    *   Set up CI/CD pipeline for automated testing and linting
+    *   Add contribution guidelines with code style requirements
+    *   Implement changelog tracking

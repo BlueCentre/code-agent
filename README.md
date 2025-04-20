@@ -178,4 +178,4 @@ Activate the virtual environment first: `source .venv/bin/activate`
 
 ## Development
 
-*(Add notes about running tests, contributing, etc. later)* 
+*(Add notes about running tests, contributing, etc. later)*

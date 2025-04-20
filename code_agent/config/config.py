@@ -49,13 +49,15 @@ def load_config_from_file(config_path: Path = DEFAULT_CONFIG_PATH) -> Dict[str, 
     """Loads configuration purely from a YAML file, returning a dict."""
     # Ensure config directory exists
     config_path.parent.mkdir(parents=True, exist_ok=True)
-    
+
     # If config file doesn't exist, create it from template
     if not config_path.exists():
         create_default_config_file(config_path)
         print(f"Created default configuration file at {config_path}")
-        print("Edit this file to add your API keys or set appropriate environment variables.")
-    
+        print(
+            "Edit this file to add your API keys or set appropriate environment variables."
+        )
+
     try:
         with open(config_path, "r") as f:
             return yaml.safe_load(f) or {}
@@ -85,11 +87,13 @@ def create_default_config_file(config_path: Path) -> None:
                 "native_command_allowlist": [],
                 "rules": [],
             }
-            
+
             with open(config_path, "w") as f:
                 yaml.dump(default_config, f, default_flow_style=False, sort_keys=False)
     except Exception as e:
-        print(f"Warning: Could not create default config file at {config_path}. Error: {e}")
+        print(
+            f"Warning: Could not create default config file at {config_path}. Error: {e}"
+        )
 
 
 def build_effective_config(
@@ -106,7 +110,7 @@ def build_effective_config(
 
     # 2. Layer config file settings
     file_config_data = load_config_from_file(config_file_path)
-    
+
     # Simple merge (consider deep merge for nested dicts like api_keys if needed)
     if isinstance(file_config_data.get("api_keys"), dict):
         # Merge api_keys separately to avoid overwriting entire dict
@@ -119,7 +123,9 @@ def build_effective_config(
             file_config_data[list_field] = []
 
     # Update the effective config with file data
-    effective_config_data.update({k: v for k, v in file_config_data.items() if v is not None})
+    effective_config_data.update(
+        {k: v for k, v in file_config_data.items() if v is not None}
+    )
 
     # 3. Layer Environment Variable Overrides (Focus on API keys for now)
     # TODO: Use pydantic-settings for more robust env var handling?
@@ -159,11 +165,17 @@ def build_effective_config(
     # 5. Validate and return the final config object
     try:
         # Ensure list fields are properly initialized
-        if "native_command_allowlist" not in effective_config_data or effective_config_data["native_command_allowlist"] is None:
+        if (
+            "native_command_allowlist" not in effective_config_data
+            or effective_config_data["native_command_allowlist"] is None
+        ):
             effective_config_data["native_command_allowlist"] = []
-        if "rules" not in effective_config_data or effective_config_data["rules"] is None:
+        if (
+            "rules" not in effective_config_data
+            or effective_config_data["rules"] is None
+        ):
             effective_config_data["rules"] = []
-            
+
         final_config = SettingsConfig(**effective_config_data)
         return final_config
     except ValidationError as e:
