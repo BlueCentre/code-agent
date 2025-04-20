@@ -11,7 +11,7 @@ default_provider: "ai_studio"
 # - AI Studio: "gemini-1.5-flash", "gemini-1.5-pro"
 # - OpenAI: "gpt-4o", "gpt-3.5-turbo", etc.
 # - Groq: "llama3-70b-8192", "mixtral-8x7b-32768", etc.
-default_model: "gemini-2.0-flash"
+default_model: "gemini-2.0-flash" # https://ai.google.dev/gemini-api/docs/rate-limits#free-tier
 
 # ===============================
 # API Keys
@@ -21,7 +21,7 @@ default_model: "gemini-2.0-flash"
 api_keys:
   # AI Studio - Get from https://ai.google.dev/
   # Set via AI_STUDIO_API_KEY environment variable (recommended)
-  ai_studio: null  # Or add your key directly: "aip-..."
+  ai_studio: null  # Or add your key directly: "AI..."
 
   # OpenAI - Get from https://platform.openai.com/
   # Set via OPENAI_API_KEY environment variable (recommended)
@@ -52,9 +52,25 @@ auto_approve_native_commands: false
 native_command_allowlist:
   # - "git status"
   # - "ls -la"
-  # - "echo"
-  # - "pwd"
-  # - "cat"
+  - "echo"
+  - "ls"
+  - "pwd"
+  - "cat"
+  - "grep"
+  - "find"
+  - "sed"
+  - "awk"
+  - "cut"
+  - "sort"
+  - "uniq"
+  - "head"
+  - "tail"
+  - "wc"
+  - "xargs"
+  - "tr"
+  - "base64"
+  - "curl"
+  - "wget"
 
 # ===============================
 # Agent Instruction Rules
@@ -62,6 +78,29 @@ native_command_allowlist:
 # Custom rules to influence the agent's behavior
 rules:
   # - "Always provide code examples when explaining concepts."
+  # - "Always explain your reasoning step by step."
   # - "Prefer Python for code examples unless specified otherwise."
   # - "When writing Python code, always include type hints."
-  # - "Always explain your reasoning step by step."
+  - "Be concise and direct"
+  - "Minimize tokens while maintaining quality"
+  - "Avoid introductions, explanations, and phrases like 'Here is...'"
+  - "Follow existing code conventions"
+  - "Read files before editing them"
+  - "Never refer to tool names when communicating"
+  - "Never output tool calls as part of regular messages"
+  - "Use code editing tools instead of outputting code directly in the chat"
+  - "Never output code directly - use edit tools instead"
+  - "Stop tool calls when ready to edit or answer"
+  - "Stop tool calls once a reasonable answer is found"
+  - "Always try to find information using tools before asking the user"
+  - "Be proactive when asked but don't surprise with unexpected actions"
+  - "Use the specified format for code citations"
+  - "Use the specific code citation format ```startLine:endLine:filepath"
+  - "Read larger file sections at once vs. multiple small reads"
+  - "If an edit doesn't apply correctly, try reapplying it"
+  - "Always check with the user before disabling tests to silence errors"
+  - "Always reapply an edit if the first attempt didn't work as expected"
+  - "Always ensure any code generated is runnable (includes imports, dependencies, etc.)"
+  - "Attempt to fix linter errors up to 3 times before asking for help"
+  - "Always run the full test suite after making code changes"
+  - "Never commit using --no-verify to bypass pre-commit hooks"

@@ -76,18 +76,6 @@ code-agent run "Show me the first 10 lines of the README.md file"
 
 **Result**: ✅ Agent successfully read and displayed the beginning of the README.md file.
 
-## Model-Specific Tests
-
-### 8. Alternative Model Test
-
-```bash
-code-agent --model gemini-1.5-flash run "Tell me a short joke about programming"
-```
-
-**Purpose**: Verify the ability to override the default model for a specific query.
-
-**Result**: ✅ Successfully used the specified model instead of the default, generating a programming joke.
-
 ## Chat Mode Tests
 
 ### 9. Basic Chat Interaction
@@ -99,29 +87,6 @@ echo -e "Hello, what is your default model?\n/exit" | code-agent chat
 **Purpose**: Test chat mode functionality with a simple interaction.
 
 **Result**: ✅ Chat session initialized properly, though the response about the default model was generic.
-
-## Test Summary
-
-The end-to-end tests confirm that:
-
-1. Configuration changes were successful across all parts of the system.
-2. Basic functionality works correctly, including:
-   - Text query processing
-   - Command execution with approval
-   - File operations
-3. Model selection and overrides are working properly.
-4. Chat mode functions correctly.
-
-These tests provide confidence that the changes made to update the default model and fix the API key access methods have been implemented correctly and haven't broken any existing functionality.
-
-## Future Test Improvements
-
-For more robust testing, consider implementing:
-
-1. Automated test scripts that can run these end-to-end tests programmatically
-2. Expanded chat mode testing with multi-turn interactions
-3. Edge case testing with invalid models and providers
-4. Performance benchmarking between different models
 
 ## Advanced Use Case Tests
 
@@ -202,3 +167,38 @@ code-agent run "If I get the error 'Error during agent execution (Authentication
 **Purpose**: Test the agent's troubleshooting capabilities and knowledge of the system's error handling mechanisms.
 
 **Expected Result**: The agent should provide a comprehensive troubleshooting guide that covers various authentication scenarios, configuration locations, environment variables, and validation steps.
+
+## Model-Specific Tests
+
+### 8. Alternative Model Test
+
+```bash
+code-agent --model gemini-1.5-flash run "Tell me a short joke about programming"
+```
+
+**Purpose**: Verify the ability to override the default model for a specific query.
+
+**Result**: ✅ Successfully used the specified model instead of the default, generating a programming joke.
+
+## Test Summary
+
+The end-to-end tests confirm that:
+
+1. Configuration changes were successful across all parts of the system.
+2. Basic functionality works correctly, including:
+   - Text query processing
+   - Command execution with approval
+   - File operations
+3. Model selection and overrides are working properly.
+4. Chat mode functions correctly.
+
+These tests provide confidence that the changes made to update the default model and fix the API key access methods have been implemented correctly and haven't broken any existing functionality.
+
+## Future Test Improvements
+
+For more robust testing, consider implementing:
+
+1. Automated test scripts that can run these end-to-end tests programmatically
+2. Expanded chat mode testing with multi-turn interactions
+3. Edge case testing with invalid models and providers
+4. Performance benchmarking between different models
