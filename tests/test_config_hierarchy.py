@@ -6,10 +6,12 @@ import yaml
 from typer.testing import CliRunner
 
 from code_agent.cli.main import app
-from code_agent.config.config import (
+from code_agent.config import (
     ApiKeys,
     SettingsConfig,
     get_config,
+    build_effective_config,
+    initialize_config,
 )
 
 # Default config used in tests
@@ -120,9 +122,9 @@ def test_config_file_only(mock_config_file, reset_config_cache):
     assert config.rules == mock_config_file["rules"]
 
     # API keys should match file
-    assert config.api_keys.openai == mock_config_file["api_keys"]["openai"]
-    assert config.api_keys.groq == mock_config_file["api_keys"]["groq"]
-    assert config.api_keys.anthropic is None  # Not in file
+    assert vars(config.api_keys)["openai"] == mock_config_file["api_keys"]["openai"]
+    assert vars(config.api_keys)["groq"] == mock_config_file["api_keys"]["groq"]
+    assert vars(config.api_keys)["anthropic"] is None  # Not in file
 
 
 def test_config_env_vars_only(mock_env_vars, reset_config_cache):
@@ -138,9 +140,9 @@ def test_config_env_vars_only(mock_env_vars, reset_config_cache):
     assert config.auto_approve_native_commands is False
 
     # API keys should match environment vars
-    assert config.api_keys.openai == "env_openai_key"
-    assert config.api_keys.anthropic == "env_anthropic_key"
-    assert config.api_keys.groq is None  # Not in env
+    assert vars(config.api_keys)["openai"] == "env_openai_key"
+    assert vars(config.api_keys)["anthropic"] == "env_anthropic_key"
+    assert vars(config.api_keys)["groq"] is None  # Not in env
 
 
 def test_config_env_overrides_file(mock_config_file, mock_env_vars, reset_config_cache):
@@ -154,9 +156,9 @@ def test_config_env_overrides_file(mock_config_file, mock_env_vars, reset_config
     assert config.auto_approve_native_commands is False  # From env
 
     # API keys should prefer env values when available
-    assert config.api_keys.openai == "env_openai_key"  # From env
-    assert config.api_keys.anthropic == "env_anthropic_key"  # From env
-    assert config.api_keys.groq == "file_groq_key"  # From file
+    assert vars(config.api_keys)["openai"] == "env_openai_key"  # From env
+    assert vars(config.api_keys)["anthropic"] == "env_anthropic_key"  # From env
+    assert vars(config.api_keys)["groq"] == "file_groq_key"  # From file
 
     # Other settings should come from file if not in env
     assert (
@@ -238,9 +240,9 @@ def test_config_inheritance_for_api_keys(reset_config_cache):
         config = get_config()
 
     # Check proper precedence
-    assert config.api_keys.openai == "file_openai_key"  # From file only
-    assert config.api_keys.anthropic == "env_anthropic_key"  # From env only
-    assert config.api_keys.groq == "env_groq_key"  # Env overrides file
+    assert vars(config.api_keys)["openai"] == "file_openai_key"  # From file only
+    assert vars(config.api_keys)["anthropic"] == "env_anthropic_key"  # From env only
+    assert vars(config.api_keys)["groq"] == "env_groq_key"  # Env overrides file
 
 
 def test_config_autoload_on_cli_command(cli_runner):

@@ -5,8 +5,7 @@ import pytest
 from typer.testing import CliRunner
 
 from code_agent.cli.main import app
-from code_agent.config import SettingsConfig
-from code_agent.config.config import ApiKeys
+from code_agent.config import SettingsConfig, ApiKeys
 
 
 class MockAgent:

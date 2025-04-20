@@ -5,12 +5,13 @@ These tests verify that the agent correctly handles the maximum
 number of tool calls in a conversation turn.
 """
 
+import json
 import pytest
 from unittest.mock import patch, MagicMock
 
 from code_agent.agent.agent import CodeAgent
-from code_agent.config import SettingsConfig
-from code_agent.config.config import ApiKeys
+from code_agent.agent.run import run_agent_turn
+from code_agent.config import SettingsConfig, ApiKeys
 
 
 @pytest.fixture

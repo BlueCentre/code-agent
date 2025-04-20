@@ -5,6 +5,7 @@ These tests ensure the agent properly handles errors related to API keys,
 such as invalid keys, missing keys, and improper key configuration.
 """
 
+import os
 import pytest
 import json
 from unittest.mock import patch, MagicMock
@@ -13,8 +14,8 @@ import litellm
 from litellm.exceptions import AuthenticationError, InvalidRequestError, ServiceUnavailableError
 
 from code_agent.agent.agent import CodeAgent
-from code_agent.config import SettingsConfig
-from code_agent.config.config import ApiKeys
+from code_agent.agent.run import run_agent_turn
+from code_agent.config import SettingsConfig, ApiKeys
 
 # --- Fixtures ---
 

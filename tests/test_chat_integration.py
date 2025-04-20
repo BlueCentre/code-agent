@@ -4,10 +4,11 @@ from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 from typer.testing import CliRunner
+from pathlib import Path
 
 from code_agent.cli.main import app
-from code_agent.config import SettingsConfig
-from code_agent.config.config import ApiKeys
+from code_agent.config import SettingsConfig, ApiKeys
+from code_agent.cli.chat import Chat, save_history, load_latest_history
 
 # --- Fixtures ---
 

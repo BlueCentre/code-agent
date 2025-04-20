@@ -5,12 +5,16 @@ These tests ensure the agent correctly retrieves and uses API keys
 from the configuration system.
 """
 
+import os
 import pytest
 from unittest.mock import patch, MagicMock
 
+import litellm
+from litellm.exceptions import AuthenticationError
+
 from code_agent.agent.agent import CodeAgent
-from code_agent.config import SettingsConfig
-from code_agent.config.config import ApiKeys
+from code_agent.config import SettingsConfig, ApiKeys, get_config
+from code_agent.agent.run import run_agent_turn
 
 # --- Fixtures ---
 

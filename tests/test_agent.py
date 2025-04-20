@@ -4,8 +4,7 @@ from unittest.mock import MagicMock, patch, ANY
 import pytest
 
 from code_agent.agent.agent import CodeAgent
-from code_agent.config import SettingsConfig
-from code_agent.config.config import ApiKeys
+from code_agent.config import SettingsConfig, ApiKeys
 
 
 @pytest.fixture
