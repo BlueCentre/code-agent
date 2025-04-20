@@ -325,7 +325,7 @@ def config_aistudio():
     Show information about using Google AI Studio as a provider.
     """
     config = get_config()
-    api_key = config.api_keys.model_dump().get("ai_studio")
+    api_key = vars(config.api_keys).get("ai_studio")
 
     console = Console()
     console.print("[bold]Google AI Studio Configuration[/bold]", style="blue")
@@ -377,12 +377,8 @@ def config_aistudio():
     console.print(
         "- [bold]gemini-2.0-pro[/bold]: More capable, better for complex tasks"
     )
-    console.print(
-        "- [bold]gemini-1.5-flash[/bold]: Previous generation fast model"
-    )
-    console.print(
-        "- [bold]gemini-1.5-pro[/bold]: Previous generation capable model"
-    )
+    console.print("- [bold]gemini-1.5-flash[/bold]: Previous generation fast model")
+    console.print("- [bold]gemini-1.5-pro[/bold]: Previous generation capable model")
 
     # Usage examples
     console.print("\n[bold]Usage Examples:[/bold]")
@@ -411,7 +407,7 @@ def config_openai():
     Show information about using OpenAI as a provider.
     """
     config = get_config()
-    api_key = config.api_keys.model_dump().get("openai")
+    api_key = vars(config.api_keys).get("openai")
 
     console = Console()
     console.print("[bold]OpenAI Configuration[/bold]", style="green")
@@ -502,7 +498,7 @@ def config_groq():
     Show information about using Groq as a provider.
     """
     config = get_config()
-    api_key = config.api_keys.model_dump().get("groq")
+    api_key = vars(config.api_keys).get("groq")
 
     console = Console()
     console.print("[bold]Groq Configuration[/bold]", style="magenta")
@@ -590,7 +586,7 @@ def config_anthropic():
     Show information about using Anthropic as a provider.
     """
     config = get_config()
-    api_key = config.api_keys.model_dump().get("anthropic")
+    api_key = vars(config.api_keys).get("anthropic")
 
     console = Console()
     console.print("[bold]Anthropic Configuration[/bold]", style="cyan")
@@ -736,7 +732,7 @@ def providers_list():
     # List all providers with their status
     console.print("[bold]Available Providers:[/bold]")
     for provider_id, details in providers.items():
-        api_key = config.api_keys.model_dump().get(provider_id)
+        api_key = vars(config.api_keys).get(provider_id)  # Access directly through vars()
         name = details["name"]
         style = details["style"]
 

@@ -137,13 +137,13 @@ def build_effective_config(
     if "OPENAI_API_KEY" in os.environ:
         effective_config_data["api_keys"]["openai"] = os.environ["OPENAI_API_KEY"]
     if "AI_STUDIO_API_KEY" in os.environ:
-        effective_config_data["api_keys"]["ai_studio"] = (
-            os.environ["AI_STUDIO_API_KEY"]
-        )
+        effective_config_data["api_keys"]["ai_studio"] = os.environ["AI_STUDIO_API_KEY"]
     if "GROQ_API_KEY" in os.environ:
         effective_config_data["api_keys"]["groq"] = os.environ["GROQ_API_KEY"]
     if "ANTHROPIC_API_KEY" in os.environ:
-        effective_config_data["api_keys"]["anthropic"] = os.environ["ANTHROPIC_API_KEY"]
+        effective_config_data["api_keys"]["anthropic"] = (
+            os.environ["ANTHROPIC_API_KEY"]
+        )
     # Add more provider keys as needed
 
     # Environment variables for auto-approve flags
@@ -225,7 +225,6 @@ def get_config() -> SettingsConfig:
         )
         # Initialize with defaults as a fallback, though this indicates a logic error
         initialize_config()
-        # raise RuntimeError("Configuration accessed before initialization. Call initialize_config first.")
     return _config
 
 
@@ -235,8 +234,8 @@ def get_config() -> SettingsConfig:
 def get_api_key(provider: str) -> Optional[str]:
     """Gets the API key for a specific provider from the loaded config."""
     config = get_config()
-    # Access keys directly or via model_extra if using Pydantic v2 extra='allow'
-    return config.api_keys.model_dump().get(provider)
+    # Access keys directly using vars() instead of model_dump
+    return vars(config.api_keys).get(provider)
 
 
 # Create default config directory if it doesn't exist

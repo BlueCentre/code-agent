@@ -52,17 +52,14 @@ class CodeAgent:
         if target_provider == "openai":
             return target_model_name
         elif target_provider == "ai_studio":
-            return f"vertex_ai/{target_model_name}"
+            # For Gemini API, use the name directly as LiteLLM will handle the formatting
+            return target_model_name
         # Handle other providers
         return f"{target_provider}/{target_model_name}"
 
     def _get_api_base(self, provider: Optional[str]) -> Optional[str]:
         """Get the appropriate API base URL for the provider."""
-        target_provider = provider or self.config.default_provider
-
-        if target_provider == "ai_studio":
-            return "https://api.ai.studio/v1"
-
+        # All providers use their default API base URLs through LiteLLM
         return None
 
     def run_turn(
@@ -75,17 +72,14 @@ class CodeAgent:
 
         model_string = self._get_model_string(provider, model)
         system_prompt = "\n".join(self.base_instruction_parts)
-        api_base = self._get_api_base(provider)
 
         print(
             f"[grey50]Initializing Agent (Model: {model_string}, Provider: {provider or self.config.default_provider})[/grey50]"
         )
-        if api_base:
-            print(f"[grey50]Using custom API base: {api_base}[/grey50]")
 
         # Retrieve API key from config
         target_provider = provider or self.config.default_provider
-        api_key = self.config.api_keys.model_dump().get(target_provider)
+        api_key = vars(self.config.api_keys).get(target_provider)
 
         if not api_key:
             print(
@@ -240,8 +234,9 @@ class CodeAgent:
                         "api_key": api_key,
                     }
 
-                    if api_base:
-                        completion_params["api_base"] = api_base
+                    # For ai_studio (Gemini API), specify the provider explicitly
+                    if (provider or self.config.default_provider) == "ai_studio":
+                        completion_params["custom_llm_provider"] = "gemini"
 
                     response = litellm.completion(**completion_params)
 
