@@ -104,9 +104,7 @@ def test_load_config_env_override_bools(mock_config_path: Path, monkeypatch):
 
     # Env vars set flags to True
     monkeypatch.setenv("CODE_AGENT_AUTO_APPROVE_EDITS", "true")
-    monkeypatch.setenv(
-        "CODE_AGENT_AUTO_APPROVE_NATIVE_COMMANDS", "TRUE"
-    )  # Case-insensitive check
+    monkeypatch.setenv("CODE_AGENT_AUTO_APPROVE_NATIVE_COMMANDS", "TRUE")  # Case-insensitive check
 
     # Build config without CLI overrides
     config = build_effective_config(mock_config_path)
@@ -152,9 +150,7 @@ def test_load_config_cli_override_provider_model(mock_config_path: Path, monkeyp
     mock_config_path.write_text(yaml.dump(config_content))
     # No env vars for provider/model currently implemented in build_effective_config
 
-    config = build_effective_config(
-        mock_config_path, cli_provider="cli_p", cli_model="cli_m"
-    )
+    config = build_effective_config(mock_config_path, cli_provider="cli_p", cli_model="cli_m")
     assert config.default_provider == "cli_p"
     assert config.default_model == "cli_m"
 
@@ -172,8 +168,7 @@ def test_load_config_invalid_yaml(mock_config_path: Path, capsys):
     assert config.default_model == "gemini-2.0-flash"
     assert config.api_keys.openai is None
     assert (
-        "Warning: Could not read config file" in captured.out
-        or "Warning: Could not read config file" in captured.err
+        "Warning: Could not read config file" in captured.out or "Warning: Could not read config file" in captured.err
     )
 
 
@@ -199,7 +194,9 @@ def test_load_config_invalid_structure(mock_config_path: Path, capsys):
 
     # Check that validation errors were printed
     assert (
-        "Error: Invalid effective configuration" in captured.out
+        "Error: Invalid configuration" in captured.out
+        or "Error: Invalid configuration" in captured.err
+        or "Error: Invalid effective configuration" in captured.out
         or "Error: Invalid effective configuration" in captured.err
     )
     assert (

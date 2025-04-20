@@ -24,7 +24,7 @@ This document consolidates all tasks, improvements, and future enhancements for 
 - **Configuration Improvements**
   - ✅ Fully implement the CLI > Env > File hierarchy for all configuration options [from implementation.md]
   - ✅ Use pydantic-settings for more robust env var handling [from todo_priorities]
-  - 🔜 **NEXT ITEM TO WORK ON** - Implement dynamic configuration validation with clear error messages [from future_improvements.md]
+  - ✅ Implement dynamic configuration validation with clear error messages [from future_improvements.md]
 
 - **User Experience Improvements**
   - 🔄 Enhance confirmation prompts with more context and better diff highlighting [from future_improvements.md]

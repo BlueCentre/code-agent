@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional
 import yaml
 from pydantic import BaseModel, Field, ValidationError
 from pydantic_settings import SettingsConfigDict
+from rich import print as rich_print
 
 # Configuration management logic will go here
 # Placeholder for now
@@ -55,6 +56,24 @@ class SettingsConfig(BaseModel):
             "api_keys.anthropic": "ANTHROPIC_API_KEY",
         },
     )
+
+    def validate_dynamic(self, verbose: bool = False) -> bool:
+        """Perform dynamic validation of the config beyond basic type checking.
+
+        Args:
+            verbose: Whether to print validation messages even if there are no errors.
+
+        Returns:
+            bool: True if the configuration is valid (may have warnings), False otherwise.
+        """
+        # Lazy import to avoid circular imports
+        from code_agent.config.validation import print_validation_result, validate_config
+
+        result = validate_config(self)
+        if verbose or not result.valid or result.warnings:
+            print_validation_result(result, verbose=verbose)
+
+        return result.valid
 
 
 # --- Configuration Loading Logic ---
@@ -196,12 +215,19 @@ def build_effective_config(
         final_config = SettingsConfig(**effective_config_data)
         return final_config
     except ValidationError as e:
-        print(f"Error: Invalid effective configuration:\n{e}")
-        print("Falling back to default configuration.")
+        # Improved error handling with more context on what went wrong
+        error_details = []
+        for err in e.errors():
+            field = ".".join(str(loc) for loc in err["loc"])
+            error_details.append(f"- Field '{field}': {err['msg']}")
+
+        error_msg = "\n".join(error_details)
+        rich_print(f"[bold red]Error:[/bold red] Invalid configuration:\n{error_msg}")
+        rich_print("[yellow]Falling back to default configuration.[/yellow]")
         return SettingsConfig()
     except Exception as e:
-        print(f"Error creating final configuration: {e}")
-        print("Falling back to default configuration.")
+        rich_print(f"[bold red]Error creating final configuration:[/bold red] {e}")
+        rich_print("[yellow]Falling back to default configuration.[/yellow]")
         return SettingsConfig()
 
 
@@ -211,8 +237,18 @@ def initialize_config(
     cli_model: Optional[str] = None,
     cli_auto_approve_edits: Optional[bool] = None,
     cli_auto_approve_native_commands: Optional[bool] = None,
+    validate: bool = True,
 ):
-    """Initializes the global config singleton with effective settings."""
+    """Initializes the global config singleton with effective settings.
+
+    Args:
+        config_file_path: Path to the config file
+        cli_provider: Optional provider override from CLI
+        cli_model: Optional model override from CLI
+        cli_auto_approve_edits: Optional auto-approve edits flag override from CLI
+        cli_auto_approve_native_commands: Optional auto-approve commands flag override from CLI
+        validate: Whether to run dynamic validation after loading config
+    """
     global _config
     if _config is None:
         _config = build_effective_config(
@@ -222,6 +258,10 @@ def initialize_config(
             cli_auto_approve_edits=cli_auto_approve_edits,
             cli_auto_approve_native_commands=cli_auto_approve_native_commands,
         )
+
+        # Run dynamic validation if requested
+        if validate:
+            _config.validate_dynamic()
     # else: config already initialized
 
 
@@ -229,7 +269,7 @@ def get_config() -> SettingsConfig:
     """Returns the loaded configuration, raising error if not initialized."""
     if _config is None:
         # This should ideally not happen if initialize_config is called in main
-        print("[bold red]Error:[/bold red] Configuration accessed before " "initialization.")
+        rich_print("[bold red]Error:[/bold red] Configuration accessed before " "initialization.")
         # Initialize with defaults as a fallback, though this indicates a logic error
         initialize_config()
     return _config
@@ -243,6 +283,19 @@ def get_api_key(provider: str) -> Optional[str]:
     config = get_config()
     # Access keys directly using vars() instead of model_dump
     return vars(config.api_keys).get(provider)
+
+
+def validate_config(verbose: bool = False) -> bool:
+    """Validate the current config and print results.
+
+    Args:
+        verbose: Whether to print validation messages even if there are no errors.
+
+    Returns:
+        bool: True if the configuration is valid (may have warnings), False otherwise.
+    """
+    config = get_config()
+    return config.validate_dynamic(verbose=verbose)
 
 
 # Create default config directory if it doesn't exist
