@@ -1,11 +1,13 @@
 from typing import Dict, List, Optional
 
 import litellm
-from code_agent.config import get_api_key, get_config
 from rich import print
+
+from code_agent.config import get_api_key, get_config
 
 # Configure LiteLLM settings if needed (e.g., logging)
 # litellm.set_verbose = True
+
 
 def get_llm_response(
     prompt: str,
@@ -29,11 +31,11 @@ def get_llm_response(
         return None
     # Add similar checks for other providers requiring keys
     if target_provider == "groq" and not api_key:
-         print(
-             f"[bold red]Error:[/bold red] Groq API key not found. "
-             f"Set GROQ_API_KEY environment variable or add it to {config.DEFAULT_CONFIG_PATH}."
-         )
-         return None
+        print(
+            f"[bold red]Error:[/bold red] Groq API key not found. "
+            f"Set GROQ_API_KEY environment variable or add it to {config.DEFAULT_CONFIG_PATH}."
+        )
+        return None
 
     messages = []
     if history:
@@ -46,7 +48,7 @@ def get_llm_response(
             f"Model: {target_model})...[/grey50]"
         )
         response = litellm.completion(
-            model=f"{target_provider}/{target_model}", # LiteLLM uses provider/model format
+            model=f"{target_provider}/{target_model}",  # LiteLLM uses provider/model format
             messages=messages,
             api_key=api_key,
             # Add other parameters like temperature, max_tokens if needed
@@ -62,12 +64,13 @@ def get_llm_response(
         # Consider more specific error handling (e.g., API key errors, model not found)
         return None
 
+
 # Example usage (can be removed later)
 if __name__ == "__main__":
     # Ensure you have OPENAI_API_KEY or GROQ_API_KEY set in your env or config
     test_prompt = "Explain the concept of AI agents in one sentence."
     print(f"Sending prompt: {test_prompt}")
-    response_content = get_llm_response(test_prompt) # Uses defaults from config/env
+    response_content = get_llm_response(test_prompt)  # Uses defaults from config/env
 
     if response_content:
         print("\n[bold green]LLM Response:[/bold green]")

@@ -10,19 +10,20 @@ from rich.prompt import Confirm
 # --- Tool Input Schema ---
 class RunNativeCommandArgs(BaseModel):
     command: str = Field(
-        ...,
-        description="The native terminal command string to execute."
+        ..., description="The native terminal command string to execute."
     )
     # TODO: Consider adding timeout, working directory options?
 
+
 # --- Tool Implementation ---
 def run_native_command(args: RunNativeCommandArgs) -> str:
-    """Executes a native terminal command after checking allowlist and requesting 
+    """Executes a native terminal command after checking allowlist and requesting
     user confirmation."""
     # Import get_config here
     from code_agent.config.config import get_config
+
     config = get_config()
-    command_str = args.command.strip() # Ensure no leading/trailing whitespace
+    command_str = args.command.strip()  # Ensure no leading/trailing whitespace
     if not command_str:
         return "Error: Empty command string provided."
 
@@ -30,9 +31,13 @@ def run_native_command(args: RunNativeCommandArgs) -> str:
     # Check if this is a file listing command, especially for Python files
     command_lower = command_str.lower()
     if (
-        ("list" in command_lower and "python" in command_lower and "file" in command_lower) or
-        ("find" in command_lower and "*.py" in command_lower) or
-        (command_lower.startswith("ls") and "*.py" in command_lower)
+        (
+            "list" in command_lower
+            and "python" in command_lower
+            and "file" in command_lower
+        )
+        or ("find" in command_lower and "*.py" in command_lower)
+        or (command_lower.startswith("ls") and "*.py" in command_lower)
     ):
         # Extract the target directory from the command if possible
         target_dir = "."  # Default to current directory
@@ -42,7 +47,7 @@ def run_native_command(args: RunNativeCommandArgs) -> str:
                 # This might be a directory path
                 target_dir = part
                 break
-            
+
         # Use find command for better recursive listing of Python files
         modified_command = f"find {target_dir} -type f -name '*.py' | sort"
         print(f"[yellow]Enhanced file listing command:[/yellow] {modified_command}")
@@ -61,9 +66,11 @@ def run_native_command(args: RunNativeCommandArgs) -> str:
     # 1. Allowlist Check (Exact match on base command)
     allowlist = config.native_command_allowlist
     is_allowed = False
-    if not allowlist: # Empty allowlist means all commands require confirmation (unless auto-approved)
+    if (
+        not allowlist
+    ):  # Empty allowlist means all commands require confirmation (unless auto-approved)
         is_allowed = True
-    elif base_command in allowlist: # Check if the base command is exactly in the list
+    elif base_command in allowlist:  # Check if the base command is exactly in the list
         is_allowed = True
 
     if not is_allowed and not config.auto_approve_native_commands:
@@ -73,11 +80,11 @@ def run_native_command(args: RunNativeCommandArgs) -> str:
             f"({config.DEFAULT_CONFIG_PATH}) and auto-approval is disabled."
         )
     elif not is_allowed and config.auto_approve_native_commands:
-         # Break long f-string
-         print(
-             f"[yellow]Warning:[/yellow] Command '{base_command}' is not in the allowlist, "
-             f"but executing due to auto-approval."
-         )
+        # Break long f-string
+        print(
+            f"[yellow]Warning:[/yellow] Command '{base_command}' is not in the allowlist, "
+            f"but executing due to auto-approval."
+        )
 
     # 2. User Confirmation
     confirmed = False
@@ -90,7 +97,9 @@ def run_native_command(args: RunNativeCommandArgs) -> str:
         confirmed = True
     else:
         # Show the command clearly before asking
-        print(f"[bold red]Agent requests to run native command:[/bold red] {command_str}")
+        print(
+            f"[bold red]Agent requests to run native command:[/bold red] {command_str}"
+        )
         confirmed = Confirm.ask("Do you want to execute this command?", default=False)
 
     if not confirmed:
@@ -103,8 +112,8 @@ def run_native_command(args: RunNativeCommandArgs) -> str:
         result = subprocess.run(
             command_parts,
             capture_output=True,
-            text=True, # Get stdout/stderr as strings
-            check=False # Don't raise exception on non-zero exit code
+            text=True,  # Get stdout/stderr as strings
+            check=False,  # Don't raise exception on non-zero exit code
             # Consider adding timeout=...
         )
 
@@ -117,15 +126,16 @@ def run_native_command(args: RunNativeCommandArgs) -> str:
         return output.strip()
 
     except FileNotFoundError:
-         return f"Error: Command not found: {command_parts[0]}"
+        return f"Error: Command not found: {command_parts[0]}"
     except Exception as e:
         return f"Error executing command '{command_str}': {e}"
+
 
 # Create the native command tool
 run_native_command_tool = FunctionTool.from_function(
     run_native_command,
     name="run_native_command",
-    description="Executes a native terminal command after requesting confirmation."
+    description="Executes a native terminal command after requesting confirmation.",
 )
 
 # For compatibility with imports elsewhere
