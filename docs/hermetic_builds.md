@@ -124,4 +124,4 @@ Once implemented:
 2. Keep container definitions up to date
 3. Include environment validation in code reviews
 4. Document any deviations or exceptions needed
-5. Track environment-related issues and analyze root causes 
+5. Track environment-related issues and analyze root causes

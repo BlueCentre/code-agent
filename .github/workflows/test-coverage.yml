@@ -30,19 +30,25 @@ jobs:
         poetry install --no-interaction
         python -m pip install --upgrade pip pytest pytest-cov
 
-    - name: Debug environment
-      run: |
-        python --version
-        pip list
-        echo "Current directory: $(pwd)"
-        ls -la
-
     - name: Run tests with coverage
       run: |
         python -m pytest tests/ --cov=code_agent --cov-report=xml --cov-report=term --cov-fail-under=80
 
-    - name: Upload coverage report
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./coverage.xml
-        fail_ci_if_error: true
+    # - name: Upload coverage report
+    #   uses: codecov/codecov-action@v3
+    #   with:
+    #     file: ./coverage.xml
+    #     fail_ci_if_error: true
+
+    # We will use SonarCloud for code coverage reporting instead
+    # Example SonarCloud implementation:
+    # - name: SonarCloud Scan
+    #   uses: SonarSource/sonarcloud-github-action@master
+    #   env:
+    #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    #   with:
+    #     args: >
+    #       -Dsonar.python.coverage.reportPaths=coverage.xml
+    #       -Dsonar.sources=code_agent
+    #       -Dsonar.tests=tests
