@@ -384,8 +384,7 @@ def test_unknown_tool_call_handling(agent_with_mock_config, mocker):
     # Check that the error was handled correctly
     assert result == "Final response"
     mock_print.assert_any_call(
-        "[bold red]Unknown tool 'unknown_function' "
-        "requested by LLM[/bold red]"
+        "[bold red]Unknown tool 'unknown_function' " "requested by LLM[/bold red]"
     )
 
 
@@ -424,8 +423,7 @@ def test_error_in_tool_execution(agent_with_mock_config, mocker):
     # Check that the error was handled correctly
     assert result == "Final response"
     mock_print.assert_any_call(
-        "[red]Error executing read_file: "
-        "File not found[/red]"
+        "[red]Error executing read_file: " "File not found[/red]"
     )
 
 
