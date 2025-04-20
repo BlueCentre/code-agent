@@ -10,6 +10,27 @@ It allows interaction with various AI providers (OpenAI, Groq, etc. via LiteLLM)
 
 *(Work in progress)*
 
+## Quick Start
+
+Install directly from PyPI using pip:
+
+```bash
+pip install cli-code-agent
+```
+
+Or using the faster uv package installer:
+
+```bash
+uv pip install cli-code-agent
+```
+
+After installation, set up your API key (for OpenAI in this example):
+
+```bash
+export OPENAI_API_KEY=sk-your-key-here
+code-agent run "Hello! What can you help me with today?"
+```
+
 ## Features
 
 *   **Multi-Provider Support:** Connect to different LLM providers using LiteLLM.
