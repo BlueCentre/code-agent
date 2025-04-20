@@ -5,13 +5,13 @@
 # Default LLM Provider and Model
 # ===============================
 # Options include: "ai_studio", "openai", "groq", "anthropic", etc.
-default_provider: "ai_studio"  
+default_provider: "ai_studio"
 
 # Available models depend on the provider:
 # - AI Studio: "gemini-1.5-flash", "gemini-1.5-pro"
 # - OpenAI: "gpt-4o", "gpt-3.5-turbo", etc.
 # - Groq: "llama3-70b-8192", "mixtral-8x7b-32768", etc.
-default_model: "gemini-1.5-flash"
+default_model: "gemini-2.0-flash"
 
 # ===============================
 # API Keys
@@ -22,15 +22,15 @@ api_keys:
   # AI Studio - Get from https://ai.google.dev/
   # Set via AI_STUDIO_API_KEY environment variable (recommended)
   ai_studio: null  # Or add your key directly: "aip-..."
-  
+
   # OpenAI - Get from https://platform.openai.com/
   # Set via OPENAI_API_KEY environment variable (recommended)
   openai: null  # Or add your key directly: "sk-..."
-  
+
   # Groq - Get from https://console.groq.com/
   # Set via GROQ_API_KEY environment variable (recommended)
   groq: null  # Or add your key directly: "gsk-..."
-  
+
   # Anthropic - Get from https://console.anthropic.com/
   # Set via ANTHROPIC_API_KEY environment variable (recommended)
   # anthropic: null  # Or add your key directly: "sk-ant-..."
@@ -64,4 +64,5 @@ rules:
   # - "Always provide code examples when explaining concepts."
   # - "Prefer Python for code examples unless specified otherwise."
   # - "When writing Python code, always include type hints."
-  # - "Always explain your reasoning step by step." 
+  # - "Always explain your reasoning step by step."
+

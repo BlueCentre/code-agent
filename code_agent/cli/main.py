@@ -372,10 +372,16 @@ def config_aistudio():
     # Available models
     console.print("\n[bold]Available Models:[/bold]")
     console.print(
-        "- [bold]gemini-1.5-flash[/bold]: Fast, efficient responses (default)"
+        "- [bold]gemini-2.0-flash[/bold]: Fast, efficient responses (default)"
     )
     console.print(
-        "- [bold]gemini-1.5-pro[/bold]: More capable, better for complex tasks"
+        "- [bold]gemini-2.0-pro[/bold]: More capable, better for complex tasks"
+    )
+    console.print(
+        "- [bold]gemini-1.5-flash[/bold]: Previous generation fast model"
+    )
+    console.print(
+        "- [bold]gemini-1.5-pro[/bold]: Previous generation capable model"
     )
 
     # Usage examples
@@ -384,7 +390,7 @@ def config_aistudio():
     console.print('code-agent run "What\'s the current Python version?"')
 
     console.print("\n# Specify a different AI Studio model")
-    console.print('code-agent --model gemini-1.5-pro run "Explain quantum computing"')
+    console.print('code-agent --model gemini-2.0-pro run "Explain quantum computing"')
 
     # Add usage examples for AI Studio
     console.print("\n# Switch to a different provider")

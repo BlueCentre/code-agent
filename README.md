@@ -55,7 +55,7 @@ A default configuration file is created automatically if it doesn't exist. You *
 ```yaml
 # Default LLM provider and model
 default_provider: "ai_studio"  # Options: "ai_studio", "openai", "groq", "anthropic", etc.
-default_model: "gemini-1.5-flash"  # For AI Studio, use Gemini models
+default_model: "gemini-2.0-flash"  # For AI Studio, use Gemini models
 
 # API keys (Set via ENV VARS is recommended for security)
 api_keys:

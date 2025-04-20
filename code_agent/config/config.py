@@ -31,8 +31,11 @@ class ApiKeys(BaseModel):
 
 
 class SettingsConfig(BaseModel):
+    """Configuration settings for code-agent."""
+
+    # Default provider and model
     default_provider: str = "ai_studio"
-    default_model: str = "gemini-1.5-flash"
+    default_model: str = "gemini-2.0-flash"
     api_keys: ApiKeys = Field(default_factory=ApiKeys)
     auto_approve_edits: bool = False
     auto_approve_native_commands: bool = False
@@ -55,7 +58,8 @@ def load_config_from_file(config_path: Path = DEFAULT_CONFIG_PATH) -> Dict[str, 
         create_default_config_file(config_path)
         print(f"Created default configuration file at {config_path}")
         print(
-            "Edit this file to add your API keys or set appropriate environment variables."
+            "Edit this file to add your API keys or set appropriate "
+            "environment variables."
         )
 
     try:
@@ -76,7 +80,7 @@ def create_default_config_file(config_path: Path) -> None:
             # Fallback if template doesn't exist
             default_config = {
                 "default_provider": "ai_studio",
-                "default_model": "gemini-1.5-flash",
+                "default_model": "gemini-2.0-flash",
                 "api_keys": {
                     "ai_studio": None,
                     "openai": None,
@@ -92,7 +96,8 @@ def create_default_config_file(config_path: Path) -> None:
                 yaml.dump(default_config, f, default_flow_style=False, sort_keys=False)
     except Exception as e:
         print(
-            f"Warning: Could not create default config file at {config_path}. Error: {e}"
+            f"Warning: Could not create default config file at {config_path}. "
+            f"Error: {e}"
         )
 
 
@@ -132,7 +137,9 @@ def build_effective_config(
     if "OPENAI_API_KEY" in os.environ:
         effective_config_data["api_keys"]["openai"] = os.environ["OPENAI_API_KEY"]
     if "AI_STUDIO_API_KEY" in os.environ:
-        effective_config_data["api_keys"]["ai_studio"] = os.environ["AI_STUDIO_API_KEY"]
+        effective_config_data["api_keys"]["ai_studio"] = (
+            os.environ["AI_STUDIO_API_KEY"]
+        )
     if "GROQ_API_KEY" in os.environ:
         effective_config_data["api_keys"]["groq"] = os.environ["GROQ_API_KEY"]
     if "ANTHROPIC_API_KEY" in os.environ:
@@ -213,7 +220,8 @@ def get_config() -> SettingsConfig:
     if _config is None:
         # This should ideally not happen if initialize_config is called in main
         print(
-            "[bold red]Error:[/bold red] Configuration accessed before initialization."
+            "[bold red]Error:[/bold red] Configuration accessed before "
+            "initialization."
         )
         # Initialize with defaults as a fallback, though this indicates a logic error
         initialize_config()
