@@ -1,5 +1,6 @@
 from typing import Dict, List, Optional
 
+# ruff: noqa: E501
 import litellm
 from rich import print
 from rich.status import Status
@@ -40,7 +41,7 @@ class CodeAgent:
             "- run_native_command(command): Executes a native terminal command after asking for "
             "user confirmation (unless auto-approved or on allowlist). Use cautiously."
         )
-        
+
         # Add specific guidance for file listing
         self.base_instruction_parts.append(
             "When asked to list files, especially Python files in directories:"
@@ -50,9 +51,10 @@ class CodeAgent:
             "run_native_command(command=\"find directory_path -type f -name '*.py' | sort\")"
         )
         self.base_instruction_parts.append(
-            "- Never use simple 'ls' commands with wildcards like 'ls *.py' as they don't search recursively."
+            "- Never use simple 'ls' commands with wildcards like 'ls *.py' "
+            "as they don't search recursively."
         )
-        
+
         self.base_instruction_parts.append(
             "Use these functions when necessary to fulfill the user's request."
         )
@@ -87,7 +89,8 @@ class CodeAgent:
         system_prompt = "\n".join(self.base_instruction_parts)
 
         print(
-            f"[grey50]Initializing Agent (Model: {model_string}, Provider: {provider or self.config.default_provider})[/grey50]"
+            f"[grey50]Initializing Agent (Model: {model_string}, "
+            f"Provider: {provider or self.config.default_provider})[/grey50]"
         )
 
         # Retrieve API key from config
@@ -99,8 +102,9 @@ class CodeAgent:
                 f"[bold red]Error: No API key found for provider {target_provider}[/bold red]"
             )
             print("  - Please set the API key in one of the following ways:")
-            print("  - Set environment variable"
-                  f" ({target_provider.upper()}_API_KEY)")
+            print(
+                "  - Set environment variable" f" ({target_provider.upper()}_API_KEY)"
+            )
             print("  - Add to config: ~/.config/code-agent/config.yaml")
 
             # Fallback to simple command handling for demo purposes
@@ -140,26 +144,30 @@ class CodeAgent:
                 target_dir = "."
                 prompt_parts = prompt.lower().split()
                 dir_indicators = ["in", "from", "inside", "under", "within"]
-                
+
                 for i, part in enumerate(prompt_parts):
                     if part in dir_indicators and i < len(prompt_parts) - 1:
                         # Check for a directory name after an indicator word
                         potential_dir = prompt_parts[i + 1].strip("\"'.,;:")
                         if potential_dir != "the" and len(potential_dir) > 1:
                             # If using more specific references like "code_agent directory"
-                            if "directory" in prompt_parts[i + 1:i + 3] and i + 2 < len(prompt_parts):
+                            if "directory" in prompt_parts[
+                                i + 1 : i + 3
+                            ] and i + 2 < len(prompt_parts):
                                 target_dir = potential_dir
                                 break
                             # Otherwise just use the word after the indicator
                             target_dir = potential_dir
                             break
-                
+
                 # If the target isn't a path already, make it one
                 if not target_dir.startswith("./") and not target_dir.startswith("/"):
                     if target_dir != ".":
                         target_dir = f"./{target_dir}"
-                
-                result = run_native_command(f"find {target_dir} -type f -name '*.py' | sort")
+
+                result = run_native_command(
+                    f"find {target_dir} -type f -name '*.py' | sort"
+                )
                 self.history.append({"role": "user", "content": prompt})
                 self.history.append(
                     {
@@ -170,7 +178,9 @@ class CodeAgent:
                 return f"Here are the Python files in {target_dir}:\n\n{result}"
 
             else:
-                return "Sorry, I need an API key to process general requests. For this demo, I can only handle basic commands like asking about the current directory or listing files."
+                return "Sorry, I need an API key to process general requests. For this demo, "
+                "I can only handle basic commands like asking about the current directory "
+                "or listing files."
 
         # Set up all the tool/function definitions for the LLM
         tool_definitions = [
@@ -257,7 +267,7 @@ class CodeAgent:
 
                 # Keep track if we're in a tool calling loop
                 tool_calls_pending = True
-                max_tool_calls = 5  # Safety limit for tool call loops
+                max_tool_calls = 20  # Safety limit for tool call loops
                 tool_call_count = 0
 
                 while tool_calls_pending and tool_call_count < max_tool_calls:
@@ -364,7 +374,8 @@ class CodeAgent:
                 )
                 return assistant_response
             else:
-                return "No clear response was generated after tool execution. Try asking again or simplifying your request."
+                return "No clear response was generated after tool execution. "
+                "Try asking again or simplifying your request."
 
         except Exception as e:
             # Error Handling
@@ -373,9 +384,7 @@ class CodeAgent:
             print(f"[bold red]Error during agent execution ({error_type}):[/bold red]")
 
             if "api key" in error_message.lower():
-                print(
-                     "  - Check API key config (config file or ENV vars)."
-                )
+                print("  - Check API key config (config file or ENV vars).")
             elif "model not found" in error_message.lower():
                 print(f"  - Model '{model_string}' might be unavailable/misspelled.")
             elif "rate limit" in error_message.lower():
