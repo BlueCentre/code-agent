@@ -1,0 +1,66 @@
+{
+  "mcpServers": {
+    "memory": {
+      "command": "npx -y @modelcontextprotocol/server-memory",
+      "env": {
+        "MEMORY_FILE_PATH": "scripts/memorystore.json"
+      }
+    },
+    "puppeteer": {
+      "command": "npx",
+      "args": [
+        "@modelcontextprotocol/server-puppeteer"
+      ]
+    },
+    "Atlassian MCP": {
+      "command": "uvx",
+      "args": [
+        "mcp-atlassian",
+        "--confluence-url={{env.CONFLUENCE_URL}}",
+        "--confluence-username={{env.CONFLUENCE_USERNAME}}",
+        "--confluence-token={{env.CONFLUENCE_TOKEN}}",
+        "--jira-url={{env.JIRA_URL}}",
+        "--jira-username={{env.JIRA_USERNAME}}",
+        "--jira-token={{env.JIRA_TOKEN}}"
+      ]
+    },
+    "SlackBot Composio": {
+      "url": "https://mcp.composio.dev/slackbot/{{env.COMPOSIO_UNIQUE_ID}}"
+    },
+    "Google Tasks MCP": {
+      "url": "https://mcp.composio.dev/googletasks/{{env.COMPOSIO_UNIQUE_ID}}"
+    },
+    "GitHub MCP": {
+      "command": "docker",
+      "args": [
+        "run",
+        "-i",
+        "--rm",
+        "-e",
+        "GITHUB_PERSONAL_ACCESS_TOKEN",
+        "ghcr.io/github/github-mcp-server"
+      ],
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN":"{{env.GITHUB_TOKEN}}"
+      }
+    },
+    "sonarqube": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "sonarqube-mcp-server@1.0.0"
+      ],
+      "env": {
+        "SONARQUBE_URL": "https://sonarcloud.io",
+        "SONARQUBE_TOKEN": "{{env.SONAR_TOKEN}}",
+        "SONARQUBE_ORGANIZATION": "{{env.SONAR_ORGANIZATION}}"
+      }
+    },
+    "gcp": {
+      "command": "npx -y gcp-mcp"
+    },
+    "Stripe MCP": {
+      "command": "npx -y @stripe/mcp --tools=all --api-key={{env.STRIPE_API_KEY}}"
+    }
+  }
+}

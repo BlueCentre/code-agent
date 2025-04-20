@@ -1,4 +1,5 @@
-from unittest.mock import patch
+import json
+from unittest.mock import MagicMock, patch
 
 import litellm
 import pytest
@@ -129,17 +130,152 @@ def test_agent_api_context_length_error(agent_with_mock_config, mock_litellm):
 
 def test_agent_read_file_error(agent_with_mock_config, mock_litellm):
     """Test handling of file read errors during tool calls"""
-    pytest.skip("Test skipped due to changes in error handling implementation")
+    # First response: Agent wants to call read_file that will fail
+    first_message = MagicMock()
+    first_message.content = None
+
+    # Create a tool call object
+    tool_call = MagicMock()
+    tool_call.id = "call_123"
+    tool_call.function = MagicMock()
+    tool_call.function.name = "read_file"
+    tool_call.function.arguments = json.dumps({"path": "nonexistent.txt"})
+
+    first_message.tool_calls = [tool_call]
+
+    tool_call_response = MagicMock()
+    tool_call_response.choices = [MagicMock(message=first_message)]
+
+    # Second response: Agent processes the error and gives a final answer
+    final_message = MagicMock()
+    final_message.content = "I couldn't read the file because it doesn't exist."
+    final_message.tool_calls = None
+
+    final_response = MagicMock()
+    final_response.choices = [MagicMock(message=final_message)]
+
+    # Setup mock to return different responses on consecutive calls
+    mock_litellm.side_effect = [tool_call_response, final_response]
+
+    # Mock the read_file function to return an error message
+    with patch("code_agent.agent.agent.read_file") as mock_read_file:
+        error_msg = "Error: File not found: nonexistent.txt"
+        mock_read_file.return_value = error_msg
+
+        # Run the agent
+        result = agent_with_mock_config.run_turn("Can you read nonexistent.txt?")
+
+    # The agent should handle the error and return the final response
+    assert result == "I couldn't read the file because it doesn't exist."
+
+    # Verify read_file was called with the correct path argument
+    mock_read_file.assert_called_once_with(path="nonexistent.txt")
+
+    # Verify litellm was called twice (initial call + after tool response)
+    assert mock_litellm.call_count == 2
 
 
 def test_agent_apply_edit_error(agent_with_mock_config, mock_litellm):
     """Test handling of file edit errors during tool calls"""
-    pytest.skip("Test skipped due to changes in error handling implementation")
+    # First response: Agent wants to call apply_edit that will fail
+    first_message = MagicMock()
+    first_message.content = None
+
+    # Create a tool call object
+    tool_call = MagicMock()
+    tool_call.id = "call_123"
+    tool_call.function = MagicMock()
+    tool_call.function.name = "apply_edit"
+    # Break long argument dictionary into multiple lines
+    tool_call.function.arguments = json.dumps(
+        {"target_file": "/etc/passwd", "code_edit": "malicious content"}
+    )
+
+    first_message.tool_calls = [tool_call]
+
+    tool_call_response = MagicMock()
+    tool_call_response.choices = [MagicMock(message=first_message)]
+
+    # Second response: Agent processes the error and gives a final answer
+    final_message = MagicMock()
+    final_message.content = "I cannot modify that file due to permission restrictions."
+    final_message.tool_calls = None
+
+    final_response = MagicMock()
+    final_response.choices = [MagicMock(message=final_message)]
+
+    # Setup mock to return different responses on consecutive calls
+    mock_litellm.side_effect = [tool_call_response, final_response]
+
+    # Mock the apply_edit function to return an error message
+    with patch("code_agent.agent.agent.apply_edit") as mock_apply_edit:
+        # Break this long error message into multiple lines
+        error_msg = (
+            "Error: Path access restricted. "
+            "Can only edit files within the current working directory."
+        )
+        mock_apply_edit.return_value = error_msg
+
+        # Run the agent
+        result = agent_with_mock_config.run_turn("Can you modify /etc/passwd?")
+
+    # The agent should handle the error and return the final response
+    assert result == "I cannot modify that file due to permission restrictions."
+
+    # Verify apply_edit was called with the correct arguments
+    mock_apply_edit.assert_called_once_with(
+        target_file="/etc/passwd", code_edit="malicious content"
+    )
+
+    # Verify litellm was called twice (initial call + after tool response)
+    assert mock_litellm.call_count == 2
 
 
 def test_agent_run_command_error(agent_with_mock_config, mock_litellm):
     """Test handling of command execution errors"""
-    pytest.skip("Test skipped due to changes in error handling implementation")
+    # First response: Agent wants to call run_native_command that will fail
+    first_message = MagicMock()
+    first_message.content = None
+
+    # Create a tool call object
+    tool_call = MagicMock()
+    tool_call.id = "call_123"
+    tool_call.function = MagicMock()
+    tool_call.function.name = "run_native_command"
+    tool_call.function.arguments = json.dumps({"command": "rm -rf /"})
+
+    first_message.tool_calls = [tool_call]
+
+    tool_call_response = MagicMock()
+    tool_call_response.choices = [MagicMock(message=first_message)]
+
+    # Second response: Agent processes the error and gives a final answer
+    final_message = MagicMock()
+    final_message.content = "I cannot run that command as it's potentially destructive."
+    final_message.tool_calls = None
+
+    final_response = MagicMock()
+    final_response.choices = [MagicMock(message=final_message)]
+
+    # Setup mock to return different responses on consecutive calls
+    mock_litellm.side_effect = [tool_call_response, final_response]
+
+    # Mock the run_native_command function to return an error message
+    with patch("code_agent.agent.agent.run_native_command") as mock_run_command:
+        error_msg = "Error: Command is not allowed: rm -rf /"
+        mock_run_command.return_value = error_msg
+
+        # Run the agent
+        result = agent_with_mock_config.run_turn("Can you delete all files?")
+
+    # The agent should handle the error and return the final response
+    assert result == "I cannot run that command as it's potentially destructive."
+
+    # Verify run_native_command was called with the correct arguments
+    mock_run_command.assert_called_once_with(command="rm -rf /")
+
+    # Verify litellm was called twice (initial call + after tool response)
+    assert mock_litellm.call_count == 2
 
 
 # --- CLI Error Handling Tests ---
