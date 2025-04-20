@@ -1,5 +1,6 @@
 from typing import Dict, List, Optional
 
+# ruff: noqa: E501
 import litellm
 from rich import print
 
