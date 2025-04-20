@@ -91,7 +91,7 @@ class CodeAgent:
             print(
                 f"[bold red]Error: No API key found for provider {target_provider}[/bold red]"
             )
-            print("  - Please set the API key in ~/.code-agent/config.yaml")
+            print("  - Please set the API key in ~/code-agent/config.yaml")
             print(
                 f"  - Or set the environment variable {target_provider.upper()}_API_KEY"
             )
@@ -343,7 +343,7 @@ class CodeAgent:
 
             if "api key" in error_message.lower():
                 print(
-                    "  - Check API key config (~/.code-agent/config.yaml or ENV vars)."
+                    "  - Check API key config (~/code-agent/config.yaml or ENV vars)."
                 )
             elif "model not found" in error_message.lower():
                 print(f"  - Model '{model_string}' might be unavailable/misspelled.")

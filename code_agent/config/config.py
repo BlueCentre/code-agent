@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field, ValidationError
 pass
 
 # Define the default config path
-DEFAULT_CONFIG_DIR = Path.home() / ".code-agent"
+DEFAULT_CONFIG_DIR = Path.home() / "code-agent"
 DEFAULT_CONFIG_PATH = DEFAULT_CONFIG_DIR / "config.yaml"
 TEMPLATE_CONFIG_PATH = Path(__file__).parent / "template.yaml"
 

@@ -15,7 +15,7 @@ It allows interaction with various AI providers (OpenAI, Groq, etc. via LiteLLM)
     *   `read_file`: Allows the agent to read local files.
     *   `apply_edit`: Allows the agent to propose file edits (shows diff, requires confirmation).
     *   `run_native_command`: Allows the agent to run terminal commands (requires confirmation, respects allowlist).
-*   **Configuration:** Manage settings via `~/.code-agent/config.yaml`, environment variables, and CLI flags.
+*   **Configuration:** Manage settings via `~/code-agent/config.yaml`, environment variables, and CLI flags.
 *   **Rich Output:** Uses `rich` for Markdown rendering and syntax highlighting.
 
 ## Installation
@@ -46,11 +46,11 @@ Code Agent uses a hierarchical configuration system:
 
 1.  **CLI Flags:** (e.g., `--provider`, `--model`) - Highest priority.
 2.  **Environment Variables:** (e.g., `OPENAI_API_KEY`, `GROQ_API_KEY`) - Medium priority.
-3.  **Configuration File:** (`~/.code-agent/config.yaml`) - Lowest priority.
+3.  **Configuration File:** (`~/code-agent/config.yaml`) - Lowest priority.
 
-A default configuration file is created automatically if it doesn't exist. You **must** edit `~/.code-agent/config.yaml` or set environment variables to add your API keys for the desired providers.
+A default configuration file is created automatically if it doesn't exist. You **must** edit `~/code-agent/config.yaml` or set environment variables to add your API keys for the desired providers.
 
-**Example `~/.code-agent/config.yaml`:**
+**Example `~/code-agent/config.yaml`:**
 
 ```yaml
 # Default LLM provider and model
@@ -97,7 +97,7 @@ rules:
      ```
    - **Option 2:** Add it to your config file:
      ```yaml
-     # In ~/.code-agent/config.yaml
+     # In ~/code-agent/config.yaml
      api_keys:
        ai_studio: "aip-your-key-here"
      ```

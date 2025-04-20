@@ -1,5 +1,5 @@
 # Code Agent Configuration Template
-# Copy this to ~/.code-agent/config.yaml and edit as needed
+# Copy this to ~/code-agent/config.yaml and edit as needed
 
 # ===============================
 # Default LLM Provider and Model

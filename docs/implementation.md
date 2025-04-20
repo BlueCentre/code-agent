@@ -11,7 +11,7 @@ This document outlines the implementation steps taken and the future roadmap.
     *   [x] Create virtual environment (`.venv`).
     *   [x] Install base dependencies (`typer`, `litellm`, `pyyaml`, `rich`, `pydantic`).
 *   [x] **Configuration Management:**
-    *   [x] Define `config.yaml` structure (`~/.code-agent/config.yaml`).
+    *   [x] Define `config.yaml` structure (`~/code-agent/config.yaml`).
     *   [x] Implement `config.py` to load settings (File > Env > Defaults - *Note: CLI override not fully implemented yet*).
     *   [x] Implement validation using Pydantic.
 *   [x] **Basic CLI Structure (Typer):**
@@ -28,7 +28,7 @@ This document outlines the implementation steps taken and the future roadmap.
 *   [x] **Interactive Chat Mode:**
     *   [x] Implement `code-agent chat` command using a loop.
     *   [x] Implement basic in-memory history tracking.
-    *   [x] Implement saving/loading history to timestamped JSON files (`~/.code-agent/history/`).
+    *   [x] Implement saving/loading history to timestamped JSON files (`~/code-agent/history/`).
     *   [x] Use `rich` for formatted input/output.
 *   [x] **Output Formatting:**
     *   [x] Integrate `rich` for Markdown rendering and code syntax highlighting in both single-shot and chat modes.
@@ -83,4 +83,4 @@ This document outlines the implementation steps taken and the future roadmap.
     *   Add size limits and pagination to `read_file`.
 *   **Chat History:** Add option to load specific history files or clear history.
 *   **Packaging & Distribution:** Finalize packaging for distribution (e.g., PyPI).
-*   **Advanced Features:** Explore optional enhancements like long-term memory, dynamic tool discovery, etc. (See `PLAN.md` section 6).
+*   **Advanced Features:** Explore optional enhancements like long-term memory, dynamic tool discovery, etc. (See `PLAN.md` section on "Future Enhancements").
