@@ -2,7 +2,7 @@
 name = "cli-code-agent"
 version = "0.1.0"
 description = "CLI agent for interacting with LLMs and local environment"
-authors = ["James Nguyen git@nocentre.net"]
+authors = ["James Nguyen <git@nocentre.net>"]
 readme = "README.md"
 packages = [{include = "code_agent"}]
 
