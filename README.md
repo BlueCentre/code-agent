@@ -12,17 +12,44 @@ It allows interaction with various AI providers (OpenAI, Groq, etc. via LiteLLM)
 
 ## Quick Start
 
-Install directly from PyPI using pip:
+### Installation
+
+First, install the UV package manager (optional but recommended for faster installation):
 
 ```bash
-pip install cli-code-agent
+# Install UV on macOS/Linux
+curl -fsSL https://astral.sh/uv/install.sh | bash
+
+# Or with pip
+pip install uv
 ```
 
-Or using the faster uv package installer:
+Then, install the CLI Code Agent:
 
 ```bash
+# Using pip
+pip install cli-code-agent
+
+# Or using uv (faster)
 uv pip install cli-code-agent
 ```
+
+### Verify Installation
+
+After installation, make sure the executable is in your PATH. If you can't run the `code-agent` command, you may need to add the installation directory to your PATH:
+
+```bash
+# Find where the package was installed
+pip show cli-code-agent
+
+# Add the bin directory to your PATH (example for ~/.local/bin)
+export PATH="$HOME/.local/bin:$PATH"
+
+# For permanent addition, add to your shell profile (.bashrc, .zshrc, etc.)
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+```
+
+### First Run
 
 After installation, set up your API key (for OpenAI in this example):
 
