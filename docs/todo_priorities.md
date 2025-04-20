@@ -11,7 +11,7 @@ This document consolidates all tasks, improvements, and future enhancements for 
 
 - **Error Handling Refinement**
   - 🔄 Refine error handling and user feedback for API errors, tool failures, configuration issues, and LLM runtime errors [from implementation.md]
-  - 🔄 Implement more informative error messages for file operation failures [from future_improvements.md]
+  - 🔜 Implement more informative error messages for file operation failures [from future_improvements.md]
 
 ## High Priority
 

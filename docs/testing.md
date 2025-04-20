@@ -168,6 +168,22 @@ code-agent run "If I get the error 'Error during agent execution (Authentication
 
 **Expected Result**: The agent should provide a comprehensive troubleshooting guide that covers various authentication scenarios, configuration locations, environment variables, and validation steps.
 
+### 17. Configuration Validation and Security Checks
+
+```bash
+code-agent config validate --verbose
+```
+
+**Purpose**: Test the configuration validation system that ensures model compatibility with providers, API key format validation, command allowlist security checks, and identifies security risks in configuration settings.
+
+**Expected Result**: The validation should check the current configuration for:
+- Model compatibility with the selected provider
+- API key format and presence
+- Security concerns in command allowlist patterns
+- Auto-approve settings that might pose security risks
+
+When run with the verbose flag, it should display all validation details even if there are only warnings. If validation fails with errors, the command should exit with code 1, indicating failure.
+
 ## Model-Specific Tests
 
 ### 8. Alternative Model Test
