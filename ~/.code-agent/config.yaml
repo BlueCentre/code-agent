@@ -1,0 +1,26 @@
+# Default configuration for MyAgent
+
+# Default LLM provider and model
+default_provider: "openai"  # Example: openai, groq, ollama, anthropic, etc.
+default_model: "gpt-4o"     # Example: gpt-4o, llama3-70b-8192, claude-3-opus-20240229
+
+# API keys (Ideally loaded from environment variables or a secure location)
+# Example structure - keys should NOT be stored directly here in a real setup
+api_keys:
+  openai: "YOUR_OPENAI_API_KEY"
+  groq: "YOUR_GROQ_API_KEY"
+  # anthropic: "YOUR_ANTHROPIC_API_KEY"
+
+# Agent behavior
+auto_approve_edits: false
+auto_approve_native_commands: false
+
+# Allowed native commands (empty list means none allowed unless auto_approve is true)
+native_command_allowlist: []
+  # - "ls"
+  # - "git status | cat"
+
+# Custom rules/guidance for the agent
+# rules:
+#  - "Always use TDD when generating code."
+#  - "Prefer functional programming style." 

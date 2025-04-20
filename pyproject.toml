@@ -1,0 +1,52 @@
+[tool.poetry]
+name = "code-agent"
+version = "0.1.0"
+description = "CLI agent for interacting with LLMs and local environment"
+authors = ["Your Name <you@example.com>"]
+readme = "README.md"
+packages = [{include = "code_agent"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+typer = {extras = ["all"], version = "^0.12.3"}
+litellm = "^1.39.2"
+pyyaml = "^6.0.1"
+rich = "^13.7.1"
+google-adk = "^0.2.0"
+pydantic = "^2.7.4"
+
+[tool.poetry.scripts]
+code-agent = "code_agent.cli.main:app"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.2.2"
+pytest-cov = "^5.0.0"
+ruff = "^0.4.10"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+# Ruff Configuration
+[tool.ruff]
+# Same as Black.
+line-length = 88
+# Assume Python 3.10+.
+target-version = "py310"
+
+[tool.ruff.lint]
+# Enable Pyflakes (F) and a subset of the pycodestyle (E, W) rules by default.
+# Adding isort (I) for import sorting.
+# Adding flake8-bugbear (B) for potential bugs.
+# Adding ruff-specific rules (RUF)
+select = ["E", "F", "W", "I", "B", "RUF"]
+
+# Optional: Ignore specific rules if needed
+# ignore = ["F401"] # Example: Ignore unused imports
+
+# Allow unused variables when starting with `_`.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+# Configure isort
+[tool.ruff.lint.isort]
+known-first-party = ["code_agent"] # Tell ruff your own code directory 
