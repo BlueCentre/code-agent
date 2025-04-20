@@ -233,6 +233,87 @@ def config_show():
     )
     print(config.model_dump_json(indent=2))
 
+@config_app.command("reset")
+def config_reset():
+    """
+    Reset configuration to defaults by copying the template file.
+    """
+    from code_agent.config.config import DEFAULT_CONFIG_PATH, TEMPLATE_CONFIG_PATH, create_default_config_file
+    
+    if DEFAULT_CONFIG_PATH.exists():
+        backup_path = DEFAULT_CONFIG_PATH.with_suffix(".yaml.bak")
+        try:
+            # Create a backup of the existing config
+            import shutil
+            shutil.copy2(DEFAULT_CONFIG_PATH, backup_path)
+            print(f"[yellow]Created backup of existing config at {backup_path}[/yellow]")
+        except Exception as e:
+            print(f"[red]Warning: Could not create backup: {e}[/red]")
+    
+    # Create default config file from template
+    create_default_config_file(DEFAULT_CONFIG_PATH)
+    print(f"[bold green]Configuration reset to defaults at {DEFAULT_CONFIG_PATH}[/bold green]")
+    print("Edit this file to add your API keys or set appropriate environment variables.")
+
+@config_app.command("aistudio")
+def config_aistudio():
+    """
+    Show information about using Google AI Studio as a provider.
+    """
+    config = get_config()
+    api_key = config.api_keys.model_dump().get("ai_studio")
+    
+    console = Console()
+    console.print("[bold]Google AI Studio Configuration[/bold]", style="blue")
+    console.print("=" * 50)
+    
+    # Status information
+    console.print("[bold]Current Status:[/bold]")
+    if config.default_provider == "ai_studio":
+        console.print("✅ AI Studio is currently the [bold green]default provider[/bold green].")
+    else:
+        console.print(f"❌ AI Studio is [yellow]NOT[/yellow] the default provider (currently using: [bold]{config.default_provider}[/bold]).")
+    
+    if api_key:
+        console.print("✅ AI Studio API key is [bold green]configured[/bold green].")
+    else:
+        console.print("❌ No AI Studio API key [red]found[/red] in config or environment.")
+    
+    # Setup instructions
+    console.print("\n[bold]Setup Instructions:[/bold]")
+    console.print("1. Visit [link]https://ai.google.dev/[/link] to access Google AI Studio")
+    console.print("2. Create an account or sign in")
+    console.print("3. Navigate to the API keys section and create a new key")
+    console.print("4. Your API key will start with 'aip-'")
+    
+    # Configuration options
+    console.print("\n[bold]Configuration Options:[/bold]")
+    console.print("[bold yellow]Option 1:[/bold yellow] Set environment variable")
+    console.print("  export AI_STUDIO_API_KEY=aip-your-key-here")
+    
+    console.print("[bold yellow]Option 2:[/bold yellow] Add to config file")
+    console.print("  Edit ~/.code-agent/config.yaml and add:")
+    console.print("  api_keys:")
+    console.print("    ai_studio: \"aip-your-key-here\"")
+    
+    # Available models
+    console.print("\n[bold]Available Models:[/bold]")
+    console.print("- [bold]gemini-1.5-flash[/bold]: Fast, efficient responses (default)")
+    console.print("- [bold]gemini-1.5-pro[/bold]: More capable, better for complex tasks")
+    
+    # Usage examples
+    console.print("\n[bold]Usage Examples:[/bold]")
+    console.print("# Use AI Studio (default)")
+    console.print("code-agent run \"What's the current Python version?\"")
+    
+    console.print("\n# Specify a different AI Studio model")
+    console.print("code-agent --model gemini-1.5-pro run \"Explain quantum computing\"")
+    
+    console.print("\n# Switch to a different provider")
+    console.print("code-agent --provider openai --model gpt-4o run \"Compare Python and JavaScript\"")
+    
+    console.print("\n[italic]For more information, see https://ai.google.dev/docs[/italic]")
+
 # --- Provider Commands ---
 provider_app = typer.Typer(name="providers", help="Manage providers.")
 app.add_typer(provider_app)

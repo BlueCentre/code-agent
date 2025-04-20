@@ -1,4 +1,5 @@
 import os
+import shutil
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -12,6 +13,7 @@ pass
 # Define the default config path
 DEFAULT_CONFIG_DIR = Path.home() / ".code-agent"
 DEFAULT_CONFIG_PATH = DEFAULT_CONFIG_DIR / "config.yaml"
+TEMPLATE_CONFIG_PATH = Path(__file__).parent / "template.yaml"
 
 # --- Pydantic Models for Validation ---
 
@@ -45,14 +47,49 @@ _config: Optional[SettingsConfig] = None
 
 def load_config_from_file(config_path: Path = DEFAULT_CONFIG_PATH) -> Dict[str, Any]:
     """Loads configuration purely from a YAML file, returning a dict."""
+    # Ensure config directory exists
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    # If config file doesn't exist, create it from template
     if not config_path.exists():
-        return {}
+        create_default_config_file(config_path)
+        print(f"Created default configuration file at {config_path}")
+        print("Edit this file to add your API keys or set appropriate environment variables.")
+    
     try:
         with open(config_path, "r") as f:
             return yaml.safe_load(f) or {}
     except Exception as e:
         print(f"Warning: Could not read config file at {config_path}. Error: {e}")
         return {}
+
+
+def create_default_config_file(config_path: Path) -> None:
+    """Creates a default configuration file from the template."""
+    try:
+        if TEMPLATE_CONFIG_PATH.exists():
+            # Copy from template if it exists
+            shutil.copy2(TEMPLATE_CONFIG_PATH, config_path)
+        else:
+            # Fallback if template doesn't exist
+            default_config = {
+                "default_provider": "ai_studio",
+                "default_model": "gemini-1.5-flash",
+                "api_keys": {
+                    "ai_studio": None,
+                    "openai": None,
+                    "groq": None,
+                },
+                "auto_approve_edits": False,
+                "auto_approve_native_commands": False,
+                "native_command_allowlist": [],
+                "rules": [],
+            }
+            
+            with open(config_path, "w") as f:
+                yaml.dump(default_config, f, default_flow_style=False, sort_keys=False)
+    except Exception as e:
+        print(f"Warning: Could not create default config file at {config_path}. Error: {e}")
 
 
 def build_effective_config(

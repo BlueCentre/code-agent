@@ -1,0 +1,67 @@
+# Code Agent Configuration Template
+# Copy this to ~/.code-agent/config.yaml and edit as needed
+
+# ===============================
+# Default LLM Provider and Model
+# ===============================
+# Options include: "ai_studio", "openai", "groq", "anthropic", etc.
+default_provider: "ai_studio"  
+
+# Available models depend on the provider:
+# - AI Studio: "gemini-1.5-flash", "gemini-1.5-pro"
+# - OpenAI: "gpt-4o", "gpt-3.5-turbo", etc.
+# - Groq: "llama3-70b-8192", "mixtral-8x7b-32768", etc.
+default_model: "gemini-1.5-flash"
+
+# ===============================
+# API Keys
+# ===============================
+# It's recommended to set these via environment variables for security
+# You can also set them directly here, but be careful with this file's permissions
+api_keys:
+  # AI Studio - Get from https://ai.google.dev/
+  # Set via AI_STUDIO_API_KEY environment variable (recommended)
+  ai_studio: null  # Or add your key directly: "aip-..."
+  
+  # OpenAI - Get from https://platform.openai.com/
+  # Set via OPENAI_API_KEY environment variable (recommended)
+  openai: null  # Or add your key directly: "sk-..."
+  
+  # Groq - Get from https://console.groq.com/
+  # Set via GROQ_API_KEY environment variable (recommended)
+  groq: null  # Or add your key directly: "gsk-..."
+  
+  # Anthropic - Get from https://console.anthropic.com/
+  # Set via ANTHROPIC_API_KEY environment variable (recommended)
+  # anthropic: null  # Or add your key directly: "sk-ant-..."
+
+# ===============================
+# Agent Behavior Settings
+# ===============================
+# Auto-approve file edits (CAUTION: setting to true allows changes without confirmation)
+auto_approve_edits: false
+
+# Auto-approve command execution (EXTREME CAUTION: setting to true allows command execution without confirmation)
+auto_approve_native_commands: false
+
+# ===============================
+# Command Security
+# ===============================
+# If non-empty, only these commands will be allowed without requiring auto-approve
+# Use exact command prefixes (commands must START WITH these strings)
+native_command_allowlist:
+  # - "git status"
+  # - "ls -la"
+  # - "echo"
+  # - "pwd"
+  # - "cat"
+
+# ===============================
+# Agent Instruction Rules
+# ===============================
+# Custom rules to influence the agent's behavior
+rules:
+  # - "Always provide code examples when explaining concepts."
+  # - "Prefer Python for code examples unless specified otherwise."
+  # - "When writing Python code, always include type hints."
+  # - "Always explain your reasoning step by step." 

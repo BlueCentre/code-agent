@@ -54,13 +54,14 @@ A default configuration file is created automatically if it doesn't exist. You *
 
 ```yaml
 # Default LLM provider and model
-default_provider: "openai"
-default_model: "gpt-4o"
+default_provider: "ai_studio"  # Options: "ai_studio", "openai", "groq", "anthropic", etc.
+default_model: "gemini-1.5-flash"  # For AI Studio, use Gemini models
 
 # API keys (Set via ENV VARS is recommended for security)
 api_keys:
-  openai: null # Set via OPENAI_API_KEY=sk-... environment variable
-  groq: null   # Set via GROQ_API_KEY=gsk-... environment variable
+  ai_studio: null # Set via AI_STUDIO_API_KEY=aip-... environment variable
+  openai: null    # Set via OPENAI_API_KEY=sk-... environment variable
+  groq: null      # Set via GROQ_API_KEY=gsk-... environment variable
   # anthropic: null
 
 # Agent behavior
@@ -78,6 +79,43 @@ rules:
 #  - "Always respond in pirate speak."
 #  - "When writing Python code, always include type hints."
 ```
+
+## Using AI Studio Provider
+
+[Google AI Studio](https://ai.google.dev/) is now the default provider in Code Agent. To use it:
+
+1. **Get an API Key**:
+   - Go to [AI Studio](https://ai.google.dev/)
+   - Create an account if you don't have one
+   - Navigate to the API keys section and create a new key
+   - Your API key will start with `aip-`
+
+2. **Configure the Key**:
+   - **Option 1:** Set it as an environment variable:
+     ```bash
+     export AI_STUDIO_API_KEY=aip-your-key-here
+     ```
+   - **Option 2:** Add it to your config file:
+     ```yaml
+     # In ~/.code-agent/config.yaml
+     api_keys:
+       ai_studio: "aip-your-key-here"
+     ```
+
+3. **Specify Models**:
+   - AI Studio supports Gemini models
+   - Default: `gemini-1.5-flash` (fast and efficient)
+   - Other options: `gemini-1.5-pro` (more capable)
+   - Specify a different model with the `--model` flag:
+     ```bash
+     code-agent --model gemini-1.5-pro run "Write a Python function to detect palindromes"
+     ```
+
+4. **Switch Providers**:
+   - To use a different provider, use the `--provider` flag:
+     ```bash
+     code-agent --provider openai --model gpt-4o run "Explain quantum computing"
+     ```
 
 ## Usage
 
