@@ -103,7 +103,7 @@ def test_read_file_pagination_error(tmp_path: Path):
     with patch("code_agent.tools.file_tools.is_path_safe", return_value=(True, None)):
         with patch("code_agent.tools.file_tools._read_file_lines", side_effect=Exception("Pagination error")):
             result = read_file(str(test_file_path), enable_pagination=True)
-            assert "Failed when reading with pagination" in result
+            assert "Error: Failed when reading with pagination" in result
             assert "Pagination error" in result
 
 

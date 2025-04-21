@@ -200,11 +200,13 @@ def test_read_file_invalid_pagination_params(tmp_path: Path):
 
     # Test with negative offset
     result_negative_offset = read_file(path=str(test_file_path), offset=-1, enable_pagination=True)
-    assert "Error: offset must be a non-negative integer" in result_negative_offset
+    assert "Error: Failed when validating parameters" in result_negative_offset
+    assert "Offset must be a non-negative integer" in result_negative_offset
 
     # Test with zero limit
     result_zero_limit = read_file(path=str(test_file_path), limit=0, enable_pagination=True)
-    assert "Error: limit must be a positive integer" in result_zero_limit
+    assert "Error: Failed when validating parameters" in result_zero_limit
+    assert "Limit must be a positive integer" in result_zero_limit
 
 
 # --- Tests for apply_edit ---
