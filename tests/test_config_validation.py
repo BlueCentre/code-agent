@@ -12,6 +12,7 @@ from code_agent.config.validation import (
     validate_config,
     validate_model_compatibility,
     validate_native_command_allowlist,
+    validate_native_command_settings,
 )
 
 
@@ -256,3 +257,75 @@ def test_validate_dynamic_method():
         mock_print.assert_any_call("[bold yellow]Found 2 configuration warning(s):[/bold yellow]")
         # Should indicate that it's valid with warnings
         mock_print.assert_any_call("[bold green]✓ Configuration is valid[/bold green] [yellow](with warnings)[/yellow]")
+
+
+def test_validate_native_command_allowlist_with_dangerous_patterns():
+    result = ValidationResult()
+    dangerous_allowlist = ["rm", ";" "mv *"]
+    validate_native_command_allowlist(dangerous_allowlist, result)
+    assert len(result.warnings) == 1
+    assert "Potentially insecure command patterns" in result.warnings[0]
+    assert "rm" in result.warnings[0]
+    assert "mv *" in result.warnings[0]
+
+
+def test_validate_native_command_settings_null():
+    """Test validation with null settings."""
+    result = ValidationResult()
+    validate_native_command_settings(None, result)
+    assert len(result.errors) == 0
+    assert len(result.warnings) == 0
+
+
+def test_validate_native_command_settings_negative_timeout():
+    """Test validation with negative timeout value."""
+    result = ValidationResult()
+
+    # Create a simple mock object
+    class MockSettings:
+        def __init__(self):
+            self.default_timeout = -10
+            self.default_working_directory = None
+
+    settings = MockSettings()
+    validate_native_command_settings(settings, result)
+
+    assert len(result.errors) == 1
+    assert "Invalid default_timeout value" in result.errors[0]
+    assert "-10" in result.errors[0]
+
+
+def test_validate_native_command_settings_nonexistent_dir():
+    """Test validation with nonexistent working directory."""
+    result = ValidationResult()
+
+    # Create a simple mock object
+    class MockSettings:
+        def __init__(self):
+            self.default_timeout = 30
+            self.default_working_directory = "/nonexistent/directory/path"
+
+    settings = MockSettings()
+    validate_native_command_settings(settings, result)
+
+    assert len(result.errors) == 0
+    assert len(result.warnings) == 1
+    assert "Default working directory does not exist" in result.warnings[0]
+    assert "/nonexistent/directory/path" in result.warnings[0]
+
+
+def test_validate_native_command_settings_valid():
+    """Test validation with valid settings."""
+    result = ValidationResult()
+
+    # Create a simple mock object with valid values
+    class MockSettings:
+        def __init__(self):
+            self.default_timeout = 30
+            self.default_working_directory = None  # None is always valid
+
+    settings = MockSettings()
+    validate_native_command_settings(settings, result)
+
+    assert len(result.errors) == 0
+    assert len(result.warnings) == 0
