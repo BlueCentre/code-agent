@@ -10,9 +10,7 @@ the basic type checking done by Pydantic. It includes validation for:
 """
 
 import re
-from typing import List
-
-from code_agent.config.config import ApiKeys, SettingsConfig
+from typing import Any, Dict, List, Union
 
 # --- Model compatibility validation ---
 
@@ -91,19 +89,26 @@ def validate_model_compatibility(provider: str, model: str, result: ValidationRe
         result.add_error(f"Model '{model}' is not recognized for provider '{provider}'. " f"Supported models include: {supported_models}.")
 
 
-def validate_api_keys(api_keys: ApiKeys, result: ValidationResult) -> None:
+def validate_api_keys(api_keys: Union[Dict[str, str], Any], result: ValidationResult) -> None:
     """Validate API keys for format and presence.
 
     Checks:
     1. The key for the default provider is present
     2. Any provided keys match the expected format
+
+    Args:
+        api_keys: Either an ApiKeys object or a dictionary of keys
+        result: ValidationResult to update
     """
     # Get all API keys as a dictionary
     if isinstance(api_keys, dict):
         keys_dict = api_keys
     else:
         # Get the dict representation of the ApiKeys object
-        keys_dict = api_keys.model_dump()
+        try:
+            keys_dict = api_keys.model_dump()
+        except AttributeError:
+            keys_dict = vars(api_keys)
 
     # Check if any keys were provided
     if not any(v for v in keys_dict.values() if v is not None):
@@ -151,11 +156,11 @@ def validate_native_command_allowlist(allowlist: List[str], result: ValidationRe
         )
 
 
-def validate_config(config: SettingsConfig) -> ValidationResult:
+def validate_config(config: Any) -> ValidationResult:
     """Validate the complete configuration and return detailed results.
 
     Args:
-        config: The configuration to validate
+        config: The configuration to validate (SettingsConfig object)
 
     Returns:
         ValidationResult with detailed errors and warnings
