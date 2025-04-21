@@ -120,24 +120,19 @@ def read_file(path: str, offset: Optional[int] = None, limit: Optional[int] = No
     """
     # Validate the offset and limit parameters
     if offset is not None and offset < 0:
-        return f"Error: offset must be a non-negative integer, got {offset}"
+        return f"Error: Failed when validating parameters for '{path}'.\nOffset must be a non-negative integer, got {offset}."
 
     if limit is not None and limit <= 0:
-        return f"Error: limit must be a positive integer, got {limit}"
+        return f"Error: Failed when validating parameters for '{path}'.\nLimit must be a positive integer, got {limit}."
 
     # Get configuration settings
     config = get_config()
 
-    # Get file read settings from config or use defaults
-    try:
-        max_file_size_kb = config.file_operations.read_file.max_file_size_kb
-        max_lines = config.file_operations.read_file.max_lines
-        config_enable_pagination = config.file_operations.read_file.enable_pagination
-    except AttributeError:
-        # Fall back to defaults if configuration structure is not available
-        max_file_size_kb = DEFAULT_MAX_FILE_SIZE_KB
-        max_lines = DEFAULT_MAX_LINES
-        config_enable_pagination = False
+    # Get file read settings from config or use defaults with direct assignment
+    # Default values will be used if the config structure doesn't have the needed attributes
+    max_file_size_kb = getattr(config.file_operations.read_file, "max_file_size_kb", DEFAULT_MAX_FILE_SIZE_KB)
+    max_lines = getattr(config.file_operations.read_file, "max_lines", DEFAULT_MAX_LINES)
+    config_enable_pagination = getattr(config.file_operations.read_file, "enable_pagination", False)
 
     # Convert KB to bytes
     max_file_size_bytes = max_file_size_kb * 1024
