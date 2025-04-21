@@ -6,12 +6,13 @@ This document consolidates all tasks, improvements, and future enhancements for 
 
 - **Test Suite Completion**
   - ✅ Add tests for 'chat' command (more complex due to interaction) [from todo_priorities]
-  - 🔄 Improve test coverage, especially for edge cases in tools [from implementation.md] (Current: 80% coverage)
-  - 🔄 Complete test LLM interaction with mocked responses/tool calls [from implementation.md]
+  - ✅ Improve test coverage, especially for edge cases in tools [from implementation.md] (Current: 80% coverage)
+  - 🔜 Complete test LLM interaction with mocked responses/tool calls [from implementation.md]
 
 - **Error Handling Refinement**
   - 🔄 Refine error handling and user feedback for API errors, tool failures, configuration issues, and LLM runtime errors [from implementation.md]
-  - 🔜 Implement more informative error messages for file operation failures [from future_improvements.md]
+  - ✅ Implement more informative error messages for file operation failures [from future_improvements.md]
+  - 🔄 Update test assertions to match new error message format [in response to error message improvements]
 
 ## High Priority
 

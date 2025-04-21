@@ -35,8 +35,7 @@ def mock_path_validation():
 def temp_file(tmp_path: Path) -> Path:
     """Creates a temporary file with some content."""
     file_path = tmp_path / "test_file.txt"
-    content = "Line 1\nLine 2\nLine 3"
-    file_path.write_text(content)
+    file_path.write_text("Line 1\nLine 2\nLine 3\n")
     return file_path
 
 
@@ -96,19 +95,19 @@ def test_is_path_within_cwd():
 def test_read_file_success(temp_file: Path):
     """Test reading an existing file successfully."""
     result = read_file(str(temp_file))
-    assert result == "Line 1\nLine 2\nLine 3"
+    assert result == "Line 1\nLine 2\nLine 3\n"
 
 
 def test_read_file_not_found(tmp_path: Path):
     """Test reading a non-existent file."""
     result = read_file(str(tmp_path / "non_existent.txt"))
-    assert "Error: File not found" in result
+    assert "File not found or is not a regular file" in result
 
 
 def test_read_file_is_directory(temp_dir: Path):
     """Test attempting to read a directory."""
     result = read_file(str(temp_dir))
-    assert "Error: File not found or is not a regular file" in result
+    assert "File not found or is not a regular file" in result
 
 
 def test_read_file_too_large(tmp_path: Path):
@@ -121,7 +120,8 @@ def test_read_file_too_large(tmp_path: Path):
     with patch("pathlib.Path.is_file", return_value=True):
         with patch("pathlib.Path.stat", return_value=stat_result):
             result = read_file(str(large_file_path))
-            assert "Error: File is too large" in result
+            assert "too large" in result
+            assert "Maximum allowed size" in result
 
 
 def test_read_file_stat_error(tmp_path: Path):
@@ -131,7 +131,8 @@ def test_read_file_stat_error(tmp_path: Path):
     with patch("pathlib.Path.is_file", return_value=True):
         with patch("pathlib.Path.stat", side_effect=OSError("stat error")):
             result = read_file(str(file_path))
-            assert "Error getting file size" in result
+            assert "Failed when checking size of" in result
+            assert "stat error" in result
 
 
 def test_read_file_permission_error(temp_file: Path):
@@ -140,7 +141,8 @@ def test_read_file_permission_error(temp_file: Path):
         with patch("pathlib.Path.stat", return_value=type("MockStatResult", (), {"st_size": 100})):
             with patch("pathlib.Path.read_text", side_effect=PermissionError("Permission denied")):
                 result = read_file(str(temp_file))
-                assert "Error: Permission denied" in result
+                assert "Failed when reading" in result
+                assert "permission" in result.lower()
 
 
 def test_read_file_generic_error(temp_file: Path):
@@ -149,14 +151,15 @@ def test_read_file_generic_error(temp_file: Path):
         with patch("pathlib.Path.stat", return_value=type("MockStatResult", (), {"st_size": 100})):
             with patch("pathlib.Path.read_text", side_effect=Exception("Generic error")):
                 result = read_file(str(temp_file))
-                assert "Error reading file" in result
+                assert "Failed when reading" in result
+                assert "Generic error" in result
 
 
 def test_read_file_outside_cwd(temp_file: Path):
     """Test reading a file outside the CWD."""
     with patch("code_agent.tools.file_tools.is_path_within_cwd", return_value=False):
         result = read_file(str(temp_file))
-        assert "Error: Path access restricted" in result
+        assert "Path access restricted" in result
 
 
 def test_read_file_legacy(temp_file: Path):
@@ -238,7 +241,7 @@ def test_apply_edit_no_changes(temp_file: Path, mock_config):
         content_before = temp_file.read_text()
         result = apply_edit(str(temp_file), content_before)
 
-        assert "No changes detected" in result
+        assert "No changes needed" in result
         assert temp_file.read_text() == content_before
         mock_confirm.assert_not_called()
 
@@ -246,8 +249,10 @@ def test_apply_edit_no_changes(temp_file: Path, mock_config):
 def test_apply_edit_is_directory(temp_dir: Path, mock_config):
     """Test applying an edit to a path that is a directory."""
     # First mock is_path_within_cwd to return True, then proceed with the test
-    result = apply_edit(str(temp_dir), "Some content")
-    assert "Error: Path exists but is not a regular file" in result
+    with patch("pathlib.Path.exists", return_value=True):
+        with patch("pathlib.Path.is_file", return_value=False):
+            result = apply_edit(str(temp_dir), "Some content")
+            assert "regular file" in result
 
 
 def test_apply_edit_outside_cwd(temp_file: Path, mock_config):
@@ -264,7 +269,7 @@ def test_apply_edit_outside_cwd(temp_file: Path, mock_config):
             patch("code_agent.tools.file_tools.Confirm.ask", return_value=False),
         ):
             result = apply_edit(str(temp_file), "Modified content")
-            assert "Error: Path access restricted" in result
+            assert "Path access restricted" in result
 
 
 def test_apply_edit_permission_error(temp_file: Path, mock_config):
@@ -272,8 +277,8 @@ def test_apply_edit_permission_error(temp_file: Path, mock_config):
     with patch("code_agent.tools.file_tools.Confirm.ask", return_value=True):
         with patch("pathlib.Path.write_text", side_effect=PermissionError("Permission denied")):
             result = apply_edit(str(temp_file), "New content")
-            assert "Error writing changes to file" in result
-            assert "Permission denied" in result
+            assert "Failed when writing changes to" in result
+            assert "permission" in result.lower()
 
 
 def test_apply_edit_generic_error(temp_file: Path, mock_config):
@@ -281,5 +286,5 @@ def test_apply_edit_generic_error(temp_file: Path, mock_config):
     with patch("code_agent.tools.file_tools.Confirm.ask", return_value=True):
         with patch("pathlib.Path.write_text", side_effect=Exception("Generic error")):
             result = apply_edit(str(temp_file), "New content")
-            assert "Error writing changes to file" in result
+            assert "Failed when writing changes to" in result
             assert "Generic error" in result

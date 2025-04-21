@@ -6,6 +6,14 @@ from rich import print
 from rich.console import Console
 from rich.prompt import Confirm
 from rich.syntax import Syntax
+from rich.table import Table
+
+from code_agent.config import get_config
+from code_agent.tools.error_utils import (
+    format_file_error,
+    format_file_size_error,
+    format_path_restricted_error,
+)
 
 console = Console()
 
@@ -33,68 +41,69 @@ def is_path_within_cwd(path_str: str) -> bool:
 def read_file(path: str) -> str:
     """Reads the entire content of a file at the given path, restricted to CWD."""
     if not is_path_within_cwd(path):
-        # Break long f-string
-        return (
-            f"Error: Path access restricted. Can only read files within the "
-            f"current working directory or its subdirectories: {path}"
-        )
+        return format_path_restricted_error(path)
+
     try:
         # Path is already resolved in is_path_within_cwd, but resolve again for consistency
         file_path = Path(path).resolve()
         print(f"[yellow]Attempting to read file:[/yellow] {file_path}")
 
         if not file_path.is_file():
-            return f"Error: File not found or is not a regular file: {path}"
+            return (
+                f"Error: File not found or is not a regular file: '{path}'.\n"
+                f"Please check:\n"
+                f"- If the path points to a regular file, not a directory\n"
+                f"- If the file exists at the specified location"
+            )
 
         # Add file size check
         try:
             file_size = file_path.stat().st_size
             if file_size > MAX_FILE_SIZE_BYTES:
-                mb_size = file_size / 1024 / 1024
-                max_mb_size = MAX_FILE_SIZE_BYTES / 1024 / 1024
-                # Break long f-string
-                return f"Error: File is too large ({mb_size:.2f} MB). " f"Maximum allowed size is {max_mb_size:.2f} MB."
+                return format_file_size_error(path, file_size, MAX_FILE_SIZE_BYTES)
         except Exception as stat_e:
-            return f"Error getting file size for {path}: {stat_e}"
+            return format_file_error(stat_e, path, "checking size of")
 
         content = file_path.read_text()
         return content
 
-    except FileNotFoundError:
-        return f"Error: File not found: {path}"
-    except PermissionError:
-        return f"Error: Permission denied when trying to read file: {path}"
+    except FileNotFoundError as e:
+        return format_file_error(e, path, "reading")
+    except PermissionError as e:
+        return format_file_error(e, path, "reading")
     except Exception as e:
-        return f"Error reading file {path}: {e}"
+        return format_file_error(e, path, "reading")
 
 
 # --- Delete File Tool Function ---
 def delete_file(path: str) -> str:
     """Deletes a file at the given path, restricted to CWD."""
     if not is_path_within_cwd(path):
-        return (
-            f"Error: Path access restricted. Can only delete files within the "
-            f"current working directory or its subdirectories: {path}"
-        )
+        return format_path_restricted_error(path)
+
     try:
         file_path = Path(path).resolve()
         print(f"[yellow]Attempting to delete file:[/yellow] {file_path}")
 
         if not file_path.exists():
-            return f"Error: File does not exist: {path}"
+            return f"Error: File does not exist: '{path}'.\n" f"Please check if the file path is correct."
 
         if not file_path.is_file():
-            return f"Error: Path exists but is not a regular file: {path}"
+            return (
+                f"Error: Path exists but is not a regular file: '{path}'.\n"
+                f"Only regular files can be deleted with this tool.\n"
+                f"If you're trying to delete a directory, this operation is not supported."
+            )
 
         file_path.unlink()
         return f"File deleted successfully: {path}"
 
-    except FileNotFoundError:
-        return f"Error: File not found: {path}"
-    except PermissionError:
-        return f"Error: Permission denied when trying to delete file: {path}"
+    except FileNotFoundError as e:
+        return format_file_error(e, path, "deleting")
+    except PermissionError as e:
+        return format_file_error(e, path, "deleting")
     except Exception as e:
-        return f"Error deleting file {path}: {e}"
+        return format_file_error(e, path, "deleting")
 
 
 # --- Apply Edit Tool Input Schema ---
@@ -116,55 +125,85 @@ def _is_path_safe(base_path: Path, target_path: Path) -> bool:
 
 # apply_edit function with updated signature
 def apply_edit(target_file: str, code_edit: str) -> str:
-    """Applies proposed content changes to a file after showing a diff and requesting user confirmation.
-    Restricted to CWD."""
-    from code_agent.config import get_config
-
+    """Applies proposed content changes to a file after showing a diff and requesting user confirmation."""
     config = get_config()
-    file_path_str = target_file
-    proposed_content = code_edit
 
-    if not _is_path_safe(Path.cwd(), Path(file_path_str)):
-        # Break long f-string
-        return (
-            f"Error: Path access restricted. Can only edit files within the "
-            f"current working directory or its subdirectories: {file_path_str}"
-        )
+    if not is_path_within_cwd(target_file):
+        return format_path_restricted_error(target_file)
 
     try:
-        file_path = Path(file_path_str).resolve()
-        print(f"[yellow]Attempting to edit file:[/yellow] {file_path}")
+        file_path = Path(target_file).resolve()
 
-        # Read current content (or empty if file doesn't exist)
-        current_content = ""
-        if file_path.is_file():
-            current_content = file_path.read_text()
-        elif file_path.exists():
-            return f"Error: Path exists but is not a regular file: {target_file}"
-
-        # --- Calculate and Display Diff ---
-        diff = list(
-            difflib.unified_diff(
-                current_content.splitlines(keepends=True),
-                proposed_content.splitlines(keepends=True),
-                fromfile=f"a/{target_file}",
-                tofile=f"b/{target_file}",
-                lineterm="\n",
+        # Check if path exists and is a directory
+        if file_path.exists() and not file_path.is_file():
+            return (
+                f"Error: Path exists but is not a regular file: '{target_file}'.\n"
+                f"Only regular files can be edited. If you're trying to edit a directory,\n"
+                f"this operation is not supported."
             )
-        )
 
-        if not diff:
-            return "No changes detected. File content is the same."
+        # Get current content or empty string if file doesn't exist
+        current_content = ""
+        if file_path.exists() and file_path.is_file():
+            try:
+                current_content = file_path.read_text()
+            except Exception as read_e:
+                return format_file_error(read_e, target_file, "reading for edit")
 
-        print("\n[bold]Proposed changes:[/bold]")
-        # Use rich Syntax for diff highlighting
-        diff_text = "".join(diff)
-        syntax = Syntax(diff_text, "diff", theme="default", line_numbers=False)
-        console.print(syntax)
+        proposed_content = code_edit
 
-        # --- Request Confirmation ---
-        # Auto-approve or ask for confirmation
-        confirmed = False
+        # Check if there's an actual change
+        if current_content == proposed_content and file_path.exists():
+            return f"No changes needed, file content already matches the proposed edit for {target_file}."
+
+        # --- Prepare and Show Diff ---
+        is_new_file = not file_path.exists()
+
+        console = Console()
+        print()
+        if is_new_file:
+            print(f"[bold green]Creating new file:[/bold green] {target_file}")
+
+            # Just show the syntax-highlighted content for new files
+            syntax = Syntax(
+                proposed_content,
+                lexer="python",  # This will be auto-detected in many cases
+                line_numbers=True,
+                theme="monokai",
+            )
+            console.print(syntax)
+        else:
+            print(f"[bold yellow]Editing existing file:[/bold yellow] {target_file}")
+
+            # Generate diff between current and proposed
+            diff = list(
+                difflib.unified_diff(
+                    current_content.splitlines(),
+                    proposed_content.splitlines(),
+                    fromfile=f"Current: {target_file}",
+                    tofile=f"Proposed: {target_file}",
+                    lineterm="",
+                )
+            )
+
+            # Create a highlighted diff display
+            table = Table(show_header=False, box=None)
+            table.add_column("Change", style="bold")
+            table.add_column("Line")
+
+            for line in diff:
+                if line.startswith("+++") or line.startswith("---") or line.startswith("@@"):
+                    table.add_row("", f"[dim]{line}[/dim]")
+                elif line.startswith("+"):
+                    table.add_row("+", f"[green]{line[1:]}[/green]")
+                elif line.startswith("-"):
+                    table.add_row("-", f"[red]{line[1:]}[/red]")
+                else:
+                    table.add_row("", line)
+
+            console.print(table)
+
+        # --- Ask for Confirmation ---
         if config.auto_approve_edits:
             print("[yellow]Auto-approving edit based on configuration.[/yellow]")
             confirmed = True
@@ -180,7 +219,7 @@ def apply_edit(target_file: str, code_edit: str) -> str:
                 file_path.write_text(proposed_content)
                 return f"Edit applied successfully to {target_file}."
             except Exception as write_e:
-                return f"Error writing changes to file {target_file}: {write_e}"
+                return format_file_error(write_e, target_file, "writing changes to")
         else:
             return "Edit cancelled by user."
 
@@ -188,10 +227,10 @@ def apply_edit(target_file: str, code_edit: str) -> str:
         # This case might be handled by the initial check, but added for safety
         # If the intention is to create a new file, the logic handles it.
         pass  # Let the diff/write logic handle file creation
-    except PermissionError:
-        return f"Error: Permission denied when accessing file: {target_file}"
+    except PermissionError as e:
+        return format_file_error(e, target_file, "accessing")
     except Exception as e:
-        return f"Error applying edit to {target_file}: {e}"
+        return format_file_error(e, target_file, "applying edit to")
 
 
 # For compatibility with legacy code that might expect ReadFileArgs

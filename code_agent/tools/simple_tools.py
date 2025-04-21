@@ -13,6 +13,17 @@ from rich.console import Console
 from rich.prompt import Confirm
 from rich.syntax import Syntax
 
+from code_agent.config.config import get_config
+from code_agent.tools.error_utils import (
+    format_file_error,
+    format_file_size_error,
+    format_path_restricted_error,
+)
+
+# Make these module-level variables that can be easily mocked in tests
+subprocess_run = subprocess.run
+confirm_ask = Confirm.ask
+
 console = Console()
 
 # Define a max file size limit (e.g., 1MB)
@@ -34,50 +45,46 @@ def is_path_within_cwd(path_str: str) -> bool:
 def read_file(path: str) -> str:
     """Reads the entire content of a file at the given path, restricted to CWD."""
     if not is_path_within_cwd(path):
-        return (
-            f"Error: Path access restricted. Can only read files within the "
-            f"current working directory or its subdirectories: {path}"
-        )
+        return format_path_restricted_error(path)
+
     try:
         file_path = Path(path).resolve()
         print(f"[yellow]Attempting to read file:[/yellow] {file_path}")
 
         if not file_path.is_file():
-            return f"Error: File not found or is not a regular file: {path}"
+            return (
+                f"Error: File not found or is not a regular file: '{path}'.\n"
+                f"Please check:\n"
+                f"- If the path points to a regular file, not a directory\n"
+                f"- If the file exists at the specified location"
+            )
 
         # Add file size check
         try:
             file_size = file_path.stat().st_size
             if file_size > MAX_FILE_SIZE_BYTES:
-                mb_size = file_size / 1024 / 1024
-                max_mb_size = MAX_FILE_SIZE_BYTES / 1024 / 1024
-                return f"Error: File is too large ({mb_size:.2f} MB). " f"Maximum allowed size is {max_mb_size:.2f} MB."
+                return format_file_size_error(path, file_size, MAX_FILE_SIZE_BYTES)
         except Exception as stat_e:
-            return f"Error getting file size for {path}: {stat_e}"
+            return format_file_error(stat_e, path, "checking size of")
 
         content = file_path.read_text()
         return content
 
-    except FileNotFoundError:
-        return f"Error: File not found: {path}"
-    except PermissionError:
-        return f"Error: Permission denied when trying to read file: {path}"
+    except FileNotFoundError as e:
+        return format_file_error(e, path, "reading")
+    except PermissionError as e:
+        return format_file_error(e, path, "reading")
     except Exception as e:
-        return f"Error reading file {path}: {e}"
+        return format_file_error(e, path, "reading")
 
 
 # --- APPLY EDIT Tool ---
 def apply_edit(target_file: str, code_edit: str) -> str:
     """Applies proposed content changes to a file after showing a diff and requesting user confirmation."""
-    from code_agent.config.config import get_config
-
     config = get_config()
 
     if not is_path_within_cwd(target_file):
-        return (
-            f"Error: Path access restricted. Can only edit files within the "
-            f"current working directory or its subdirectories: {target_file}"
-        )
+        return format_path_restricted_error(target_file)
 
     try:
         file_path = Path(target_file).resolve()
@@ -86,9 +93,16 @@ def apply_edit(target_file: str, code_edit: str) -> str:
         # Read current content (or empty if file doesn't exist)
         current_content = ""
         if file_path.is_file():
-            current_content = file_path.read_text()
+            try:
+                current_content = file_path.read_text()
+            except Exception as read_e:
+                return format_file_error(read_e, target_file, "reading for edit")
         elif file_path.exists():
-            return f"Error: Path exists but is not a regular file: {target_file}"
+            return (
+                f"Error: Path exists but is not a regular file: '{target_file}'.\n"
+                f"Only regular files can be edited. If you're trying to edit a directory,\n"
+                f"this operation is not supported."
+            )
 
         # --- Calculate and Display Diff ---
         diff = list(
@@ -102,7 +116,7 @@ def apply_edit(target_file: str, code_edit: str) -> str:
         )
 
         if not diff:
-            return "No changes detected. File content is the same."
+            return f"No changes needed. File content already matches the proposed edit for {target_file}."
 
         print("\n[bold]Proposed changes:[/bold]")
         # Use rich Syntax for diff highlighting
@@ -126,21 +140,19 @@ def apply_edit(target_file: str, code_edit: str) -> str:
                 file_path.write_text(code_edit)
                 return f"Edit applied successfully to {target_file}."
             except Exception as write_e:
-                return f"Error writing changes to file {target_file}: {write_e}"
+                return format_file_error(write_e, target_file, "writing changes to")
         else:
             return "Edit cancelled by user."
 
-    except PermissionError:
-        return f"Error: Permission denied when accessing file: {target_file}"
+    except PermissionError as e:
+        return format_file_error(e, target_file, "accessing")
     except Exception as e:
-        return f"Error applying edit to {target_file}: {e}"
+        return format_file_error(e, target_file, "applying edit to")
 
 
 # --- RUN NATIVE COMMAND Tool ---
 def run_native_command(command: str) -> str:
     """Executes a native terminal command after checking allowlist and requesting user confirmation."""
-    from code_agent.config.config import get_config
-
     config = get_config()
 
     command_str = command.strip()  # Ensure no leading/trailing whitespace
@@ -181,35 +193,56 @@ def run_native_command(command: str) -> str:
     else:
         # Show the command clearly before asking
         print(f"[bold red]Agent requests to run native command:[/bold red] {command_str}")
-        confirmed = Confirm.ask("Do you want to execute this command?", default=False)
+        # Use the module-level variable that can be mocked
+        confirmed = confirm_ask("Do you want to execute this command?", default=False)
 
     if not confirmed:
         return "Command execution cancelled by user."
 
     # --- Execute Command ---
     try:
-        # Check if the command contains a pipe or other shell operators
+        # Use shell=True only for commands with shell operators
         use_shell = "|" in command_str or ">" in command_str or "<" in command_str
 
-        print(f"[grey50]Executing command:[/grey50] {command_parts}")
-
         if use_shell:
-            # Use shell=True for commands with pipes or redirection
+            # For complex commands with pipe/redirects, use shell=True
             print("[grey50]Using shell for complex command[/grey50]")
-            result = subprocess.run(command_str, shell=True, capture_output=True, text=True, check=False)
+            # Use the module-level variable that can be mocked
+            result = subprocess_run(command_str, shell=True, capture_output=True, text=True, check=False)
         else:
-            # Use normal execution for simple commands
-            result = subprocess.run(command_parts, capture_output=True, text=True, check=False)
+            # For simple commands, avoid shell=True for better security
+            # Use the module-level variable that can be mocked
+            result = subprocess_run(command_parts, capture_output=True, text=True, check=False)
 
-        output = f"Command: {command_str}\nExit Code: {result.returncode}\n"
-        if result.stdout:
-            output += f"\n--- stdout ---\n{result.stdout.strip()}\n--------------\n"
-        if result.stderr:
-            output += f"\n--- stderr ---\n{result.stderr.strip()}\n--------------\n"
+        # --- Format and Return Results ---
+        stdout = result.stdout.strip()
+        stderr = result.stderr.strip()
+        return_code = result.returncode
 
-        return output.strip()
+        # Format the response
+        response = []
+        response.append(f"Command: {command_str}")
+        response.append(f"Return code: {return_code}")
+
+        if stdout:
+            response.append("\n=== STDOUT ===")
+            response.append(stdout)
+
+        if stderr:
+            response.append("\n=== STDERR ===")
+            response.append(stderr)
+
+        if return_code != 0:
+            response.append(f"\n⚠️ [bold yellow]Command exited with non-zero status code: {return_code}[/bold yellow]")
+
+        return "\n".join(response)
 
     except FileNotFoundError:
-        return f"Error: Command not found: {base_command}"
+        return f"Error: Command not found: '{base_command}'. Please check if it's installed and available in PATH."
+    except PermissionError:
+        return (
+            f"Error: Permission denied when executing '{base_command}'. "
+            f"Check file permissions or if elevated privileges are required."
+        )
     except Exception as e:
-        return f"Error executing command '{command_str}': {e}"
+        return f"Error executing command: {e}"
