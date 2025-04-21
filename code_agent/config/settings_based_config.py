@@ -74,6 +74,19 @@ class FileOperationsSettings(BaseModel):
     )
 
 
+class NativeCommandSettings(BaseModel):
+    """Settings for native command execution."""
+
+    default_timeout: Optional[int] = Field(
+        default=None,
+        description="Default timeout in seconds for native commands (None means no timeout)",
+    )
+    default_working_directory: Optional[str] = Field(
+        default=None,
+        description="Default working directory for native commands (None means current directory)",
+    )
+
+
 class CodeAgentSettings(BaseModel):
     """Main configuration settings for the code agent."""
 
@@ -107,6 +120,12 @@ class CodeAgentSettings(BaseModel):
     native_command_allowlist: List[str] = Field(
         default_factory=list,
         description="List of command prefixes that are allowed without confirmation",
+    )
+
+    # Native command settings
+    native_commands: NativeCommandSettings = Field(
+        default_factory=NativeCommandSettings,
+        description="Settings for native command execution",
     )
 
     # Security settings
@@ -185,6 +204,9 @@ class SettingsConfig(BaseSettings):
 
     # Add file_operations settings
     file_operations: FileOperationsSettings = Field(default_factory=FileOperationsSettings)
+
+    # Add native command settings
+    native_commands: NativeCommandSettings = Field(default_factory=NativeCommandSettings)
 
     # Environment variable mapping configuration
     model_config = SettingsConfigDict(

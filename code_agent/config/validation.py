@@ -156,6 +156,33 @@ def validate_native_command_allowlist(allowlist: List[str], result: ValidationRe
         )
 
 
+def validate_native_command_settings(native_commands: Any, result: ValidationResult) -> None:
+    """Validate the native command settings.
+
+    Checks:
+    1. Timeout is a positive number if set
+    2. Working directory exists or is None
+    """
+    if native_commands is None:
+        return
+
+    # Check timeout
+    if hasattr(native_commands, "default_timeout") and native_commands.default_timeout is not None:
+        if native_commands.default_timeout <= 0:
+            result.add_error(f"Invalid default_timeout value: {native_commands.default_timeout}. " f"Timeout must be a positive number.")
+
+    # Check working directory
+    if hasattr(native_commands, "default_working_directory") and native_commands.default_working_directory is not None:
+        from pathlib import Path
+
+        working_dir = Path(native_commands.default_working_directory)
+        if not working_dir.exists():
+            result.add_warning(
+                f"Default working directory does not exist: {native_commands.default_working_directory}. "
+                f"Commands may fail if this directory is not created."
+            )
+
+
 def validate_config(config: Any) -> ValidationResult:
     """Validate the complete configuration and return detailed results.
 
@@ -175,6 +202,10 @@ def validate_config(config: Any) -> ValidationResult:
 
     # Validate native command allowlist
     validate_native_command_allowlist(config.native_command_allowlist, result)
+
+    # Validate native command settings
+    if hasattr(config, "native_commands"):
+        validate_native_command_settings(config.native_commands, result)
 
     # Check for security risks
     if config.auto_approve_native_commands:
