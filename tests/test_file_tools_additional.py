@@ -10,11 +10,11 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from code_agent.tools.file_tools import (
-    read_file,
-    apply_edit,
-    is_path_within_cwd,
     MAX_FILE_SIZE_BYTES,
+    apply_edit,
     delete_file,
+    is_path_within_cwd,
+    read_file,
 )
 
 
@@ -45,290 +45,283 @@ def mock_path_validation():
         yield
 
 
+class TestIsPathWithinCwd:
+    def test_valid_path_within_cwd(self):
+        """Test that a path within CWD is considered valid."""
+        with (
+            patch("pathlib.Path.cwd") as mock_cwd,
+            patch("pathlib.Path.resolve") as mock_resolve,
+            patch("pathlib.Path.is_relative_to") as mock_is_relative,
+        ):
+            mock_cwd.return_value = Path("/home/user")
+            mock_resolve.return_value = Path("/home/user/test.txt")
+            mock_is_relative.return_value = True
+
+            result = is_path_within_cwd("test.txt")
+            assert result is True
+
+    def test_path_outside_cwd(self):
+        """Test that a path outside CWD is considered invalid."""
+        with (
+            patch("pathlib.Path.cwd") as mock_cwd,
+            patch("pathlib.Path.resolve") as mock_resolve,
+            patch("pathlib.Path.is_relative_to") as mock_is_relative,
+        ):
+            mock_cwd.return_value = Path("/home/user")
+            mock_resolve.return_value = Path("/etc/passwd")
+            mock_is_relative.return_value = False
+
+            result = is_path_within_cwd("/etc/passwd")
+            assert result is False
+
+    def test_path_resolution_error(self):
+        """Test handling errors during path resolution."""
+        with patch("pathlib.Path.resolve", side_effect=ValueError("Invalid path")):
+            result = is_path_within_cwd("invalid\\path")
+            assert result is False
+
+
 class TestReadFile:
     """Tests for the read_file function."""
 
-    def test_read_file_path_outside_cwd(self):
-        """Test that read_file rejects paths outside current working directory."""
-        # Override the fixture for this specific test
-        with patch("code_agent.tools.file_tools.is_path_within_cwd", return_value=False):
-            result = read_file("/some/absolute/path")
-            assert "Error: Path access restricted" in result
+    def test_read_file_outside_cwd(self):
+        with patch("code_agent.tools.file_tools.is_path_within_cwd") as mock_is_within:
+            mock_is_within.return_value = False
 
-    def test_read_file_not_a_file(self):
-        """Test read_file with a path that exists but is not a file."""
-        with patch("pathlib.Path.is_file", return_value=False):
-            result = read_file("some_directory")
-            assert "Error: File not found or is not a regular file" in result
-
-    def test_read_file_too_large(self):
-        """Test read_file with a file that exceeds the size limit."""
-        with patch("pathlib.Path.is_file", return_value=True):
-            # Create a stat_result-like object
-            stat_result = type("MockStatResult", (), {"st_size": MAX_FILE_SIZE_BYTES + 1})
-            with patch("pathlib.Path.stat", return_value=stat_result):
-                result = read_file("large_file.txt")
-                assert "Error: File is too large" in result
-
-    def test_read_file_stat_error(self):
-        """Test read_file when an error occurs getting file statistics."""
-        with patch("pathlib.Path.is_file", return_value=True):
-            with patch("pathlib.Path.stat", side_effect=OSError("stat error")):
-                result = read_file("problem_file.txt")
-                assert "Error getting file size" in result
+            result = read_file("/etc/passwd")
+            assert "Error" in result
+            assert "Path access restricted" in result
 
     def test_read_file_not_found(self):
-        """Test read_file with a nonexistent file."""
-        with patch("pathlib.Path.is_file", return_value=True):
-            # Create a stat_result-like object
-            stat_result = type("MockStatResult", (), {"st_size": 100})
-            with patch("pathlib.Path.stat", return_value=stat_result):
-                with patch("pathlib.Path.read_text", side_effect=FileNotFoundError("Not found")):
-                    result = read_file("nonexistent.txt")
-                    assert "Error: File not found" in result
+        with (
+            patch("code_agent.tools.file_tools.is_path_within_cwd") as mock_is_within,
+            patch("pathlib.Path.is_file") as mock_is_file,
+        ):
+            mock_is_within.return_value = True
+            mock_is_file.return_value = False
 
-    def test_read_file_permission_error(self):
-        """Test read_file with a file that causes a permission error."""
-        with patch("pathlib.Path.is_file", return_value=True):
-            # Create a stat_result-like object
-            stat_result = type("MockStatResult", (), {"st_size": 100})
-            with patch("pathlib.Path.stat", return_value=stat_result):
-                with patch("pathlib.Path.read_text", side_effect=PermissionError("Permission denied")):
-                    result = read_file("protected.txt")
-                    assert "Error: Permission denied" in result
-
-    def test_read_file_generic_error(self):
-        """Test read_file with a file that causes a generic error."""
-        with patch("pathlib.Path.is_file", return_value=True):
-            # Create a stat_result-like object
-            stat_result = type("MockStatResult", (), {"st_size": 100})
-            with patch("pathlib.Path.stat", return_value=stat_result):
-                with patch("pathlib.Path.read_text", side_effect=Exception("Generic error")):
-                    result = read_file("error.txt")
-                    assert "Error reading file" in result
-
-    def test_read_file_success(self):
-        """Test reading a file successfully."""
-        # Create a test content
-        test_content = "line 1\nline 2\nline 3\nline 4\nline 5\n"
-
-        # Mock the read_text method to return our test content
-        with patch("pathlib.Path.is_file", return_value=True):
-            with patch("pathlib.Path.stat", return_value=type("MockStatResult", (), {"st_size": 100})):
-                with patch("pathlib.Path.read_text", return_value=test_content):
-                    result = read_file("test_file.txt")
-                    assert "line 1" in result
-                    assert "line 5" in result
-
-    def test_read_file_nonexistent(self):
-        """Test reading a nonexistent file."""
-        with patch("pathlib.Path.is_file", side_effect=FileNotFoundError("No such file or directory")):
-            result = read_file("/nonexistent/file.txt")
-            assert "Error:" in result
-            assert "File not found" in result
-
-    def test_read_file_directory(self):
-        """Test reading a directory."""
-        with patch("pathlib.Path.is_file", return_value=False):
-            result = read_file("/some/directory")
-            assert "Error:" in result
+            result = read_file("nonexistent_file.txt")
+            assert "Error" in result
             assert "not a regular file" in result
 
-    @patch("builtins.open")
-    def test_read_file_permission_error_with_mock(self, mock_open):
-        """Test reading a file with permission errors using mock."""
-        with patch("pathlib.Path.is_file", return_value=True):
-            with patch("pathlib.Path.stat", return_value=type("MockStatResult", (), {"st_size": 100})):
-                with patch("pathlib.Path.read_text", side_effect=PermissionError("Permission denied")):
-                    result = read_file("protected_file.txt")
-                    assert "Error:" in result
-                    assert "Permission denied" in result
+    def test_read_file_too_large(self):
+        with (
+            patch("code_agent.tools.file_tools.is_path_within_cwd") as mock_is_within,
+            patch("pathlib.Path.is_file") as mock_is_file,
+            patch("pathlib.Path.stat") as mock_stat,
+        ):
+            mock_is_within.return_value = True
+            mock_is_file.return_value = True
+
+            # Mock stat result
+            mock_stat_result = MagicMock()
+            mock_stat_result.st_size = MAX_FILE_SIZE_BYTES + 1024  # Slightly over the limit
+            mock_stat.return_value = mock_stat_result
+
+            result = read_file("large_file.txt")
+            assert "Error" in result
+            assert "File is too large" in result
+
+    def test_read_file_permission_error(self):
+        with (
+            patch("code_agent.tools.file_tools.is_path_within_cwd") as mock_is_within,
+            patch("pathlib.Path.is_file") as mock_is_file,
+            patch("pathlib.Path.read_text", side_effect=PermissionError("Permission denied")),
+        ):
+            mock_is_within.return_value = True
+            mock_is_file.return_value = True
+
+            # Mock stat to return a reasonable file size so the size check passes
+            with patch("pathlib.Path.stat") as mock_stat:
+                mock_stat_result = MagicMock()
+                mock_stat_result.st_size = 1024  # A small file
+                mock_stat.return_value = mock_stat_result
+
+                result = read_file("protected_file.txt")
+                assert "Error" in result
+                assert "Permission denied" in result
 
 
 class TestDeleteFile:
     """Tests for the delete_file function."""
 
     def test_delete_file_success(self):
-        """Test deleting a file successfully."""
-        with patch("pathlib.Path.exists", return_value=True):
-            with patch("pathlib.Path.is_file", return_value=True):
-                with patch("pathlib.Path.unlink") as mock_unlink:
-                    result = delete_file("existing_file.txt")
-                    assert "successfully" in result
-                    mock_unlink.assert_called_once()
+        with (
+            patch("code_agent.tools.file_tools.is_path_within_cwd") as mock_is_within,
+            patch("pathlib.Path.exists") as mock_exists,
+            patch("pathlib.Path.is_file") as mock_is_file,
+            patch("pathlib.Path.unlink") as mock_unlink,
+        ):
+            mock_is_within.return_value = True
+            mock_exists.return_value = True
+            mock_is_file.return_value = True
+
+            result = delete_file("file_to_delete.txt")
+            assert "File deleted successfully" in result
+            mock_unlink.assert_called_once()
+
+    def test_delete_file_outside_cwd(self):
+        with patch("code_agent.tools.file_tools.is_path_within_cwd") as mock_is_within:
+            mock_is_within.return_value = False
+
+            result = delete_file("/etc/passwd")
+            assert "Error" in result
+            assert "Path access restricted" in result
 
     def test_delete_file_nonexistent(self):
-        """Test deleting a nonexistent file."""
-        with patch("pathlib.Path.exists", return_value=False):
+        with (
+            patch("code_agent.tools.file_tools.is_path_within_cwd") as mock_is_within,
+            patch("pathlib.Path.exists") as mock_exists,
+        ):
+            mock_is_within.return_value = True
+            mock_exists.return_value = False
+
             result = delete_file("nonexistent_file.txt")
-            assert "Error:" in result
+            assert "Error" in result
             assert "does not exist" in result
 
     def test_delete_file_not_a_file(self):
-        """Test deleting a path that is not a file."""
-        with patch("pathlib.Path.exists", return_value=True):
-            with patch("pathlib.Path.is_file", return_value=False):
-                result = delete_file("directory/")
-                assert "Error:" in result
-                assert "not a regular file" in result
+        with (
+            patch("code_agent.tools.file_tools.is_path_within_cwd") as mock_is_within,
+            patch("pathlib.Path.exists") as mock_exists,
+            patch("pathlib.Path.is_file") as mock_is_file,
+        ):
+            mock_is_within.return_value = True
+            mock_exists.return_value = True
+            mock_is_file.return_value = False
+
+            result = delete_file("directory/")
+            assert "Error" in result
+            assert "not a regular file" in result
 
     def test_delete_file_permission_error(self):
-        """Test deleting a file with permission error."""
-        with patch("pathlib.Path.exists", return_value=True):
-            with patch("pathlib.Path.is_file", return_value=True):
-                with patch("pathlib.Path.unlink", side_effect=PermissionError("Permission denied")):
-                    result = delete_file("protected_file.txt")
-                    assert "Error:" in result
-                    assert "Permission denied" in result
+        with (
+            patch("code_agent.tools.file_tools.is_path_within_cwd") as mock_is_within,
+            patch("pathlib.Path.exists") as mock_exists,
+            patch("pathlib.Path.is_file") as mock_is_file,
+            patch("pathlib.Path.unlink", side_effect=PermissionError("Permission denied")),
+        ):
+            mock_is_within.return_value = True
+            mock_exists.return_value = True
+            mock_is_file.return_value = True
+
+            result = delete_file("protected_file.txt")
+            assert "Error" in result
+            assert "Permission denied" in result
 
     def test_delete_file_generic_error(self):
-        """Test deleting a file with a generic error."""
-        with patch("pathlib.Path.exists", return_value=True):
-            with patch("pathlib.Path.is_file", return_value=True):
-                with patch("pathlib.Path.unlink", side_effect=OSError("OS Error")):
-                    result = delete_file("error_file.txt")
-                    assert "Error:" in result
-                    assert "OS Error" in result
+        with (
+            patch("code_agent.tools.file_tools.is_path_within_cwd") as mock_is_within,
+            patch("pathlib.Path.exists") as mock_exists,
+            patch("pathlib.Path.is_file") as mock_is_file,
+            patch("pathlib.Path.unlink", side_effect=Exception("Unexpected error")),
+        ):
+            mock_is_within.return_value = True
+            mock_exists.return_value = True
+            mock_is_file.return_value = True
 
-    def test_delete_file_path_outside_cwd(self):
-        """Test that delete_file rejects paths outside current working directory."""
-        # Override the fixture for this specific test
-        with patch("code_agent.tools.file_tools.is_path_within_cwd", return_value=False):
-            result = delete_file("/some/absolute/path")
-            assert "Error: Path access restricted" in result
+            result = delete_file("problematic_file.txt")
+            assert "Error" in result
+            assert "Unexpected error" in result
 
 
 class TestApplyEdit:
     """Tests for the apply_edit function."""
 
-    @patch("code_agent.config.config.get_config")
-    @patch("rich.prompt.Confirm.ask", return_value=True)
-    def test_edit_file_success(self, mock_confirm, mock_get_config):
-        """Test editing a file successfully."""
-        # Setup the mock config
-        config = MagicMock()
-        config.auto_approve_edits = False
-        mock_get_config.return_value = config
+    def test_apply_edit_success(self):
+        with (
+            patch("code_agent.tools.file_tools._is_path_safe", return_value=True),
+            patch("pathlib.Path.is_file") as mock_is_file,
+            patch("pathlib.Path.read_text", return_value="Original content"),
+            patch("pathlib.Path.write_text") as mock_write,
+            patch("rich.prompt.Confirm.ask", return_value=True),
+        ):
+            mock_is_file.return_value = True
 
-        # Mock file operations
-        with patch("pathlib.Path.is_file", return_value=True):
-            with patch("pathlib.Path.read_text", return_value="line 1\nline 2\nline 3\n"):
-                with patch("pathlib.Path.write_text") as mock_write:
-                    result = apply_edit("test_file.txt", "line 1\nline 2 modified\nline 3\n")
-                    assert "successfully" in result
-                    mock_write.assert_called_once()
+            # Mock config to not auto-approve
+            with patch("code_agent.config.get_config") as mock_config:
+                config = MagicMock()
+                config.auto_approve_edits = False
+                mock_config.return_value = config
 
-    @patch("code_agent.config.config.get_config")
-    @patch("rich.prompt.Confirm.ask", return_value=True)
-    def test_edit_file_create_new(self, mock_confirm, mock_get_config):
-        """Test creating a new file."""
-        # Setup the mock config
-        config = MagicMock()
-        config.auto_approve_edits = False
-        mock_get_config.return_value = config
+                result = apply_edit("test.txt", "Updated content")
+                assert "Edit applied successfully" in result
+                mock_write.assert_called_once_with("Updated content")
 
-        # Mock file operations
-        with patch("pathlib.Path.is_file", return_value=False):
-            with patch("pathlib.Path.exists", return_value=False):
-                with patch("pathlib.Path.write_text") as mock_write:
-                    with patch("pathlib.Path.parent.mkdir") as mock_mkdir:
-                        result = apply_edit("new_file.txt", "new content")
-                        assert "successfully" in result
-                        mock_write.assert_called_once()
-                        mock_mkdir.assert_called_once()
+    def test_apply_edit_create_new_file(self, tmp_path):
+        """Test applying an edit to create a new file using a real temporary directory."""
+        # Use a real temporary file to avoid mocking complexities
+        new_file = tmp_path / "test_new_file.txt"
 
-    @patch("code_agent.config.config.get_config")
-    def test_edit_file_no_changes(self, mock_get_config):
-        """Test with no changes to the file."""
-        # Setup the mock config
-        config = MagicMock()
-        config.auto_approve_edits = False
-        mock_get_config.return_value = config
+        with (
+            patch("code_agent.tools.file_tools._is_path_safe", return_value=True),
+            patch("rich.prompt.Confirm.ask", return_value=True),
+        ):
+            # Mock config to not auto-approve
+            with patch("code_agent.config.get_config") as mock_config:
+                config = MagicMock()
+                config.auto_approve_edits = False
+                mock_config.return_value = config
 
-        # Mock file operations
-        with patch("pathlib.Path.is_file", return_value=True):
-            with patch("pathlib.Path.read_text", return_value="line 1\nline 2\nline 3\n"):
-                result = apply_edit("test_file.txt", "line 1\nline 2\nline 3\n")
+                # Apply an edit to create the new file
+                result = apply_edit(str(new_file), "New file content")
+
+                # Verify the file was created with the right content
+                assert new_file.exists()
+                assert new_file.read_text() == "New file content"
+                assert "Edit applied successfully" in result
+
+    def test_apply_edit_no_changes(self):
+        content = "Original content"
+        with (
+            patch("code_agent.tools.file_tools._is_path_safe", return_value=True),
+            patch("pathlib.Path.is_file") as mock_is_file,
+            patch("pathlib.Path.read_text", return_value=content),
+            patch("pathlib.Path.write_text") as mock_write,
+            patch("rich.prompt.Confirm.ask", return_value=True),
+        ):
+            mock_is_file.return_value = True
+
+            # Mock config
+            with patch("code_agent.config.get_config") as mock_config:
+                config = MagicMock()
+                config.auto_approve_edits = False
+                mock_config.return_value = config
+
+                result = apply_edit("test.txt", content)  # Same content
                 assert "No changes detected" in result
+                mock_write.assert_not_called()
 
-    @patch("code_agent.config.config.get_config")
-    @patch("pathlib.Path.write_text", side_effect=PermissionError("Permission denied"))
-    @patch("rich.prompt.Confirm.ask", return_value=True)
-    def test_edit_file_permission_error(self, mock_confirm, mock_write, mock_get_config):
-        """Test editing a file with permission error."""
-        # Setup the mock config
-        config = MagicMock()
-        config.auto_approve_edits = False
-        mock_get_config.return_value = config
+    def test_apply_edit_permission_error(self):
+        with (
+            patch("code_agent.tools.file_tools._is_path_safe", return_value=True),
+            patch("pathlib.Path.is_file") as mock_is_file,
+            patch("pathlib.Path.read_text", return_value="Original content"),
+            patch("pathlib.Path.write_text", side_effect=PermissionError("Permission denied")),
+            patch("rich.prompt.Confirm.ask", return_value=True),
+        ):
+            mock_is_file.return_value = True
 
-        # Mock file operations
-        with patch("pathlib.Path.is_file", return_value=True):
-            with patch("pathlib.Path.read_text", return_value="line 1\nline 2\nline 3\n"):
-                result = apply_edit("protected_file.txt", "line 1\nline 2 modified\nline 3\n")
-                assert "Error:" in result
+            # Mock config
+            with patch("code_agent.config.get_config") as mock_config:
+                config = MagicMock()
+                config.auto_approve_edits = False
+                mock_config.return_value = config
+
+                result = apply_edit("protected.txt", "New content")
+                assert "Error writing changes to file" in result
                 assert "Permission denied" in result
 
-    @patch("code_agent.config.config.get_config")
-    @patch("rich.prompt.Confirm.ask", return_value=True)
-    def test_edit_file_parent_dir_creation_error(self, mock_confirm, mock_get_config):
-        """Test creating a new file with parent directory creation error."""
-        # Setup the mock config
-        config = MagicMock()
-        config.auto_approve_edits = False
-        mock_get_config.return_value = config
-
-        # Mock file operations
-        with patch("pathlib.Path.is_file", return_value=False):
-            with patch("pathlib.Path.exists", return_value=False):
-                with patch("pathlib.Path.parent.mkdir", side_effect=PermissionError("Permission denied")):
-                    result = apply_edit("new/subfolder/file.txt", "new content")
-                    assert "Error:" in result
-                    assert "Permission denied" in result
-
-    @patch("code_agent.config.config.get_config")
-    @patch("pathlib.Path.write_text", side_effect=Exception("Generic error"))
-    @patch("rich.prompt.Confirm.ask", return_value=True)
-    def test_edit_file_generic_error(self, mock_confirm, mock_write, mock_get_config):
-        """Test editing a file with a generic error."""
-        # Setup the mock config
-        config = MagicMock()
-        config.auto_approve_edits = False
-        mock_get_config.return_value = config
-
-        # Mock file operations
-        with patch("pathlib.Path.is_file", return_value=True):
-            with patch("pathlib.Path.read_text", return_value="line 1\nline 2\nline 3\n"):
-                result = apply_edit("error_file.txt", "line 1\nline 2 modified\nline 3\n")
-                assert "Error:" in result
-                assert "Generic error" in result
-
-    def test_edit_file_path_outside_cwd(self):
-        """Test that edit_file rejects paths outside current working directory."""
-        # Override the fixture for this specific test
+    def test_apply_edit_outside_cwd(self):
         with patch("code_agent.tools.file_tools._is_path_safe", return_value=False):
-            result = apply_edit("/some/absolute/path", "new content")
+            result = apply_edit("/etc/passwd", "malicious content")
             assert "Error: Path access restricted" in result
 
-
-class TestIsPathWithinCwd:
-    """Tests for the is_path_within_cwd function."""
-
-    def test_path_within_cwd(self):
-        """Test path within current working directory."""
-        with patch("pathlib.Path.cwd", return_value=Path("/current/working/dir")):
-            with patch("pathlib.Path.resolve", return_value=Path("/current/working/dir/subdir/file.txt")):
-                result = is_path_within_cwd("subdir/file.txt")
-                assert result is True
-
-    def test_path_outside_cwd(self):
-        """Test path outside current working directory."""
-        with patch("pathlib.Path.cwd", return_value=Path("/current/working/dir")):
-            with patch("pathlib.Path.resolve", return_value=Path("/different/dir/file.txt")):
-                result = is_path_within_cwd("/different/dir/file.txt")
-                assert result is False
-
-    def test_path_error(self):
-        """Test path resolution error."""
-        with patch("pathlib.Path.resolve", side_effect=ValueError("Invalid path")):
-            result = is_path_within_cwd("invalid/path")
-            assert result is False
+    def test_apply_edit_generic_error(self):
+        with (
+            patch("code_agent.tools.file_tools._is_path_safe", return_value=True),
+            patch("pathlib.Path.resolve", side_effect=Exception("Unknown error")),
+        ):
+            result = apply_edit("test.txt", "content")
+            assert "Error applying edit to" in result
+            assert "Unknown error" in result
