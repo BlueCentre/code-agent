@@ -1,60 +1,80 @@
 # Coverage Verification
 
-This document describes how code coverage is verified in the CLI Code Agent project.
+This document explains how test coverage is measured and verified in this project.
 
 ## Coverage Requirements
 
-The project requires at least 80% test coverage, as defined in the following configuration files:
-- `.coveragerc` - Sets coverage configuration for the Python `coverage` library
-- `pyproject.toml` - Includes coverage settings in the `[tool.coverage]` section
+The project aims to maintain at least 80% code coverage for all code in the `code_agent` package. This helps ensure that the codebase is reliable and that most functionality is tested.
 
-## Running Coverage Tests
+## Coverage Pipeline
 
-There are two scripts available to run the coverage pipeline:
+The coverage pipeline is implemented in the `scripts/run_coverage_pipeline_venv.sh` script, which:
 
-1. `scripts/run_coverage_pipeline.sh` - Runs coverage tests using system-wide dependencies
-2. `scripts/run_coverage_pipeline_venv.sh` - Runs coverage tests in a virtual environment (recommended)
+1. Sets up a Python virtual environment
+2. Installs all dependencies
+3. Runs pytest with coverage reporting
+4. Verifies that coverage meets the required threshold (80%)
+5. Generates coverage XML report for further analysis
+6. Optionally runs SonarQube analysis
 
-Both scripts perform the following steps:
-- Install necessary dependencies
-- Run tests with coverage reporting
-- Extract the project version
-- Run a SonarQube scan (if configured)
+## Running the Coverage Pipeline
 
-## Version Extraction
-
-The project version is extracted using `scripts/extract_version.sh`, a robust script that:
-1. Checks `pyproject.toml` for the version number
-2. Falls back to `setup.py` if needed
-3. Searches `__init__.py` files for `__version__` variables
-4. Provides a sensible default if no version is found
-
-This approach is more reliable than using `importlib.metadata`, which requires the package to be installed and can fail if the package isn't found or properly installed.
-
-## SonarQube Integration
-
-The coverage pipeline integrates with SonarQube for code quality analysis:
-- Coverage results are uploaded to SonarQube
-- The project version is included in the SonarQube scan
-- A SonarQube token must be provided via the `SONAR_TOKEN` environment variable
-
-## Running Coverage Locally
-
-To run coverage tests locally:
+You can run the coverage pipeline using:
 
 ```bash
-# Run in a virtual environment (recommended)
 ./scripts/run_coverage_pipeline_venv.sh
+```
 
-# Or using system-wide dependencies
+For environments without virtual environments already set up:
+
+```bash
 ./scripts/run_coverage_pipeline.sh
 ```
 
-The tests will fail if coverage drops below 80%.
+## Coverage Report Interpretation
 
-## Coverage Reports
+The coverage report looks like this:
 
-After running the coverage tests, reports will be available in:
-- `coverage.xml` - XML format for integration with tools
-- Terminal output - A summary of coverage is shown in the console
-- `htmlcov/` directory - HTML reports for detailed browsing (if generated)
+```
+Name                                         Stmts   Miss  Cover
+----------------------------------------------------------------
+code_agent/__init__.py                           3      0   100%
+code_agent/agent/agent.py                      202     82    59%
+code_agent/cli/main.py                         350     18    95%
+code_agent/config/__init__.py                    2      0   100%
+code_agent/config/config.py                    131     20    85%
+code_agent/config/settings_based_config.py      92     18    80%
+code_agent/config/validation.py                 87      6    93%
+code_agent/llm.py                               27      4    85%
+code_agent/tools/file_tools.py                 113     10    91%
+code_agent/tools/native_tools.py                50     35    30%
+code_agent/tools/simple_tools.py               127     19    85%
+----------------------------------------------------------------
+TOTAL                                         1184    212    82%
+```
+
+- **Stmts**: Total number of statements in the file
+- **Miss**: Number of statements not covered by tests
+- **Cover**: Percentage of statements covered by tests
+
+## Improving Coverage
+
+If coverage falls below the 80% threshold, you can improve it by:
+
+1. Adding tests for uncovered functions and methods
+2. Adding tests for error handling paths in existing functions
+3. Adding edge case tests (boundary values, invalid inputs, etc.)
+
+Focus on the modules with the lowest coverage percentage first, as they will give the biggest improvement for the least effort.
+
+## Troubleshooting
+
+If tests are failing or coverage is unexpectedly low:
+
+1. Check test imports to ensure they match the current codebase structure
+2. Verify that mock objects correctly simulate the behavior of real objects
+3. Use `pytest --no-cov -xvs tests/test_specific_file.py::TestClass::test_specific_function` to run failing tests with more detailed output
+
+## CI/CD Integration
+
+Coverage verification is part of the continuous integration pipeline. Pull requests that reduce coverage below the 80% threshold will be flagged for improvement before they can be merged.
