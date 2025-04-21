@@ -89,6 +89,24 @@ security:
   command_validation: true
 
 # ===============================
+# File Operations Settings
+# ===============================
+# These settings control the behavior of file operations
+file_operations:
+  # Read file tool settings
+  read_file:
+    # Maximum file size in KB that can be read without pagination
+    max_file_size_kb: 1024  # 1MB default
+
+    # Maximum number of lines to read at once when using pagination
+    max_lines: 1000
+
+    # Whether to enable pagination for reading large files (true/false)
+    # If enabled, the read_file tool can read files larger than max_file_size_kb
+    # by reading them in chunks of max_lines lines
+    enable_pagination: false  # Disabled by default for backward compatibility
+
+# ===============================
 # Agent Instruction Rules
 # ===============================
 # Custom rules to influence the agent's behavior

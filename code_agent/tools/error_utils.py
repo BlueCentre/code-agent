@@ -67,7 +67,7 @@ def format_path_restricted_error(path: str, reason: Optional[str] = None) -> str
     return base_message
 
 
-def format_file_size_error(path: str, actual_size: float, max_size: float) -> str:
+def format_file_size_error(path: str, actual_size: float, max_size: float, additional_message: str = "") -> str:
     """
     Format an error message for files that exceed the maximum allowed size.
 
@@ -75,6 +75,7 @@ def format_file_size_error(path: str, actual_size: float, max_size: float) -> st
         path: The path to the file
         actual_size: The actual size of the file in bytes
         max_size: The maximum allowed size in bytes
+        additional_message: Optional additional message to include in the error
 
     Returns:
         A formatted error message
@@ -82,7 +83,7 @@ def format_file_size_error(path: str, actual_size: float, max_size: float) -> st
     actual_mb = actual_size / 1024 / 1024
     max_mb = max_size / 1024 / 1024
 
-    return (
+    error_message = (
         f"Error: File '{path}' is too large ({actual_mb:.2f} MB).\n"
         f"Maximum allowed size is {max_mb:.2f} MB.\n"
         f"Consider:\n"
@@ -90,6 +91,11 @@ def format_file_size_error(path: str, actual_size: float, max_size: float) -> st
         f"- Reading only a portion of the file\n"
         f"- Splitting the file into smaller chunks"
     )
+
+    if additional_message:
+        error_message += f"\n\n{additional_message}"
+
+    return error_message
 
 
 # --- API Error Formatting Utilities ---

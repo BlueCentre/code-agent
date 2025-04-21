@@ -49,6 +49,31 @@ class SecuritySettings(BaseModel):
     )
 
 
+class FileOperationsSettings(BaseModel):
+    """Configuration for file operation features."""
+
+    class ReadFileSettings(BaseModel):
+        """Settings for the read_file tool."""
+
+        max_file_size_kb: int = Field(
+            default=1024,  # 1MB default
+            description="Maximum file size in KB that can be read without pagination",
+        )
+        max_lines: int = Field(
+            default=1000,
+            description="Maximum number of lines to read at once when using pagination",
+        )
+        enable_pagination: bool = Field(
+            default=False,
+            description="Whether to enable pagination for reading large files",
+        )
+
+    read_file: ReadFileSettings = Field(
+        default_factory=ReadFileSettings,
+        description="Settings for the read_file tool",
+    )
+
+
 class CodeAgentSettings(BaseModel):
     """Main configuration settings for the code agent."""
 
@@ -88,6 +113,12 @@ class CodeAgentSettings(BaseModel):
     security: SecuritySettings = Field(
         default_factory=SecuritySettings,
         description="Security-related configuration options",
+    )
+
+    # File operations settings
+    file_operations: FileOperationsSettings = Field(
+        default_factory=FileOperationsSettings,
+        description="File operation configuration options",
     )
 
     # Agent rules
@@ -151,6 +182,9 @@ class SettingsConfig(BaseSettings):
     auto_approve_native_commands: bool = False
     native_command_allowlist: List[str] = Field(default_factory=list)
     rules: List[str] = Field(default_factory=list)
+
+    # Add file_operations settings
+    file_operations: FileOperationsSettings = Field(default_factory=FileOperationsSettings)
 
     # Environment variable mapping configuration
     model_config = SettingsConfigDict(
