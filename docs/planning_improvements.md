@@ -1,6 +1,6 @@
 # Future Improvements
 
-> **Note**: This document has been consolidated into the main task list at [docs/todo_priorities.md](todo_priorities.md). Please refer to that file for the current list of planned improvements, prioritized tasks, and future enhancements.
+> **Note**: This document has been consolidated into the main task list at [docs/planning_priorities.md](planning_priorities.md). Please refer to that file for the current list of planned improvements, prioritized tasks, and future enhancements.
 
 This document previously outlined potential improvements to the code_agent project to enhance the user experience. The content has been merged into the consolidated priority task list for better tracking and organization.
 

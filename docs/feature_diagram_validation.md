@@ -1,4 +1,4 @@
-# Mermaid Diagram Validation
+# Diagram Validation Feature
 
 ## Validation Procedure
 

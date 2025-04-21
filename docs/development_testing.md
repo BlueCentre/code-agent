@@ -130,7 +130,7 @@ code-agent run "Analyze our error handling in code_agent/tools/*.py files and su
 ### 13. Command Chain with Dynamic Inputs
 
 ```bash
-code-agent run "Find all TODO comments in our codebase, create a prioritized list based on their context, and save it as docs/todo_priorities.md"
+code-agent run "Find all TODO comments in our codebase, create a prioritized list based on their context, and save it as docs/planning_priorities.md"
 ```
 
 **Purpose**: Test the agent's ability to chain commands where the output of one operation feeds into another, requiring synthesis and reorganization of information.
