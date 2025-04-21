@@ -74,6 +74,21 @@ native_command_allowlist:
   - "gh"
 
 # ===============================
+# Security Settings
+# ===============================
+# These settings control the security features of the CLI agent
+# CAUTION: Disabling security features can expose your system to risks
+security:
+  # Enable path validation to prevent path traversal attacks (true/false)
+  path_validation: true
+
+  # Restrict file operations to the current workspace directory (true/false)
+  workspace_restriction: true
+
+  # Enable command validation to prevent execution of dangerous commands (true/false)
+  command_validation: true
+
+# ===============================
 # Agent Instruction Rules
 # ===============================
 # Custom rules to influence the agent's behavior

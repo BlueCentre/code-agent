@@ -1,8 +1,11 @@
 """Tests for configuration validation module."""
 
+from unittest.mock import patch
+
 import pytest
 
-from code_agent.config.config import SettingsConfig
+from code_agent.config import SettingsConfig
+from code_agent.config.settings_based_config import ApiKeys, CodeAgentSettings, SecuritySettings
 from code_agent.config.validation import (
     ValidationResult,
     validate_api_keys,
@@ -175,3 +178,81 @@ def test_validate_config_with_invalid_config(valid_config):
     assert result.valid is False
     assert len(result.errors) == 1
     assert "not recognized for provider" in result.errors[0]
+
+
+def test_validate_dynamic_method():
+    """Test the validate_dynamic method on CodeAgentSettings."""
+    # Valid settings
+    valid_settings = CodeAgentSettings(
+        default_provider="ai_studio",
+        default_model="gemini-2.0-flash",
+        api_keys=ApiKeys(
+            openai="sk-" + "a" * 48,
+            ai_studio="AIza" + "a" * 35,
+        ),
+        auto_approve_edits=False,
+        auto_approve_native_commands=False,
+        native_command_allowlist=["git status", "ls -la"],
+        security=SecuritySettings(
+            path_validation=True,
+            workspace_restriction=True,
+            command_validation=True,
+        ),
+    )
+
+    # Test valid config
+    with patch("code_agent.config.settings_based_config.rich_print") as mock_print:
+        result = valid_settings.validate_dynamic()
+        assert result is True
+        # Without verbose=True, it shouldn't print anything
+        mock_print.assert_not_called()
+
+    # Test with verbose=True
+    with patch("code_agent.config.settings_based_config.rich_print") as mock_print:
+        result = valid_settings.validate_dynamic(verbose=True)
+        assert result is True
+        # It should print valid message
+        mock_print.assert_any_call("[bold green]✓ Configuration is valid.[/bold green]")
+
+    # Invalid settings (bad model)
+    invalid_settings = CodeAgentSettings(
+        default_provider="ai_studio",
+        default_model="not-a-real-model",  # Invalid model
+        api_keys=ApiKeys(
+            openai="sk-" + "a" * 48,
+            ai_studio="AIza" + "a" * 35,
+        ),
+    )
+
+    # Test invalid config
+    result = invalid_settings.validate_dynamic()
+    assert result is False
+
+    # Test with verbose=True
+    with patch("code_agent.config.settings_based_config.rich_print") as mock_print:
+        result = invalid_settings.validate_dynamic(verbose=True)
+        assert result is False
+        # It should print error message
+        mock_print.assert_any_call("[bold red]Found 1 configuration error(s):[/bold red]")
+
+    # Settings with warnings (security risks)
+    warning_settings = CodeAgentSettings(
+        default_provider="ai_studio",
+        default_model="gemini-2.0-flash",
+        api_keys=ApiKeys(
+            openai="sk-" + "a" * 48,
+            ai_studio="AIza" + "a" * 35,
+        ),
+        auto_approve_edits=True,  # Security risk
+        auto_approve_native_commands=True,  # Security risk
+        native_command_allowlist=["git status", "ls -la"],
+    )
+
+    # Test with warnings
+    with patch("code_agent.config.settings_based_config.rich_print") as mock_print:
+        result = warning_settings.validate_dynamic(verbose=True)
+        assert result is True  # Valid but with warnings
+        # Should print warnings
+        mock_print.assert_any_call("[bold yellow]Found 2 configuration warning(s):[/bold yellow]")
+        # Should indicate that it's valid with warnings
+        mock_print.assert_any_call("[bold green]✓ Configuration is valid[/bold green] [yellow](with warnings)[/yellow]")

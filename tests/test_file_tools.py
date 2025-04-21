@@ -125,7 +125,8 @@ def test_read_file_outside_cwd(temp_file: Path, monkeypatch):
         relative_path_to_file = temp_file.relative_to(mock_cwd)
 
         result = read_file(str(relative_path_to_file))
-        assert "Error: Path access restricted" in result
+        assert "[bold red]Error:[/bold red] Path" in result
+        assert "restricted for security reasons" in result
 
         # Restore CWD
         monkeypatch.chdir(original_cwd)
@@ -244,7 +245,7 @@ def test_apply_edit_outside_cwd(temp_file: Path):
         # Mock the path validation to return False
         with patch("code_agent.tools.simple_tools.is_path_within_cwd", return_value=False):
             result = apply_edit("/etc/passwd", "Dangerous content")
-            assert "path access restricted" in result.lower()
+            assert "restricted for security reasons" in result.lower()
 
 
 def test_apply_edit_write_permission_error(temp_file: Path):

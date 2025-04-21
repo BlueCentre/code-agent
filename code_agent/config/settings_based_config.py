@@ -5,6 +5,9 @@ from typing import Any, Dict, List, Optional
 import yaml
 from pydantic import BaseModel, Field, ValidationError
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from rich import print as rich_print
+
+from code_agent.config.validation import validate_config
 
 # Define the default config path
 DEFAULT_CONFIG_DIR = Path.home() / ".config" / "code-agent"
@@ -15,15 +18,122 @@ TEMPLATE_CONFIG_PATH = Path(__file__).parent / "template.yaml"
 
 
 class ApiKeys(BaseModel):
-    """API keys for different providers."""
-
-    model_config = {"extra": "allow"}
+    """API keys for different LLM providers."""
 
     openai: Optional[str] = None
     ai_studio: Optional[str] = None
     groq: Optional[str] = None
     anthropic: Optional[str] = None
-    # Other keys loaded will be accessible via model_extra
+
+    # Allow extra fields for new providers
+    model_config = {"extra": "allow"}
+
+
+class SecuritySettings(BaseModel):
+    """Configuration for security-related features."""
+
+    # Path security settings
+    path_validation: bool = Field(
+        default=True,
+        description="Enable path validation for file operations to prevent path traversal attacks",
+    )
+    workspace_restriction: bool = Field(
+        default=True,
+        description="Restrict file operations to the current workspace directory",
+    )
+
+    # Command security settings
+    command_validation: bool = Field(
+        default=True,
+        description="Enable command validation to prevent execution of dangerous commands",
+    )
+
+
+class CodeAgentSettings(BaseModel):
+    """Main configuration settings for the code agent."""
+
+    # Default provider and model
+    default_provider: str = Field(
+        default="ai_studio",
+        description="Default LLM provider to use",
+    )
+    default_model: str = Field(
+        default="gemini-2.0-flash",
+        description="Default model to use for the selected provider",
+    )
+
+    # API Keys
+    api_keys: ApiKeys = Field(
+        default_factory=ApiKeys,
+        description="API keys for different LLM providers",
+    )
+
+    # Auto-approve settings
+    auto_approve_edits: bool = Field(
+        default=False,
+        description="Auto-approve file edits without confirmation",
+    )
+    auto_approve_native_commands: bool = Field(
+        default=False,
+        description="Auto-approve command execution without confirmation",
+    )
+
+    # Command security
+    native_command_allowlist: List[str] = Field(
+        default_factory=list,
+        description="List of command prefixes that are allowed without confirmation",
+    )
+
+    # Security settings
+    security: SecuritySettings = Field(
+        default_factory=SecuritySettings,
+        description="Security-related configuration options",
+    )
+
+    # Agent rules
+    rules: List[str] = Field(
+        default_factory=list,
+        description="Custom rules to influence the agent's behavior",
+    )
+
+    # Other fields from config can be added as needed
+    model_config = {"extra": "allow"}
+
+    def validate_dynamic(self, verbose: bool = False) -> bool:
+        """
+        Perform dynamic validation beyond basic Pydantic validation.
+
+        This method checks:
+        1. Provider-specific model compatibility
+        2. API key formats
+        3. Command allowlist patterns
+        4. Security configuration warnings
+
+        Args:
+            verbose: Whether to print validation results
+
+        Returns:
+            True if valid (may have warnings), False if invalid
+        """
+        result = validate_config(self)
+
+        if verbose:
+            if result.errors:
+                rich_print(f"[bold red]Found {len(result.errors)} configuration error(s):[/bold red]")
+                for i, error in enumerate(result.errors, 1):
+                    rich_print(f"[red]{i}. {error}[/red]")
+
+            if result.warnings:
+                rich_print(f"[bold yellow]Found {len(result.warnings)} configuration warning(s):[/bold yellow]")
+                for i, warning in enumerate(result.warnings, 1):
+                    rich_print(f"[yellow]{i}. {warning}[/yellow]")
+
+            if not result.errors and not result.warnings:
+                rich_print("[bold green]✓ Configuration is valid.[/bold green]")
+            elif not result.errors:
+                rich_print("[bold green]✓ Configuration is valid[/bold green] [yellow](with warnings)[/yellow]")
+
+        return result.valid
 
 
 class SettingsConfig(BaseSettings):
@@ -220,3 +330,53 @@ def get_api_key(provider: str) -> Optional[str]:
     config = get_config()
     # Access keys directly using vars() instead of model_dump
     return vars(config.api_keys).get(provider)
+
+
+def create_settings_model(config_data: Dict) -> CodeAgentSettings:
+    """
+    Create a settings model from a dictionary.
+
+    Args:
+        config_data: Dictionary containing configuration data.
+
+    Returns:
+        A CodeAgentSettings instance.
+    """
+    # Handle the security section specifically
+    if "security" not in config_data:
+        config_data["security"] = {}
+
+    # Ensure we have security settings even if the config doesn't
+    security_data = config_data.get("security", {})
+    if not isinstance(security_data, dict):
+        security_data = {}
+
+    # Set default values if not present
+    for field in ["path_validation", "workspace_restriction", "command_validation"]:
+        if field not in security_data:
+            security_data[field] = True
+
+    config_data["security"] = security_data
+
+    return CodeAgentSettings(**config_data)
+
+
+# Function to convert settings model back to dict for saving
+def settings_to_dict(settings: CodeAgentSettings) -> Dict:
+    """
+    Convert a settings model to a dictionary.
+
+    Args:
+        settings: A CodeAgentSettings instance.
+
+    Returns:
+        Dictionary representation of the settings.
+    """
+    settings_dict = settings.model_dump(exclude_none=True)
+
+    # Handle API keys specially to avoid saving null values
+    if "api_keys" in settings_dict:
+        api_keys = settings_dict["api_keys"]
+        settings_dict["api_keys"] = {k: v for k, v in api_keys.items() if v is not None}
+
+    return settings_dict

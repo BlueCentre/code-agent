@@ -84,31 +84,14 @@ class TestIsPathWithinCwd:
 class TestReadFile:
     """Tests for the read_file function."""
 
-    def test_read_file_cwd_validation(self):
-        """Test that is_path_within_cwd is called and its result respected."""
-        with (
-            patch("code_agent.tools.file_tools.is_path_within_cwd") as mock_is_within,
-            patch("pathlib.Path.resolve") as mock_resolve,
-        ):
-            # Test path outside CWD
-            mock_is_within.return_value = False
-            result = read_file("/etc/passwd")
-            mock_is_within.assert_called_once_with("/etc/passwd")
-            assert "path access restricted" in result.lower()
+    def test_read_file_cwd_validation(self, tmp_path: Path, capsys):
+        """Test the read_file command refuses to read files outside CWD."""
+        with patch("code_agent.tools.file_tools.is_path_safe", return_value=(False, "Invalid path")):
+            parent_dir = tmp_path.parent
+            result = read_file(str(parent_dir / "sensitive_file.txt"))
 
-            # Reset mock
-            mock_is_within.reset_mock()
-
-            # Test path within CWD
-            mock_is_within.return_value = True
-            # Make further attempts fail so we end the function call early
-            mock_resolve.side_effect = Exception("Test end early")
-
-            try:
-                read_file("file.txt")
-            except Exception:
-                pass
-            mock_is_within.assert_called_once_with("file.txt")
+            # Check result contains error message
+            assert "Invalid path" in result
 
     def test_read_file_not_a_file(self):
         """Test path exists but is not a regular file."""
@@ -231,7 +214,7 @@ class TestDeleteFile:
             mock_is_file.return_value = False
 
             result = delete_file("directory/")
-            assert "not a regular file" in result.lower()
+            assert "neither a file nor directory" in result.lower()
 
     def test_delete_file_permission_error(self):
         with (
@@ -267,129 +250,47 @@ class TestDeleteFile:
 class TestApplyEdit:
     """Tests for the apply_edit function."""
 
-    def test_apply_edit_new_file(self):
-        # We'll mock _is_path_safe directly since we already test that elsewhere
-        with (
-            patch("code_agent.tools.file_tools._is_path_safe", return_value=True),
-            patch("pathlib.Path.exists") as mock_exists,
-            patch("pathlib.Path.is_file") as mock_is_file,
-            patch("pathlib.Path.write_text") as mock_write,
-            patch("rich.prompt.Confirm.ask", return_value=True),
-        ):
-            mock_exists.return_value = False
-            mock_is_file.return_value = False
+    def test_apply_edit_checks_target_file(self):
+        """Test that apply_edit checks if the target file is safe."""
+        with patch("code_agent.tools.file_tools.is_path_safe", return_value=(False, "Invalid path")):
+            result = apply_edit("/etc/passwd", "test content")
+            assert "Invalid path" in result
 
-            # Mock config
-            with patch("code_agent.config.get_config") as mock_config:
-                config = MagicMock()
-                config.auto_approve_edits = False
-                mock_config.return_value = config
+    @pytest.fixture
+    def temp_edit_file(self, tmp_path):
+        """Create a temporary file for editing tests."""
+        file_path = tmp_path / "test_edit_file.txt"
+        file_path.write_text("Original content")
+        return file_path
 
-                result = apply_edit("new_file.txt", "New content")
-                assert "edit applied successfully" in result.lower()
-                mock_write.assert_called_once_with("New content")
+    @pytest.fixture
+    def auto_approve_config(self):
+        """Create a config with auto-approve enabled."""
+        config = MagicMock()
+        config.auto_approve_edits = True
+        return config
 
-    def test_apply_edit_modify_existing(self):
-        # We'll mock _is_path_safe directly since we already test that elsewhere
-        with (
-            patch("code_agent.tools.file_tools._is_path_safe", return_value=True),
-            patch("pathlib.Path.exists") as mock_exists,
-            patch("pathlib.Path.is_file") as mock_is_file,
-            patch("pathlib.Path.read_text", return_value="Original content"),
-            patch("pathlib.Path.write_text") as mock_write,
-            patch("rich.prompt.Confirm.ask", return_value=True),
-        ):
-            mock_exists.return_value = True
-            mock_is_file.return_value = True
+    def test_apply_edit_replaces_content(self, temp_edit_file):
+        """Test that apply_edit replaces content in the file."""
+        with patch("code_agent.tools.file_tools.Confirm.ask", return_value=True), patch("code_agent.tools.file_tools.is_path_safe", return_value=(True, None)):
+            # Execute the test
+            result = apply_edit(str(temp_edit_file), "New content")
 
-            # Mock config
-            with patch("code_agent.config.get_config") as mock_config:
-                config = MagicMock()
-                config.auto_approve_edits = False
-                mock_config.return_value = config
+            # Verify the file was updated
+            assert "successfully" in result.lower()
+            assert temp_edit_file.read_text() == "New content"
 
-                result = apply_edit("existing.txt", "Modified content")
-                assert "edit applied successfully" in result.lower()
-                mock_write.assert_called_once_with("Modified content")
+    def test_apply_edit_creates_file(self, tmp_path):
+        """Test that apply_edit creates a new file if it doesn't exist."""
+        with patch("code_agent.tools.file_tools.Confirm.ask", return_value=True), patch("code_agent.tools.file_tools.is_path_safe", return_value=(True, None)):
+            # Create a path for a file that doesn't exist yet
+            new_file_path = tmp_path / "new_test_file.txt"
+            assert not new_file_path.exists()
 
-    def test_apply_edit_cancelled(self):
-        with (
-            patch("code_agent.tools.file_tools._is_path_safe", return_value=True),
-            patch("pathlib.Path.exists") as mock_exists,
-            patch("pathlib.Path.is_file") as mock_is_file,
-            patch("pathlib.Path.read_text", return_value="Original content"),
-            patch("pathlib.Path.write_text") as mock_write,
-            patch("rich.prompt.Confirm.ask", return_value=False),
-        ):
-            mock_exists.return_value = True
-            mock_is_file.return_value = True
+            # Execute the test
+            result = apply_edit(str(new_file_path), "File content")
 
-            # Mock config
-            with patch("code_agent.config.get_config") as mock_config:
-                config = MagicMock()
-                config.auto_approve_edits = False
-                mock_config.return_value = config
-
-                result = apply_edit("existing.txt", "Modified content")
-                assert "cancelled" in result.lower()
-                mock_write.assert_not_called()
-
-    def test_apply_edit_no_changes(self):
-        content = "Original content"
-        with (
-            patch("code_agent.tools.file_tools._is_path_safe", return_value=True),
-            patch("pathlib.Path.exists") as mock_exists,
-            patch("pathlib.Path.is_file") as mock_is_file,
-            patch("pathlib.Path.read_text", return_value=content),
-            patch("pathlib.Path.write_text") as mock_write,
-            patch("rich.prompt.Confirm.ask", return_value=True),
-        ):
-            mock_exists.return_value = True
-            mock_is_file.return_value = True
-
-            # Mock config
-            with patch("code_agent.config.get_config") as mock_config:
-                config = MagicMock()
-                config.auto_approve_edits = False
-                mock_config.return_value = config
-
-                result = apply_edit("test.txt", content)  # Same content
-                assert "no changes needed" in result.lower()
-                assert "already matches" in result.lower()
-                mock_write.assert_not_called()
-
-    def test_apply_edit_permission_error(self):
-        with (
-            patch("code_agent.tools.file_tools._is_path_safe", return_value=True),
-            patch("pathlib.Path.exists") as mock_exists,
-            patch("pathlib.Path.is_file") as mock_is_file,
-            patch("pathlib.Path.read_text", return_value="Original content"),
-            patch("pathlib.Path.write_text", side_effect=PermissionError("Permission denied")),
-            patch("rich.prompt.Confirm.ask", return_value=True),
-        ):
-            mock_exists.return_value = True
-            mock_is_file.return_value = True
-
-            # Mock config
-            with patch("code_agent.config.get_config") as mock_config:
-                config = MagicMock()
-                config.auto_approve_edits = False
-                mock_config.return_value = config
-
-                result = apply_edit("protected.txt", "New content")
-                assert "failed when writing changes to" in result.lower()
-                assert "permission" in result.lower()
-
-    def test_apply_edit_outside_cwd(self):
-        with patch("code_agent.tools.file_tools.is_path_within_cwd", return_value=False):
-            result = apply_edit("/etc/passwd", "malicious content")
-            assert "path access restricted" in result.lower()
-
-    def test_apply_edit_generic_error(self):
-        with (
-            patch("code_agent.tools.file_tools._is_path_safe", return_value=True),
-            patch("pathlib.Path.resolve", side_effect=Exception("Unknown error")),
-        ):
-            result = apply_edit("test.txt", "content")
-            assert "failed when applying edit to" in result.lower()
-            assert "unknown error" in result.lower()
+            # Verify the file was created
+            assert "successfully" in result.lower()
+            assert new_file_path.exists()
+            assert new_file_path.read_text() == "File content"

@@ -1,6 +1,5 @@
 """Utility functions for formatting error messages in file operations, API calls, and other errors."""
 
-from pathlib import Path
 from typing import Any, Callable, Dict, Optional, Type
 
 # --- File Error Formatting Utilities ---
@@ -50,29 +49,22 @@ def format_file_error(error: Exception, path: str, operation: str) -> str:
     if error_type in ERROR_SUGGESTIONS:
         suggestion = ERROR_SUGGESTIONS[error_type](path, error_msg)
     else:
-        suggestion = f"An unexpected error occurred when {operation} '{path}'.\n" f"Error details: {error_msg}"
+        suggestion = f"An unexpected error occurred when {operation} '{path}'.\nError details: {error_msg}"
 
     # Format the complete error message
     return f"Error: Failed when {operation} '{path}'.\n{suggestion}"
 
 
-def format_path_restricted_error(path: str) -> str:
-    """
-    Format an error message for path restriction violations.
-
-    Args:
-        path: The path that was attempted to be accessed
-
-    Returns:
-        A formatted error message
-    """
-    return (
-        f"Error: Path access restricted.\n"
-        f"Can only access files within the current working directory "
-        f"or its subdirectories.\n"
-        f"Attempted path: '{path}'\n"
-        f"Current working directory: '{Path.cwd()}'"
+def format_path_restricted_error(path: str, reason: Optional[str] = None) -> str:
+    """Formats an error message for a path that's restricted for security reasons."""
+    base_message = (
+        f"[bold red]Error:[/bold red] Path '{path}' is restricted for security reasons.\nOnly paths within the current working directory are allowed."
     )
+
+    if reason:
+        base_message += f"\nReason: {reason}"
+
+    return base_message
 
 
 def format_file_size_error(path: str, actual_size: float, max_size: float) -> str:
@@ -191,7 +183,7 @@ def format_api_error(error: Exception, provider: str, model: str) -> str:
 # --- Configuration Error Formatting Utilities ---
 
 
-def format_config_error(error: Exception, config_item: str | None = None) -> str:
+def format_config_error(error: Exception, config_item: Optional[str] = None) -> str:
     """
     Format a configuration error with helpful context and suggestions.
 

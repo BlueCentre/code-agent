@@ -288,4 +288,27 @@ Activate the virtual environment first: `source .venv/bin/activate`
 
 ## Development
 
-*(Add notes about running tests, contributing, etc. later)*
+*(TODO: Add notes about running tests, contributing, etc. later)*
+
+## Development Workflow
+
+This project follows a standardized Git workflow to ensure code quality and maintainability:
+
+- All new features, bug fixes, and changes are implemented in feature branches
+- Branch names follow the convention: `<type>/<description>` (e.g., `feat/user-auth`, `fix/login-bug`)
+- Commit messages follow the [Conventional Commits](https://www.conventionalcommits.org/) format
+- Pull requests include automated test results and coverage reports as comments
+- See [Git Workflow Documentation](docs/GIT_WORKFLOW.md) for complete details
+
+### Quick Example: Creating a Feature Branch
+
+```bash
+# Create a new feature branch
+./scripts/create-branch.sh feat new-feature
+
+# Make changes and commit with conventional format
+git commit -m "feat: add new feature"
+
+# Push and create a PR
+git push -u origin feat/new-feature
+```

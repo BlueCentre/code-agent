@@ -6,6 +6,7 @@ from rich.console import Console
 from rich.prompt import Confirm
 
 from code_agent.config import get_config
+from code_agent.tools.security import is_command_safe
 
 # --- Native Terminal Command Execution ---
 
@@ -49,30 +50,23 @@ def run_native_command(command: str) -> str:
 
     print(f"[yellow]Command requested:[/yellow] {command}")
 
+    # Validate command with security module
+    is_safe, reason, is_warning = is_command_safe(command)
+
     # Skip confirmation under certain conditions
     auto_approve = config.auto_approve_native_commands
 
-    if auto_approve:
-        # Check if the specific command is in the allowlist
-        allowlist = config.native_command_allowlist
-        command_allowed = any((cmd and command.startswith(cmd)) for cmd in allowlist if cmd)
-
-        if not command_allowed:
-            # Override auto-approve for commands not on the allowlist
-            auto_approve = False
-            print("[yellow]Command not found on the allowlist. Confirmation required.[/yellow]")
-
-    # Check for dangerous commands regardless of auto-approve setting
-    is_dangerous = any(command.startswith(prefix) for prefix in DANGEROUS_COMMAND_PREFIXES)
-    is_risky = any(command.startswith(prefix) for prefix in RISKY_COMMAND_PREFIXES)
-
-    if is_dangerous:
-        print("[bold red]⚠️  WARNING: This command could be destructive![/bold red]")
-        print("[red]This command has been identified as potentially dangerous and could cause data loss.[/red]")
+    # Handle command security validation
+    if not is_safe:
+        print(f"[bold red]⚠️  SECURITY ERROR: {reason}[/bold red]")
+        print("[red]This command cannot be executed due to security restrictions.[/red]")
         # Force confirmation for dangerous commands regardless of settings
         auto_approve = False
-    elif is_risky:
-        print("[bold yellow]⚠️  CAUTION: This command could have side effects.[/bold yellow]")
+    elif is_warning:
+        print(f"[bold yellow]⚠️  CAUTION: {reason}[/bold yellow]")
+        print("[yellow]This command could have side effects or potential risks.[/yellow]")
+        # Don't auto-approve potentially risky commands
+        auto_approve = False
 
     # Request confirmation if not auto-approved
     if not auto_approve:
@@ -81,7 +75,7 @@ def run_native_command(command: str) -> str:
     else:
         print("[yellow]Auto-approving command based on configuration and allowlist.[/yellow]")
 
-    # Execute the command
+    # If we got here, the command passed all security checks or was manually approved
     try:
         print("[grey50]Running command...[/grey50]")
         # Use shell=True to execute complex commands with pipes, redirects, etc.

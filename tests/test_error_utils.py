@@ -1,7 +1,5 @@
 """Tests for the error_utils.py functionality."""
 
-from pathlib import Path
-
 from code_agent.tools.error_utils import (
     format_file_error,
     format_file_size_error,
@@ -67,10 +65,8 @@ def test_format_path_restricted_error():
 
     result = format_path_restricted_error(path)
 
-    assert "Error: Path access restricted" in result
-    assert "current working directory" in result
-    assert f"Attempted path: '{path}'" in result
-    assert f"Current working directory: '{Path.cwd()}'" in result
+    assert "[bold red]Error:[/bold red] Path" in result
+    assert "restricted for security reasons" in result
 
 
 def test_format_file_size_error():

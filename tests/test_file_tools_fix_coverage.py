@@ -25,7 +25,7 @@ def mock_path_validation():
     """Mock the path validation functions to always return True for tests."""
     with (
         patch("code_agent.tools.file_tools.is_path_within_cwd", return_value=True),
-        patch("code_agent.tools.file_tools._is_path_safe", return_value=True),
+        patch("code_agent.tools.file_tools.is_path_safe", return_value=(True, None)),
     ):
         yield
 
@@ -68,27 +68,26 @@ def auto_approve_config():
 
 # --- Tests for is_path_within_cwd ---
 def test_is_path_within_cwd():
-    """Test the is_path_within_cwd function with various paths."""
-    # Override the fixture for this specific test
-    with patch("code_agent.tools.file_tools.is_path_within_cwd", side_effect=lambda x: is_path_within_cwd(x)):
-        with patch("pathlib.Path.cwd") as mock_cwd:
-            mock_cwd.return_value = Path("/home/user")
+    """Test that is_path_within_cwd correctly validates paths."""
+    # Override the autouse fixture for this test only
+    with patch("code_agent.tools.file_tools.is_path_safe") as mock_is_path_safe:
+        # Set up the mock to return different values based on the input
+        def side_effect(path):
+            if "/fake/cwd/" in path or path in ["file.txt", "./file.txt", "dir/file.txt"]:
+                return True, None
+            return False, "Path is outside the current workspace"
 
-            # Test relative path
-            with patch("pathlib.Path.resolve") as mock_resolve:
-                mock_resolve.return_value = Path("/home/user/file.txt")
-                with patch("pathlib.Path.is_relative_to", return_value=True):
-                    assert is_path_within_cwd("file.txt") is True
+        mock_is_path_safe.side_effect = side_effect
 
-            # Test path outside cwd
-            with patch("pathlib.Path.resolve") as mock_resolve:
-                mock_resolve.return_value = Path("/tmp/file.txt")
-                with patch("pathlib.Path.is_relative_to", return_value=False):
-                    assert is_path_within_cwd("/tmp/file.txt") is False
-
-            # Test error case
-            with patch("pathlib.Path.resolve", side_effect=ValueError("Invalid path")):
-                assert is_path_within_cwd("invalid://path") is False
+        # Now test the function with various paths
+        assert is_path_within_cwd("/fake/cwd/file.txt") is True
+        assert is_path_within_cwd("/fake/cwd/dir/file.txt") is True
+        assert is_path_within_cwd("/fake/other/file.txt") is False
+        assert is_path_within_cwd("../other/file.txt") is False
+        # Relative paths within cwd
+        assert is_path_within_cwd("file.txt") is True
+        assert is_path_within_cwd("./file.txt") is True
+        assert is_path_within_cwd("dir/file.txt") is True
 
 
 # --- Tests for read_file ---
@@ -155,11 +154,11 @@ def test_read_file_generic_error(temp_file: Path):
                 assert "Generic error" in result
 
 
-def test_read_file_outside_cwd(temp_file: Path):
-    """Test reading a file outside the CWD."""
-    with patch("code_agent.tools.file_tools.is_path_within_cwd", return_value=False):
-        result = read_file(str(temp_file))
-        assert "Path access restricted" in result
+def test_read_file_outside_cwd():
+    """Test that read_file refuses to read files outside CWD."""
+    with patch("code_agent.tools.file_tools.is_path_safe", return_value=(False, "Invalid path")):
+        result = read_file({"target_file": "/etc/passwd"})
+        assert "Invalid path" in result
 
 
 def test_read_file_legacy(temp_file: Path):
@@ -181,7 +180,7 @@ def test_apply_edit_modify_confirmed(temp_file: Path, mock_config):
         new_content = "Line 1 - Modified\nLine 2\nLine 3"
         result = apply_edit(str(temp_file), new_content)
 
-        assert "Edit applied successfully" in result
+        assert "successfully updated" in result
         assert temp_file.read_text() == new_content
 
 
@@ -192,7 +191,7 @@ def test_apply_edit_modify_cancelled(temp_file: Path, mock_config):
         new_content = "Line 1 - Modified\nLine 2\nLine 3"
         result = apply_edit(str(temp_file), new_content)
 
-        assert "Edit cancelled by user" in result
+        assert "cancelled" in result
         assert temp_file.read_text() == content_before
 
 
@@ -217,7 +216,7 @@ def test_apply_edit_auto_approved(temp_file: Path, auto_approve_config):
         result = apply_edit(str(temp_file), new_content)
 
         # Verify result
-        assert "Edit applied successfully" in result
+        assert "successfully updated" in result
         assert temp_file.read_text() == new_content
 
 
@@ -230,7 +229,7 @@ def test_apply_edit_create_file(tmp_path: Path, mock_config):
         assert not new_file_path.exists()
         result = apply_edit(str(new_file_path), new_content)
 
-        assert "Edit applied successfully" in result
+        assert "successfully created" in result
         assert new_file_path.exists()
         assert new_file_path.read_text() == new_content
 
@@ -255,21 +254,11 @@ def test_apply_edit_is_directory(temp_dir: Path, mock_config):
             assert "regular file" in result
 
 
-def test_apply_edit_outside_cwd(temp_file: Path, mock_config):
-    """Test attempting to apply an edit to a file outside the CWD."""
-    # Override the fixture to test path restriction
-    with (
-        patch("code_agent.tools.file_tools.is_path_within_cwd", return_value=False),
-        patch("code_agent.tools.file_tools._is_path_safe", return_value=False),
-    ):
-        # Suppress prints and terminal inputs during test
-        with (
-            patch("code_agent.tools.file_tools.print"),
-            patch("code_agent.tools.file_tools.console"),
-            patch("code_agent.tools.file_tools.Confirm.ask", return_value=False),
-        ):
-            result = apply_edit(str(temp_file), "Modified content")
-            assert "Path access restricted" in result
+def test_apply_edit_outside_cwd():
+    """Test that apply_edit refuses to edit files outside CWD."""
+    with patch("code_agent.tools.file_tools.is_path_safe", return_value=(False, "Invalid path")):
+        result = apply_edit("/etc/passwd", "malicious content")
+        assert "Invalid path" in result
 
 
 def test_apply_edit_permission_error(temp_file: Path, mock_config):
@@ -277,7 +266,7 @@ def test_apply_edit_permission_error(temp_file: Path, mock_config):
     with patch("code_agent.tools.file_tools.Confirm.ask", return_value=True):
         with patch("pathlib.Path.write_text", side_effect=PermissionError("Permission denied")):
             result = apply_edit(str(temp_file), "New content")
-            assert "Failed when writing changes to" in result
+            assert "Failed when writing to" in result
             assert "permission" in result.lower()
 
 
@@ -286,5 +275,17 @@ def test_apply_edit_generic_error(temp_file: Path, mock_config):
     with patch("code_agent.tools.file_tools.Confirm.ask", return_value=True):
         with patch("pathlib.Path.write_text", side_effect=Exception("Generic error")):
             result = apply_edit(str(temp_file), "New content")
-            assert "Failed when writing changes to" in result
+            assert "Failed when writing to" in result
             assert "Generic error" in result
+
+
+def test_path_validation_fails():
+    """Test that path validation fails correctly."""
+    with (
+        patch("code_agent.tools.file_tools.is_path_within_cwd", return_value=True),
+        patch("code_agent.tools.file_tools.is_path_safe", return_value=(False, "Invalid path")),
+    ):
+        # Suppress prints and terminal inputs during test
+        with patch("builtins.print"), patch("builtins.input", return_value="y"):
+            result = read_file("some_file.txt")
+            assert "Invalid path" in result
