@@ -10,15 +10,15 @@ This document consolidates all tasks, improvements, and future enhancements for 
   - ✅ Complete test LLM interaction with mocked responses/tool calls [from implementation.md]
 
 - **Error Handling Refinement**
-  - 🔄 Refine error handling and user feedback for API errors, tool failures, configuration issues, and LLM runtime errors [from implementation.md]
+  - ✅ Refine error handling and user feedback for API errors, tool failures, configuration issues, and LLM runtime errors [from implementation.md]
   - ✅ Implement more informative error messages for file operation failures [from future_improvements.md]
-  - 🔄 Update test assertions to match new error message format [in response to error message improvements]
+  - ✅ Update test assertions to match new error message format [in response to error message improvements]
 
 ## High Priority
 
 - **Tool Enhancement**
   - ✅ Add support for tools/function calling in LLM integration [from todo_priorities]
-  - 🔄 Enhance security checks for `apply_edit` and `run_native_command` (e.g., stricter path validation) [from implementation.md]
+  - 🔜 Enhance security checks for `apply_edit` and `run_native_command` (e.g., stricter path validation) [from implementation.md]
   - 🔄 Add size limits and pagination to `read_file` [from implementation.md]
   - 🔄 Add timeout and working directory options to native tools [from todo_priorities]
 
