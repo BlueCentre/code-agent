@@ -68,6 +68,34 @@ def read_file(path: str) -> str:
     except Exception as e:
         return f"Error reading file {path}: {e}"
 
+# --- Delete File Tool Function ---
+def delete_file(path: str) -> str:
+    """Deletes a file at the given path, restricted to CWD."""
+    if not is_path_within_cwd(path):
+        return (
+            f"Error: Path access restricted. Can only delete files within the "
+            f"current working directory or its subdirectories: {path}"
+        )
+    try:
+        file_path = Path(path).resolve()
+        print(f"[yellow]Attempting to delete file:[/yellow] {file_path}")
+
+        if not file_path.exists():
+            return f"Error: File does not exist: {path}"
+
+        if not file_path.is_file():
+            return f"Error: Path exists but is not a regular file: {path}"
+
+        file_path.unlink()
+        return f"File deleted successfully: {path}"
+
+    except FileNotFoundError:
+        return f"Error: File not found: {path}"
+    except PermissionError:
+        return f"Error: Permission denied when trying to delete file: {path}"
+    except Exception as e:
+        return f"Error deleting file {path}: {e}"
+
 # --- Apply Edit Tool Input Schema ---
 class ApplyEditArgs(BaseModel):
     target_file: str = Field(..., description="The path to the file to edit.")
