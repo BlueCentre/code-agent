@@ -10,8 +10,7 @@ from code_agent.agent.agent import CodeAgent
 class TestModelErrorHandling:
     """Tests for model error handling in the agent."""
 
-    @patch("code_agent.agent.agent.litellm.completion")
-    def test_handle_model_not_found_error(self, mock_litellm):
+    def test_handle_model_not_found_error(self, capsys):
         """Test handling model not found errors."""
         # Create a mock config with settings
         with patch("code_agent.agent.agent.get_config") as mock_get_config:
@@ -22,28 +21,30 @@ class TestModelErrorHandling:
             config.api_keys.openai = "test-key"
             mock_get_config.return_value = config
 
-            # Setup the mock to raise an exception
-            mock_litellm.side_effect = Exception("Model 'invalid-model' not found")
+            # Create a mock for error formatting
+            with patch("code_agent.agent.agent.format_api_error") as mock_format_error:
+                # Make it return a specific error message
+                mock_format_error.return_value = "Error: Model 'invalid-model' not found."
 
-            # Create an agent
-            agent = CodeAgent()
+                # Create a mock for litellm that raises an exception
+                with patch("code_agent.agent.agent.litellm.completion") as mock_litellm:
+                    mock_litellm.side_effect = Exception("Model 'invalid-model' not found")
 
-            # Directly manipulate the agent's run_turn to return our test message
-            # This simulates what happens when model not found error is handled by _handle_model_not_found_error
-            with patch.object(agent, "run_turn", return_value="Cannot list available models. Try installing google-generativeai package."):
-                result = agent.run_turn("Hello")
+                    # Also mock _handle_model_not_found_error to return a deterministic value
+                    with patch.object(
+                        CodeAgent, "_handle_model_not_found_error", return_value="Cannot list available models. Try installing google-generativeai package."
+                    ):
+                        # Create agent and run
+                        agent = CodeAgent()
+                        agent.run_turn("Hello")
 
-                # Check for any of our expected error message patterns
-                assert any(
-                    [
-                        "Cannot list available models" in result,
-                        "google-generativeai package" in result,
-                        "model" in result.lower() and "not found" in result.lower(),
-                    ]
-                ), f"Unexpected error message: {result}"
+                        # Capture the output that was printed
+                        captured = capsys.readouterr()
 
-    @patch("code_agent.agent.agent.litellm.completion")
-    def test_handle_api_key_error(self, mock_litellm):
+                        # The actual error formatting should be captured in the output
+                        assert "Model 'invalid-model' not found" in captured.out
+
+    def test_handle_api_key_error(self, capsys):
         """Test handling invalid API key errors."""
         # Create a mock config with settings
         with patch("code_agent.agent.agent.get_config") as mock_get_config:
@@ -54,24 +55,31 @@ class TestModelErrorHandling:
             config.api_keys.openai = "invalid-key"
             mock_get_config.return_value = config
 
-            # Setup the mock to raise an exception
-            mock_litellm.side_effect = Exception("Authentication error: Invalid API key")
+            # Create a mock for error formatting
+            with patch("code_agent.agent.agent.format_api_error") as mock_format_error:
+                # Make it return a specific error message
+                error_message = "Error: Authentication error: Invalid API key"
+                mock_format_error.return_value = error_message
 
-            # Create an agent
-            agent = CodeAgent()
+                # Create a mock for litellm that raises an exception
+                with patch("code_agent.agent.agent.litellm.completion") as mock_litellm:
+                    mock_litellm.side_effect = Exception("Authentication error: Invalid API key")
 
-            # Override run_turn to return a custom message
-            agent.run_turn = MagicMock(return_value="Error: Authentication error: Invalid API key")
+                    # Create agent and run
+                    agent = CodeAgent()
 
-            # Test that the agent handles API key errors gracefully
-            result = agent.run_turn("Hello")
+                    # For this kind of error, no special handlers are called so result will be None
+                    # But the formatted error should be printed
+                    agent.run_turn("Hello")
 
-            # Check that we get an error message
-            assert "api key" in result.lower() or "authentication" in result.lower()
-            assert "error" in result.lower()
+                    # Capture the output that was printed
+                    captured = capsys.readouterr()
 
-    @patch("code_agent.agent.agent.litellm.completion")
-    def test_handle_rate_limit_error(self, mock_litellm):
+                    # The actual error formatting should be captured in the output
+                    assert "Authentication error" in captured.out
+                    assert "API key" in captured.out
+
+    def test_handle_rate_limit_error(self, capsys):
         """Test handling rate limit errors."""
         # Create a mock config with settings
         with patch("code_agent.agent.agent.get_config") as mock_get_config:
@@ -82,18 +90,25 @@ class TestModelErrorHandling:
             config.api_keys.openai = "test-key"
             mock_get_config.return_value = config
 
-            # Setup the mock to raise an exception
-            mock_litellm.side_effect = Exception("Rate limit exceeded")
+            # Create a mock for error formatting
+            with patch("code_agent.agent.agent.format_api_error") as mock_format_error:
+                # Make it return a specific error message
+                error_message = "Error: Rate limit exceeded. Please try again later."
+                mock_format_error.return_value = error_message
 
-            # Create an agent
-            agent = CodeAgent()
+                # Create a mock for litellm that raises an exception
+                with patch("code_agent.agent.agent.litellm.completion") as mock_litellm:
+                    mock_litellm.side_effect = Exception("Rate limit exceeded")
 
-            # Override run_turn to return a custom message
-            agent.run_turn = MagicMock(return_value="Error: Rate limit exceeded. Please try again later.")
+                    # Create agent and run
+                    agent = CodeAgent()
 
-            # Test that the agent handles rate limit errors gracefully
-            result = agent.run_turn("Hello")
+                    # For this kind of error, no special handlers are called so result will be None
+                    # But the formatted error should be printed
+                    agent.run_turn("Hello")
 
-            # Check that we get an error message
-            assert "rate limit" in result.lower()
-            assert "exceeded" in result.lower()
+                    # Capture the output that was printed
+                    captured = capsys.readouterr()
+
+                    # The actual error formatting should be captured in the output
+                    assert "Rate limit exceeded" in captured.out
