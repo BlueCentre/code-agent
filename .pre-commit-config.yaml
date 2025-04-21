@@ -10,7 +10,7 @@ repos:
     -   id: check-toml
 -   repo: https://github.com/astral-sh/ruff-pre-commit
     # Ruff version. Must be synced with pyproject.toml
-    rev: v0.4.1
+    rev: v0.4.10
     hooks:
     -   id: ruff
         args: [--fix, --exit-non-zero-on-fix]
