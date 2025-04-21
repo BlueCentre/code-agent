@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from code_agent.agent import CodeAgent
+from code_agent.agent.agent import CodeAgent
 from code_agent.config.config import SettingsConfig
 
 
@@ -48,8 +48,11 @@ def mock_chat_completion():
 @pytest.fixture
 def agent(mock_config):
     """Create an agent instance for testing."""
-    # Remove verbosity parameter from initialization
-    agent = CodeAgent(config=mock_config)
+    # Initialize without config parameter
+    agent = CodeAgent()
+    # Set config directly as an attribute if needed
+    agent.config = mock_config
+    agent.model_name = "test-model"
     return agent
 
 
