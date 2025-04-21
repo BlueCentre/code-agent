@@ -32,29 +32,6 @@ cli-agent/
 └── README.md         # Project documentation
 ```
 
-## Development Workflow
-
-This project follows a standardized Git workflow to ensure code quality and maintainability:
-
-- All new features, bug fixes, and changes are implemented in feature branches
-- Branch names follow the convention: `<type>/<description>` (e.g., `feat/user-auth`, `fix/login-bug`)
-- Commit messages follow the [Conventional Commits](https://www.conventionalcommits.org/) format
-- Pull requests include automated test results and coverage reports as comments
-- See [Git Workflow Documentation](docs/GIT_WORKFLOW.md) for complete details
-
-### Quick Example: Creating a Feature Branch
-
-```bash
-# Create a new feature branch
-./scripts/create-branch.sh feat new-feature
-
-# Make changes and commit with conventional format
-git commit -m "feat: add new feature"
-
-# Push and create a PR
-git push -u origin feat/new-feature
-```
-
 ### Key Directories
 
 - **code_agent/**: Contains the main source code for the CLI tool
@@ -118,15 +95,38 @@ code-agent run "Hello! What can you help me with today?"
 
 ## Features
 
-*   **Multi-Provider Support:** Connect to different LLM providers using LiteLLM.
-*   **Single-Shot Mode:** Run individual prompts (`code-agent run "..."`).
-*   **Interactive Chat:** Engage in conversational sessions (`code-agent chat`).
-*   **Tool Use:**
-    *   `read_file`: Allows the agent to read local files.
-    *   `apply_edit`: Allows the agent to propose file edits (shows diff, requires confirmation).
-    *   `run_native_command`: Allows the agent to run terminal commands (requires confirmation, respects allowlist).
-*   **Configuration:** Manage settings via `~/.config/code-agent/config.yaml`, environment variables, and CLI flags.
-*   **Rich Output:** Uses `rich` for Markdown rendering and syntax highlighting.
+*   **Multi-Provider Support:**
+    * Connect to different LLM providers using LiteLLM
+    * Supports OpenAI, Google AI Studio, Groq, Anthropic, and more
+    * Easily switch between providers with command-line flags
+
+*   **Versatile Interaction Modes:**
+    * **Single-Shot Mode:** Run individual prompts (`code-agent run "..."`)
+    * **Interactive Chat:** Engage in conversational sessions (`code-agent chat`)
+    * Special chat commands: `/help`, `/clear`, `/exit`, `/quit`
+
+*   **Local Environment Integration:**
+    * **Read files:** Agent can access and analyze local files
+    * **Apply Edits:** Propose file changes with diff preview and confirmation
+    * **Execute Commands:** Run native terminal commands with safety checks
+    * **Search Capabilities:** Find files, locate code patterns, and analyze codebases
+
+*   **Advanced Security Controls:**
+    * Path validation to prevent path traversal attacks
+    * Workspace restrictions to limit file operations
+    * Command validation and allowlisting to prevent dangerous operations
+    * Optional auto-approval settings with clear security warnings
+
+*   **Rich Configuration System:**
+    * Hierarchical configuration (CLI > Environment > Config file)
+    * Dynamic validation of settings
+    * Provider-specific configuration options
+
+*   **User Experience Features:**
+    * Rich text output with Markdown rendering
+    * Syntax highlighting for code
+    * Clear error messages and troubleshooting information
+    * Interactive confirmation prompts for system modifications
 
 ## Installation
 
@@ -286,11 +286,25 @@ Activate the virtual environment first: `source .venv/bin/activate`
     code-agent config --help
     ```
 
-## Development
+## Contributors
 
-*(TODO: Add notes about running tests, contributing, etc. later)*
+We welcome contributions to the Code Agent project! Whether you're fixing bugs, adding features, improving documentation, or reporting issues, your help is appreciated.
 
-## Development Workflow
+Please see our [Contributing Guide](docs/CONTRIBUTING.md) for details on:
+
+- Setting up your development environment
+- Our coding standards and requirements
+- The branch naming convention and git workflow
+- Pull request process and requirements
+- Testing guidelines
+
+The project maintains high standards for code quality with:
+- Minimum 80% test coverage requirement
+- Comprehensive CI/CD pipeline
+- Conventional commit message format
+- Squash merging for a clean history
+
+### Development Workflow
 
 This project follows a standardized Git workflow to ensure code quality and maintainability:
 
@@ -312,3 +326,34 @@ git commit -m "feat: add new feature"
 # Push and create a PR
 git push -u origin feat/new-feature
 ```
+
+### Running Tests
+
+The project maintains a minimum of 80% test coverage. You can run tests using:
+
+```bash
+# Run tests using the test script
+./scripts/run_tests.sh
+
+# Run tests with coverage report
+./scripts/run_coverage_pipeline_venv.sh
+
+# Run tests for a specific module
+./scripts/run_native_tools_coverage.sh
+```
+
+Test coverage can also be viewed in HTML format with:
+
+```bash
+./scripts/run_tests.sh --html
+```
+
+### Pull Request Process
+
+When submitting a PR:
+
+1. The GitHub Actions CI pipeline will automatically run tests
+2. Coverage reports are posted as comments on the PR
+3. All checks must pass and coverage cannot drop below 80%
+4. At least one reviewer must approve the PR
+5. Use "Squash and merge" to maintain a clean history

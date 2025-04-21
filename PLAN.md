@@ -1,8 +1,8 @@
 # Code Agent Project Plan
 
-> **Note**: Future enhancements from this document have been consolidated into the main task list at [docs/todo_priorities.md](docs/todo_priorities.md). Please refer to that file for the current list of planned improvements, prioritized tasks, and future enhancements.
+> **Note**: Future enhancements from this document have been consolidated into the main task list at [docs/planning_priorities.md](docs/planning_priorities.md). Please refer to that file for the current list of planned improvements, prioritized tasks, and future enhancements.
 
-> This document has been partially superseded by `docs/implementation.md` which contains the current implementation status. The future enhancements section is now maintained in the consolidated priority list.
+> This document has been partially superseded by `docs/getting_started_implementation.md` which contains the current implementation status. The future enhancements section is now maintained in the consolidated priority list.
 
 ## 1. Introduction & Vision
 
@@ -17,4 +17,4 @@ Prioritize configuration settings: CLI flags > Environment Variables > config.ya
 
 ## 3. Future Enhancements
 
-> **Note**: All future enhancements have been moved to the consolidated priority task list at [docs/todo_priorities.md](docs/todo_priorities.md) under the "Future Enhancements" section.
+> **Note**: All future enhancements have been moved to the consolidated priority task list at [docs/planning_priorities.md](docs/planning_priorities.md) under the "Future Enhancements" section.

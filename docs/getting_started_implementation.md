@@ -1,6 +1,6 @@
 # Code Agent Implementation Plan & Status
 
-> **Note**: The roadmap and next steps have been consolidated into the main task list at [docs/todo_priorities.md](todo_priorities.md). Please refer to that file for the current list of planned improvements, prioritized tasks, and future enhancements.
+> **Note**: The roadmap and next steps have been consolidated into the main task list at [docs/planning_priorities.md](planning_priorities.md). Please refer to that file for the current list of planned improvements, prioritized tasks, and future enhancements.
 
 This document outlines the implementation steps that have been completed for the Code Agent project.
 
@@ -75,4 +75,4 @@ This document outlines the implementation steps that have been completed for the
 
 ## Next Steps
 
-For current priorities, roadmap, and next steps, please refer to the consolidated task list at [docs/todo_priorities.md](todo_priorities.md).
+For current priorities, roadmap, and next steps, please refer to the consolidated task list at [docs/planning_priorities.md](planning_priorities.md).
