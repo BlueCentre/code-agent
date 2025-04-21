@@ -5,6 +5,7 @@ import litellm
 from rich import print
 
 from code_agent.config import get_api_key, get_config
+from code_agent.tools.error_utils import format_api_error
 
 # Configure LiteLLM settings if needed (e.g., logging)
 # litellm.set_verbose = True
@@ -25,17 +26,11 @@ def get_llm_response(
     api_key = get_api_key(target_provider)
 
     if target_provider == "openai" and not api_key:
-        print(
-            f"[bold red]Error:[/bold red] OpenAI API key not found. "
-            f"Set OPENAI_API_KEY environment variable or add it to {config.DEFAULT_CONFIG_PATH}."
-        )
+        print(f"[bold red]Error:[/bold red] OpenAI API key not found. " f"Set OPENAI_API_KEY environment variable or add it to {config.DEFAULT_CONFIG_PATH}.")
         return None
     # Add similar checks for other providers requiring keys
     if target_provider == "groq" and not api_key:
-        print(
-            f"[bold red]Error:[/bold red] Groq API key not found. "
-            f"Set GROQ_API_KEY environment variable or add it to {config.DEFAULT_CONFIG_PATH}."
-        )
+        print(f"[bold red]Error:[/bold red] Groq API key not found. " f"Set GROQ_API_KEY environment variable or add it to {config.DEFAULT_CONFIG_PATH}.")
         return None
 
     messages = []
@@ -44,10 +39,7 @@ def get_llm_response(
     messages.append({"role": "user", "content": prompt})
 
     try:
-        print(
-            f"[grey50]Calling LiteLLM (Provider: {target_provider}, "
-            f"Model: {target_model})...[/grey50]"
-        )
+        print(f"[grey50]Calling LiteLLM (Provider: {target_provider}, " f"Model: {target_model})...[/grey50]")
         response = litellm.completion(
             model=f"{target_provider}/{target_model}",  # LiteLLM uses provider/model format
             messages=messages,
@@ -61,8 +53,10 @@ def get_llm_response(
         return content.strip() if content else None
 
     except Exception as e:
-        print(f"[bold red]Error calling LiteLLM:[/bold red] {e}")
-        # Consider more specific error handling (e.g., API key errors, model not found)
+        # Enhanced error handling with detailed formatting
+        formatted_error = format_api_error(e, target_provider, target_model)
+        print("[bold red]Error calling LiteLLM:[/bold red]")
+        print(f"[red]{formatted_error}[/red]")
         return None
 
 

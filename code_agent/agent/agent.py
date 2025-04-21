@@ -7,6 +7,7 @@ from rich.status import Status
 
 # Import tools as regular functions
 from code_agent.config import SettingsConfig, get_config
+from code_agent.tools.error_utils import format_api_error, format_tool_error
 from code_agent.tools.simple_tools import apply_edit, read_file, run_native_command
 
 
@@ -39,17 +40,12 @@ class CodeAgent:
         # Add specific guidance for file listing
         self.base_instruction_parts.append("When asked to list files, especially Python files in directories:")
         self.base_instruction_parts.append(
-            "- For listing Python files recursively in a directory, use: "
-            "run_native_command(command=\"find directory_path -type f -name '*.py' | sort\")"
+            "- For listing Python files recursively in a directory, use: " "run_native_command(command=\"find directory_path -type f -name '*.py' | sort\")"
         )
-        self.base_instruction_parts.append(
-            "- Never use simple 'ls' commands with wildcards like 'ls *.py' " "as they don't search recursively."
-        )
+        self.base_instruction_parts.append("- Never use simple 'ls' commands with wildcards like 'ls *.py' " "as they don't search recursively.")
 
         self.base_instruction_parts.append("When asked to create or update documentation:")
-        self.base_instruction_parts.append(
-            "- Use apply_edit to create or modify documentation files directly in the appropriate directory."
-        )
+        self.base_instruction_parts.append("- Use apply_edit to create or modify documentation files directly in the appropriate directory.")
         self.base_instruction_parts.append(
             "- For user requests about documenting features or improvements, create a relevant markdown file in the 'docs/' directory."
         )
@@ -188,9 +184,7 @@ class CodeAgent:
                                 with open(config_path, "w") as f:
                                     yaml.dump(config_data, f, default_flow_style=False)
 
-                                print(
-                                    f"[bold green]✓ Configuration updated:[/bold green] Changed default_model from '{old_model}' to '{selected_model}'"
-                                )
+                                print(f"[bold green]✓ Configuration updated:[/bold green] Changed default_model from '{old_model}' to '{selected_model}'")
                                 return f"Configuration updated to use model '{selected_model}'. Please try your request again."
                             except Exception as e:
                                 print(f"[bold red]Error updating config:[/bold red] {e}")
@@ -220,10 +214,7 @@ class CodeAgent:
         model_string = self._get_model_string(provider, model)
         system_prompt = "\n".join(self.base_instruction_parts)
 
-        print(
-            f"[grey50]Initializing Agent (Model: {model_string}, "
-            f"Provider: {provider or self.config.default_provider})[/grey50]"
-        )
+        print(f"[grey50]Initializing Agent (Model: {model_string}, " f"Provider: {provider or self.config.default_provider})[/grey50]")
 
         # Retrieve API key from config
         target_provider = provider or self.config.default_provider
@@ -239,11 +230,7 @@ class CodeAgent:
             print("[yellow]Using fallback simple command handling for demonstration[/yellow]")
 
             # Process a few basic commands without a real LLM
-            if (
-                "current directory" in prompt.lower()
-                or "current working directory" in prompt.lower()
-                or "pwd" in prompt.lower()
-            ):
+            if "current directory" in prompt.lower() or "current working directory" in prompt.lower() or "pwd" in prompt.lower():
                 result = run_native_command("pwd")
                 self.history.append({"role": "user", "content": prompt})
                 self.history.append(
@@ -451,7 +438,7 @@ class CodeAgent:
                                         }
                                     )
                                 except Exception as e:
-                                    error_msg = f"Error executing {function_name}: {e!s}"
+                                    error_msg = format_tool_error(e, function_name, args_dict)
                                     print(f"[red]{error_msg}[/red]")
                                     # Add the specific print for test_agent_malformed_tool_call
                                     print(f"[bold red]Error executing tool '{function_name}'[/bold red]")
@@ -499,20 +486,22 @@ class CodeAgent:
                 "Try asking again or simplifying your request."
 
         except Exception as e:
-            # Error Handling
+            # Enhanced Error Handling with detailed formatting
             error_type = type(e).__name__
-            error_message = str(e)
-            print(f"[bold red]Error during agent execution ({error_type}):[/bold red]")
 
-            if "api key" in error_message.lower():
-                print("  - Check API key config (config file or ENV vars).")
-            elif "model not found" in error_message.lower() or "is not found" in error_message.lower():
-                # Use the helper function to handle model not found errors
+            # Get provider and model for better error context
+            target_provider = provider or self.config.default_provider
+            target_model = model or self.config.default_model
+
+            # Format error with context and suggestions
+            formatted_error = format_api_error(e, target_provider, target_model)
+            print(f"[bold red]Error during agent execution ({error_type}):[/bold red]")
+            print(f"[red]{formatted_error}[/red]")
+
+            # Special handling for model not found errors to offer interactive model selection
+            if "NotFoundError" in error_type or "model not found" in str(e).lower() or "is not found" in str(e).lower():
+                # Use the helper function to handle model not found errors with interactive resolution
                 return self._handle_model_not_found_error(model_string)
-            elif "rate limit" in error_message.lower():
-                print("  - API rate limit likely exceeded.")
-            else:
-                print(f"  - {error_message}")
 
             return None
 

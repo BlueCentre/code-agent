@@ -8,6 +8,8 @@ from pydantic import BaseModel, Field, ValidationError
 from pydantic_settings import SettingsConfigDict
 from rich import print as rich_print
 
+from code_agent.tools.error_utils import format_config_error
+
 # Configuration management logic will go here
 # Placeholder for now
 pass
@@ -82,35 +84,30 @@ _config: Optional[SettingsConfig] = None
 
 
 def load_config_from_file(config_path: Path = DEFAULT_CONFIG_PATH) -> Dict[str, Any]:
-    """Loads configuration purely from a YAML file, returning a dict."""
-    # Ensure config directory exists
-    config_path.parent.mkdir(parents=True, exist_ok=True)
-
-    # Check for config at old location (~/.code-agent/config.yaml) and migrate if needed
-    old_config_dir = Path.home() / "code-agent"
-    old_config_path = old_config_dir / "config.yaml"
-    if old_config_path.exists() and not config_path.exists():
-        try:
-            print(f"Migrating config from {old_config_path} to {config_path}")
-            # Copy old config to new location
-            config_path.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(old_config_path, config_path)
-            print(f"Successfully migrated configuration to {config_path}")
-        except Exception as e:
-            print(f"Warning: Could not migrate config. Error: {e}")
-
-    # If config file doesn't exist, create it from template
-    if not config_path.exists():
-        create_default_config_file(config_path)
-        print(f"Created default configuration file at {config_path}")
-        print("Edit this file to add your API keys or set appropriate " "environment variables.")
+    """Loads configuration from a YAML file."""
+    config_data = {}
 
     try:
-        with open(config_path, "r") as f:
-            return yaml.safe_load(f) or {}
-    except Exception as e:
-        print(f"Warning: Could not read config file at {config_path}. Error: {e}")
-        return {}
+        if config_path.exists():
+            with open(config_path, "r") as f:
+                config_data = yaml.safe_load(f) or {}
+        else:
+            # Create default config file if it doesn't exist
+            rich_print(f"[yellow]Config file not found at {config_path}.[/yellow]")
+            rich_print("[yellow]Creating default configuration file...[/yellow]")
+            create_default_config_file(config_path)
+            # Try loading again
+            if config_path.exists():
+                with open(config_path, "r") as f:
+                    config_data = yaml.safe_load(f) or {}
+            else:
+                rich_print("[bold red]Could not create config file.[/bold red]")
+    except (yaml.YAMLError, OSError) as e:
+        error_message = format_config_error(e, config_item=str(config_path))
+        rich_print(f"[bold red]{error_message}[/bold red]")
+        rich_print("[yellow]Using default configuration.[/yellow]")
+
+    return config_data
 
 
 def create_default_config_file(config_path: Path) -> None:
@@ -186,9 +183,7 @@ def build_effective_config(
     if "CODE_AGENT_AUTO_APPROVE_EDITS" in os.environ:
         effective_config_data["auto_approve_edits"] = os.environ["CODE_AGENT_AUTO_APPROVE_EDITS"].lower() == "true"
     if "CODE_AGENT_AUTO_APPROVE_NATIVE_COMMANDS" in os.environ:
-        effective_config_data["auto_approve_native_commands"] = (
-            os.environ["CODE_AGENT_AUTO_APPROVE_NATIVE_COMMANDS"].lower() == "true"
-        )
+        effective_config_data["auto_approve_native_commands"] = os.environ["CODE_AGENT_AUTO_APPROVE_NATIVE_COMMANDS"].lower() == "true"
 
     # 4. Layer CLI Overrides (Highest priority)
     if cli_provider is not None:
@@ -204,10 +199,7 @@ def build_effective_config(
     # 5. Validate and return the final config object
     try:
         # Ensure list fields are properly initialized
-        if (
-            "native_command_allowlist" not in effective_config_data
-            or effective_config_data["native_command_allowlist"] is None
-        ):
+        if "native_command_allowlist" not in effective_config_data or effective_config_data["native_command_allowlist"] is None:
             effective_config_data["native_command_allowlist"] = []
         if "rules" not in effective_config_data or effective_config_data["rules"] is None:
             effective_config_data["rules"] = []
@@ -215,18 +207,14 @@ def build_effective_config(
         final_config = SettingsConfig(**effective_config_data)
         return final_config
     except ValidationError as e:
-        # Improved error handling with more context on what went wrong
-        error_details = []
-        for err in e.errors():
-            field = ".".join(str(loc) for loc in err["loc"])
-            error_details.append(f"- Field '{field}': {err['msg']}")
-
-        error_msg = "\n".join(error_details)
-        rich_print(f"[bold red]Error:[/bold red] Invalid configuration:\n{error_msg}")
+        # Use the format_config_error utility for better error messages
+        error_message = format_config_error(e, config_item="configuration validation")
+        rich_print(f"[bold red]{error_message}[/bold red]")
         rich_print("[yellow]Falling back to default configuration.[/yellow]")
         return SettingsConfig()
     except Exception as e:
-        rich_print(f"[bold red]Error creating final configuration:[/bold red] {e}")
+        error_message = format_config_error(e, config_item="configuration processing")
+        rich_print(f"[bold red]{error_message}[/bold red]")
         rich_print("[yellow]Falling back to default configuration.[/yellow]")
         return SettingsConfig()
 
@@ -271,7 +259,11 @@ def get_config() -> SettingsConfig:
         # This should ideally not happen if initialize_config is called in main
         rich_print("[bold red]Error:[/bold red] Configuration accessed before " "initialization.")
         # Initialize with defaults as a fallback, though this indicates a logic error
-        initialize_config()
+        try:
+            initialize_config()
+        except Exception as e:
+            error_message = format_config_error(e, config_item="configuration initialization")
+            rich_print(f"[bold red]{error_message}[/bold red]")
     return _config
 
 
