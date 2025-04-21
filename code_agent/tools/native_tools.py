@@ -1,4 +1,5 @@
 import subprocess
+from typing import Optional
 
 from pydantic import BaseModel, Field
 from rich import print
@@ -15,78 +16,75 @@ console = Console()
 
 class RunNativeCommandArgs(BaseModel):
     command: str = Field(..., description="The terminal command to execute")
+    working_directory: str = Field(None, description="The working directory to run the command in")
+    timeout: int = Field(None, description="Timeout for the command in seconds")
 
 
-# Dangerous commands that should trigger warnings
+# List of command prefixes that are considered dangerous
+# Used for custom command safety checks beyond the general security module
 DANGEROUS_COMMAND_PREFIXES = [
-    "rm -r",
-    "rm -f",
-    "rm -rf",  # Most dangerous
-    "sudo ",
-    "> /",  # Writing to root
-    "dd",
-    "chmod -R",
-    "mkfs",
-    ":(){ ",  # Fork bomb
+    "rm -rf /",  # Delete everything from root
+    "rm -r /",  # Delete everything from root
+    "dd if=",  # Direct disk operations
+    "> /dev/sda",  # Overwrite disk
+    "mkfs",  # Format filesystem
+    ":(){ :|:& };:",  # Fork bomb
+    "wget",  # Download and potentially execute
+    "curl",  # Download and potentially execute
 ]
 
-# Commands that might be potentially risky
+# List of command prefixes that are risky but can be executed with warning
 RISKY_COMMAND_PREFIXES = [
-    "mv ",
-    "cp -r",
-    "sed -i",
-    "apt",
-    "yum",
-    "pip install",
-    "npm install",
-    "kubectl delete",
-    "terraform destroy",
+    "chmod -R",  # Recursive chmod
+    "chown -R",  # Recursive chown
+    "mv * /",  # Move everything to root
+    "cp -r * /",  # Copy everything to root
+    "find / -delete",  # Delete files recursively
+    "apt-get",  # Package management
+    "apt",  # Package management
+    "pip install",  # Python package management
+    "npm install",  # Node package management
+    "yum",  # Package management
 ]
 
 
-def run_native_command(command: str) -> str:
+def run_native_command(command: str, working_directory: Optional[str] = None, timeout: Optional[int] = None) -> str:
     """Executes a native terminal command after approval checks."""
     config = get_config()
 
-    print(f"[yellow]Command requested:[/yellow] {command}")
-
-    # Validate command with security module
+    # Security check for command
     is_safe, reason, is_warning = is_command_safe(command)
 
-    # Skip confirmation under certain conditions
-    auto_approve = config.auto_approve_native_commands
-
-    # Handle command security validation
+    # For dangerous commands, always require confirmation
     if not is_safe:
-        print(f"[bold red]⚠️  SECURITY ERROR: {reason}[/bold red]")
-        print("[red]This command cannot be executed due to security restrictions.[/red]")
-        # Force confirmation for dangerous commands regardless of settings
-        auto_approve = False
-    elif is_warning:
-        print(f"[bold yellow]⚠️  CAUTION: {reason}[/bold yellow]")
-        print("[yellow]This command could have side effects or potential risks.[/yellow]")
-        # Don't auto-approve potentially risky commands
-        auto_approve = False
+        # Don't even offer dangerous commands for execution
+        print("[bold red]Not executing command due to security concerns:[/bold red]")
+        print(f"[red]{reason}[/red]")
+        return f"Command execution not permitted: {reason}"
 
-    # Request confirmation if not auto-approved
-    if not auto_approve:
-        if not Confirm.ask("Do you want to run this command?", default=False):
-            return "Command execution cancelled by user."
+    # For risky commands, show warning and require confirmation
+    if is_warning:
+        print("[bold yellow]Warning - this command has potential risks:[/bold yellow]")
+        print(f"[yellow]{reason}[/yellow]")
+
+    # Only ask for confirmation if auto-approve is disabled
+    if not config.auto_approve_native_commands:
+        # Display the command and ask for confirmation
+        print(f"[bold]Command requested:[/bold] {command}")
+        confirmed = Confirm.ask("Do you want to execute this command?", default=False)
+        if not confirmed:
+            return "Command execution cancelled by user choice."
     else:
-        print("[yellow]Auto-approving command based on configuration and allowlist.[/yellow]")
+        print(f"[dim]Auto-approving command: {command}[/dim]")
 
     # If we got here, the command passed all security checks or was manually approved
     try:
         print("[grey50]Running command...[/grey50]")
-        # Use shell=True to execute complex commands with pipes, redirects, etc.
-        # For security in a production environment, this should be rewritten to use shell=False
-        process = subprocess.run(
-            command,
-            shell=True,
-            text=True,
-            capture_output=True,
-            executable="/bin/bash",  # Use bash to ensure consistency
-        )
+        # Split the command for safer execution with shell=False
+        cmd_parts = command.split()
+
+        # Use shell=False for better security
+        process = subprocess.run(cmd_parts, shell=False, text=True, capture_output=True, cwd=working_directory, timeout=timeout)
 
         # Prepare result with both stdout and stderr
         result = process.stdout
@@ -100,6 +98,11 @@ def run_native_command(command: str) -> str:
 
         return result
 
+    except subprocess.TimeoutExpired:
+        timeout_value = timeout or "default"
+        error_message = f"Command timed out after {timeout_value} seconds"
+        print(f"[bold red]{error_message}[/bold red]")
+        return error_message
     except Exception as e:
         error_message = f"Error executing command: {e}"
         print(f"[bold red]{error_message}[/bold red]")
@@ -108,7 +111,7 @@ def run_native_command(command: str) -> str:
 
 # Legacy function that accepts RunNativeCommandArgs for compatibility
 def run_native_command_legacy(args: RunNativeCommandArgs) -> str:
-    return run_native_command(args.command)
+    return run_native_command(args.command, working_directory=args.working_directory, timeout=args.timeout)
 
 
 # Example usage (can be removed later)
