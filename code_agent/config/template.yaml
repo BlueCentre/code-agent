@@ -74,6 +74,17 @@ native_command_allowlist:
   - "gh"
 
 # ===============================
+# Native Command Settings
+# ===============================
+# These settings control the behavior of native command execution
+native_commands:
+  # Default timeout in seconds (null means no timeout)
+  default_timeout: null
+
+  # Default working directory (null means current directory)
+  default_working_directory: null
+
+# ===============================
 # Security Settings
 # ===============================
 # These settings control the security features of the CLI agent

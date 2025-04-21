@@ -52,6 +52,13 @@ def run_native_command(command: str, working_directory: Optional[str] = None, ti
     """Executes a native terminal command after approval checks."""
     config = get_config()
 
+    # Use config defaults if values not provided
+    if working_directory is None and hasattr(config, "native_commands"):
+        working_directory = getattr(config.native_commands, "default_working_directory", None)
+
+    if timeout is None and hasattr(config, "native_commands"):
+        timeout = getattr(config.native_commands, "default_timeout", None)
+
     # Security check for command
     is_safe, reason, is_warning = is_command_safe(command)
 
@@ -71,11 +78,19 @@ def run_native_command(command: str, working_directory: Optional[str] = None, ti
     if not config.auto_approve_native_commands:
         # Display the command and ask for confirmation
         print(f"[bold]Command requested:[/bold] {command}")
+        if working_directory:
+            print(f"[bold]Working directory:[/bold] {working_directory}")
+        if timeout:
+            print(f"[bold]Timeout:[/bold] {timeout} seconds")
         confirmed = Confirm.ask("Do you want to execute this command?", default=False)
         if not confirmed:
             return "Command execution cancelled by user choice."
     else:
         print(f"[dim]Auto-approving command: {command}[/dim]")
+        if working_directory:
+            print(f"[dim]Working directory: {working_directory}[/dim]")
+        if timeout:
+            print(f"[dim]Timeout: {timeout} seconds[/dim]")
 
     # If we got here, the command passed all security checks or was manually approved
     try:

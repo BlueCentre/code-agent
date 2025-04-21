@@ -185,6 +185,13 @@ class TestRunNativeCommand:
         # Setup mocks
         config = MagicMock()
         config.auto_approve_native_commands = False
+
+        # Explicitly set native_commands with None values to avoid defaults
+        native_commands_mock = MagicMock()
+        native_commands_mock.default_timeout = None
+        native_commands_mock.default_working_directory = None
+        config.native_commands = native_commands_mock
+
         mock_get_config.return_value = config
 
         process_mock = MagicMock()
@@ -209,6 +216,13 @@ class TestRunNativeCommand:
         # Setup mocks
         config = MagicMock()
         config.auto_approve_native_commands = False
+
+        # Explicitly set native_commands with None values to avoid defaults
+        native_commands_mock = MagicMock()
+        native_commands_mock.default_timeout = None
+        native_commands_mock.default_working_directory = None
+        config.native_commands = native_commands_mock
+
         mock_get_config.return_value = config
 
         process_mock = MagicMock()
@@ -233,6 +247,13 @@ class TestRunNativeCommand:
         # Setup mocks
         config = MagicMock()
         config.auto_approve_native_commands = False
+
+        # Explicitly set native_commands with None values to avoid defaults
+        native_commands_mock = MagicMock()
+        native_commands_mock.default_timeout = None
+        native_commands_mock.default_working_directory = None
+        config.native_commands = native_commands_mock
+
         mock_get_config.return_value = config
 
         # Run the function with timeout
@@ -257,3 +278,44 @@ class TestRunNativeCommand:
         # Assertions
         assert result == "Command output"
         mock_run_native_command.assert_called_once_with("ls", working_directory="/tmp", timeout=30)
+
+    @patch("subprocess.run")
+    @patch("code_agent.tools.native_tools.is_command_safe", return_value=(True, None, False))
+    @patch("code_agent.tools.native_tools.Confirm.ask", return_value=True)
+    def test_command_with_config_defaults(self, mock_confirm, mock_is_safe, mock_subprocess_run):
+        """Test command execution using configuration defaults."""
+        # Create a mock config with native command settings
+        config_mock = MagicMock()
+        config_mock.auto_approve_native_commands = False
+
+        # Create native_commands with default values
+        native_commands_mock = MagicMock()
+        native_commands_mock.default_timeout = 60
+        native_commands_mock.default_working_directory = "/custom/workdir"
+
+        # Attach native_commands to config
+        config_mock.native_commands = native_commands_mock
+
+        # Setup subprocess mock
+        process_mock = MagicMock()
+        process_mock.returncode = 0
+        process_mock.stdout = "Command output with defaults"
+        process_mock.stderr = ""
+        mock_subprocess_run.return_value = process_mock
+
+        # Patch get_config to return our mock config
+        with patch("code_agent.tools.native_tools.get_config", return_value=config_mock):
+            # Run the command without specifying working_directory or timeout
+            # Should use the values from config
+            result = run_native_command(command="echo test")
+
+            # Assertions
+            assert "Command output with defaults" in result
+            mock_subprocess_run.assert_called_once_with(
+                ["echo", "test"],
+                capture_output=True,
+                text=True,
+                shell=False,
+                cwd="/custom/workdir",  # Should use config default
+                timeout=60,  # Should use config default
+            )
