@@ -29,6 +29,16 @@ To run coverage within a Python virtual environment:
 ./scripts/run_coverage_pipeline_venv.sh
 ```
 
+### Running Coverage for Specific Modules
+
+To run coverage tests for the `native_tools` module only:
+
+```bash
+./scripts/run_native_tools_coverage.sh
+```
+
+This script runs tests specifically for the `native_tools.py` module and verifies that it meets the 80% coverage threshold.
+
 ## Coverage Pipeline
 
 The coverage pipeline performs the following steps:
