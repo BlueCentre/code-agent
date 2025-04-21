@@ -6,7 +6,7 @@ These tests focus on edge cases and error handling in the native_tools module.
 
 from unittest.mock import MagicMock, patch
 
-from code_agent.tools.native_tools import run_native_command
+from code_agent.tools.native_tools import RunNativeCommandArgs, run_native_command, run_native_command_legacy
 
 
 class TestRunNativeCommand:
@@ -282,3 +282,14 @@ class TestRunNativeCommand:
         # Assertions
         assert "Filtered output" in result
         mock_subprocess_run.assert_called_once()
+
+    @patch("code_agent.tools.native_tools.run_native_command")
+    def test_run_native_command_legacy(self, mock_run_native_command):
+        """Test the legacy function that accepts RunNativeCommandArgs."""
+        mock_run_native_command.return_value = "Command executed"
+
+        args = RunNativeCommandArgs(command="test command")
+        result = run_native_command_legacy(args)
+
+        mock_run_native_command.assert_called_once_with("test command")
+        assert result == "Command executed"
