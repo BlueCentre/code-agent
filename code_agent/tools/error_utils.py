@@ -49,7 +49,7 @@ def format_file_error(error: Exception, path: str, operation: str) -> str:
     if error_type in ERROR_SUGGESTIONS:
         suggestion = ERROR_SUGGESTIONS[error_type](path, error_msg)
     else:
-        suggestion = f"An unexpected error occurred when {operation} '{path}'.\n" f"Error details: {error_msg}"
+        suggestion = f"An unexpected error occurred when {operation} '{path}'.\nError details: {error_msg}"
 
     # Format the complete error message
     return f"Error: Failed when {operation} '{path}'.\n{suggestion}"
@@ -58,7 +58,7 @@ def format_file_error(error: Exception, path: str, operation: str) -> str:
 def format_path_restricted_error(path: str, reason: Optional[str] = None) -> str:
     """Formats an error message for a path that's restricted for security reasons."""
     base_message = (
-        f"[bold red]Error:[/bold red] Path '{path}' is restricted for security reasons.\n" f"Only paths within the current working directory are allowed."
+        f"[bold red]Error:[/bold red] Path '{path}' is restricted for security reasons.\nOnly paths within the current working directory are allowed."
     )
 
     if reason:
