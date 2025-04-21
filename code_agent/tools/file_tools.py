@@ -14,6 +14,7 @@ from code_agent.tools.error_utils import (
     format_file_size_error,
     format_path_restricted_error,
 )
+from code_agent.tools.security import is_path_safe
 
 console = Console()
 
@@ -29,22 +30,19 @@ class ReadFileArgs(BaseModel):
 # --- Helper for Path Validation ---
 def is_path_within_cwd(path_str: str) -> bool:
     """Checks if the resolved path is within the current working directory."""
-    try:
-        cwd = Path.cwd()
-        resolved_path = Path(path_str).resolve()
-        return resolved_path.is_relative_to(cwd)
-    except (ValueError, OSError):
-        return False
+    is_safe, _ = is_path_safe(path_str)
+    return is_safe
 
 
 # --- Tool Implementation ---
 def read_file(path: str) -> str:
     """Reads the entire content of a file at the given path, restricted to CWD."""
-    if not is_path_within_cwd(path):
-        return format_path_restricted_error(path)
+    is_safe, reason = is_path_safe(path)
+    if not is_safe:
+        return format_path_restricted_error(path, reason)
 
     try:
-        # Path is already resolved in is_path_within_cwd, but resolve again for consistency
+        # Path is already validated in is_path_safe
         file_path = Path(path).resolve()
         print(f"[yellow]Attempting to read file:[/yellow] {file_path}")
 
@@ -78,8 +76,9 @@ def read_file(path: str) -> str:
 # --- Delete File Tool Function ---
 def delete_file(path: str) -> str:
     """Deletes a file at the given path, restricted to CWD."""
-    if not is_path_within_cwd(path):
-        return format_path_restricted_error(path)
+    is_safe, reason = is_path_safe(path)
+    if not is_safe:
+        return format_path_restricted_error(path, reason)
 
     try:
         file_path = Path(path).resolve()
@@ -112,24 +111,13 @@ class ApplyEditArgs(BaseModel):
     code_edit: str = Field(..., description="The proposed content to apply to the file.")
 
 
-# _is_path_safe helper should remain as introduced by previous edits
-def _is_path_safe(base_path: Path, target_path: Path) -> bool:
-    """Check if the target path is within the base path directory."""
-    try:
-        resolved_base = base_path.resolve()
-        resolved_target = target_path.resolve()
-        return resolved_target.is_relative_to(resolved_base)
-    except Exception:
-        return False
-
-
-# apply_edit function with updated signature
 def apply_edit(target_file: str, code_edit: str) -> str:
     """Applies proposed content changes to a file after showing a diff and requesting user confirmation."""
     config = get_config()
 
-    if not is_path_within_cwd(target_file):
-        return format_path_restricted_error(target_file)
+    is_safe, reason = is_path_safe(target_file)
+    if not is_safe:
+        return format_path_restricted_error(target_file, reason)
 
     try:
         file_path = Path(target_file).resolve()
@@ -203,39 +191,46 @@ def apply_edit(target_file: str, code_edit: str) -> str:
 
             console.print(table)
 
-        # --- Ask for Confirmation ---
-        if config.auto_approve_edits:
+        # --- Request Confirmation ---
+        if not config.auto_approve_edits:
+            if is_new_file:
+                if not Confirm.ask(f"Create new file {target_file} with the shown content?", default=False):
+                    return "Edit cancelled. No file created."
+            else:
+                if not Confirm.ask(f"Apply these changes to {target_file}?", default=False):
+                    return "Edit cancelled. File remains unchanged."
+        else:
             print("[yellow]Auto-approving edit based on configuration.[/yellow]")
-            confirmed = True
-        else:
-            # Ask for confirmation only if not auto-approved
-            confirmed = Confirm.ask(f"Apply these changes to {target_file}?", default=False)
 
-        # --- Apply Changes if Confirmed ---
-        if confirmed:
-            try:
-                # Ensure parent directory exists
-                file_path.parent.mkdir(parents=True, exist_ok=True)
-                file_path.write_text(proposed_content)
-                return f"Edit applied successfully to {target_file}."
-            except Exception as write_e:
-                return format_file_error(write_e, target_file, "writing changes to")
-        else:
-            return "Edit cancelled by user."
+        # --- Apply the Changes ---
+        try:
+            # Create parent directories if they don't exist
+            file_path.parent.mkdir(parents=True, exist_ok=True)
 
-    except FileNotFoundError:
-        # This case might be handled by the initial check, but added for safety
-        # If the intention is to create a new file, the logic handles it.
-        pass  # Let the diff/write logic handle file creation
-    except PermissionError as e:
-        return format_file_error(e, target_file, "accessing")
+            # Write the new content
+            file_path.write_text(proposed_content)
+
+            if is_new_file:
+                return f"New file successfully created at {target_file}."
+            else:
+                return f"File {target_file} successfully updated."
+        except PermissionError as e:
+            return format_file_error(e, target_file, "writing to")
+        except Exception as e:
+            return format_file_error(e, target_file, "writing to")
+
     except Exception as e:
-        return format_file_error(e, target_file, "applying edit to")
+        return format_file_error(e, target_file, "processing edit for")
 
 
-# For compatibility with legacy code that might expect ReadFileArgs
+# Legacy function that accepts ReadFileArgs for compatibility
 def read_file_legacy(args: ReadFileArgs) -> str:
     return read_file(args.path)
+
+
+# Legacy function that accepts ApplyEditArgs for compatibility
+def apply_edit_legacy(args: ApplyEditArgs) -> str:
+    return apply_edit(args.target_file, args.code_edit)
 
 
 # Example usage (can be removed later)

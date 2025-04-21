@@ -1,0 +1,68 @@
+name: Pull Request Workflow
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-and-report:
+    name: Test and Report
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.10']
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Needed for PR comments
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install Poetry
+      run: |
+        curl -sSL https://install.python-poetry.org | python3 -
+
+    - name: Install dependencies
+      run: |
+        poetry config virtualenvs.create false
+        poetry install --no-interaction
+        python -m pip install --upgrade pip pytest pytest-cov
+
+    - name: Run tests with coverage
+      run: |
+        python -m pytest tests/ --cov=code_agent --cov-report=xml --cov-report=term --cov-fail-under=80
+
+    - name: Generate Coverage Report
+      run: |
+        # Generate coverage report in Markdown format
+        echo "## Test Coverage Report" > coverage_report.md
+        echo "### Overall Coverage: $(python -c 'import xml.etree.ElementTree as ET; tree = ET.parse("coverage.xml"); print(f"{float(tree.getroot().attrib[\"line-rate\"]) * 100:.2f}%")')" >> coverage_report.md
+        echo "" >> coverage_report.md
+        echo "| Module | Coverage |" >> coverage_report.md
+        echo "| ------ | -------- |" >> coverage_report.md
+        python -c 'import xml.etree.ElementTree as ET; tree = ET.parse("coverage.xml"); root = tree.getroot(); [print(f"| {pkg.attrib[\"name\"]} | {float(pkg.attrib[\"line-rate\"]) * 100:.2f}% |") for pkg in root.findall(".//package")]' >> coverage_report.md
+
+    - name: Find Comment
+      uses: peter-evans/find-comment@v2
+      id: fc
+      with:
+        issue-number: ${{ github.event.pull_request.number }}
+        comment-author: 'github-actions[bot]'
+        body-includes: Test Coverage Report
+
+    - name: Create or update PR comment with coverage
+      uses: peter-evans/create-or-update-comment@v3
+      with:
+        comment-id: ${{ steps.fc.outputs.comment-id }}
+        issue-number: ${{ github.event.pull_request.number }}
+        body-file: coverage_report.md
+        edit-mode: replace
+
+    - name: Run linting
+      run: |
+        python -m ruff check . --output-format=github
+      continue-on-error: true  # Don't fail the workflow, just report issues

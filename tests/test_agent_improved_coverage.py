@@ -10,7 +10,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from code_agent.agent.agent import CodeAgent
-from code_agent.config.config import SettingsConfig
+from code_agent.config import SettingsConfig
 
 
 # Define role constants since they're not in the module
