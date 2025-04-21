@@ -167,3 +167,69 @@ code-agent config groq
 
 4. **Look for Rate Limit Errors**:
    - If hitting rate limits, switch to a different provider
+
+## Sequence Diagram
+
+The following sequence diagram illustrates how the system communicates with different LLM providers:
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant CLI as CLI Application (main.py)
+    participant Agent as CodeAgent (agent.py)
+    participant Config as Configuration System
+    participant LiteLLM as LiteLLM Client
+    participant Provider as LLM Provider (OpenAI/Anthropic/etc.)
+
+    User->>CLI: Submit query with optional provider/model
+    CLI->>Agent: run_turn(prompt, provider, model)
+
+    Agent->>Config: Get API keys and provider settings
+    Config->>Agent: Return configuration
+
+    Agent->>Agent: _get_model_string(provider, model)
+
+    alt Provider specified
+        Agent->>Agent: Use specified provider
+    else Provider not specified
+        Agent->>Agent: Use default_provider from config
+    end
+
+    alt Model specified
+        Agent->>Agent: Use specified model
+    else Model not specified
+        Agent->>Agent: Use default_model from config
+    end
+
+    Agent->>Agent: Format model string for LiteLLM (e.g., "openai/gpt-4")
+
+    Agent->>LiteLLM: litellm.completion(model, messages, api_key)
+
+    LiteLLM->>LiteLLM: Format request for specific provider
+    LiteLLM->>Provider: Send API request with appropriate format
+
+    alt API call succeeds
+        Provider->>LiteLLM: Return response
+        LiteLLM->>Agent: Return formatted completion
+    else API call fails
+        Provider->>LiteLLM: Return error
+        LiteLLM->>Agent: Raise exception
+        Agent->>Agent: Format error message (format_api_error)
+
+        alt Model not found error
+            Agent->>Agent: _handle_model_not_found_error()
+            Agent->>CLI: Suggest available models
+            CLI->>User: Display model suggestions
+        else Other API error
+            Agent->>CLI: Return formatted error message
+            CLI->>User: Display error message
+        end
+    end
+```
+
+This diagram illustrates:
+1. How the system selects which provider and model to use
+2. The process of formatting model strings for LiteLLM
+3. The API communication flow with LLM providers
+4. How different error conditions are handled, particularly model not found errors
+5. The role of LiteLLM in abstracting provider-specific API details

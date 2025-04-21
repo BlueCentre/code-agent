@@ -140,3 +140,50 @@ Agent: [Executes command using run_native_command tool]
 - **History not loading**: Check if the history files exist in `~/.config/code-agent/history/`
 - **Agent seems confused**: Try clearing history with `/clear` to start fresh
 - **Chat session crashes**: Look for error messages. In most cases, history should be saved automatically.
+
+## Sequence Diagram
+
+The following sequence diagram illustrates the chat interaction flow from when a user submits a query to when they receive a response:
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant CLI as CLI Application (main.py)
+    participant Agent as CodeAgent (agent.py)
+    participant LLM as LLM Client (llm.py)
+    participant Provider as LLM Provider
+    participant Tools as Tool Modules
+
+    User->>CLI: Submit query
+    CLI->>Agent: run_turn(prompt)
+
+    Agent->>Agent: add_user_message(prompt)
+    Agent->>Agent: Create system message from base_instruction_parts
+    Agent->>Agent: add_system_message(instructions)
+
+    Agent->>LLM: Request completion with history
+    LLM->>Provider: Make API request via LiteLLM
+    Provider->>LLM: Return response
+    LLM->>Agent: Return completion
+
+    alt Response contains tool calls
+        Agent->>Tools: Execute tool call
+        Tools->>Agent: Return tool result
+        Agent->>LLM: Request follow-up completion with tool result
+        LLM->>Provider: Make API request
+        Provider->>LLM: Return response
+        LLM->>Agent: Return follow-up completion
+    end
+
+    Agent->>Agent: add_assistant_message(response)
+    Agent->>CLI: Return final response
+    CLI->>User: Display response
+```
+
+This diagram shows:
+1. The user submitting a query to the CLI
+2. The CLI passing the query to the CodeAgent
+3. The agent preparing the conversation history and instructions
+4. The agent requesting a completion from the LLM provider
+5. The handling of tool calls if present in the response
+6. The final response being returned to the user

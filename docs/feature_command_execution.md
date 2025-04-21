@@ -172,3 +172,63 @@ native_command_allowlist:
 - Consider using `git` command with specific subcommands in allowlist (e.g., `git status`)
 - Avoid allowing commands that can modify system state without specific need
 - Use `auto_approve_native_commands: false` (the default) for maximum security
+
+## Sequence Diagram
+
+The following sequence diagram illustrates the flow of command execution, including security checks and user confirmation:
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant CLI as CLI Application (main.py)
+    participant Agent as CodeAgent (agent.py)
+    participant LLM as LLM Client
+    participant CmdTool as Command Tools Module
+    participant Security as Security Module
+    participant Shell as Terminal Shell
+
+    User->>CLI: Request involving command execution
+    CLI->>Agent: run_turn(prompt)
+    Agent->>LLM: Request completion with history
+    LLM->>Agent: Return completion with command tool call
+
+    Agent->>CmdTool: run_native_command(command)
+    CmdTool->>Security: check_command_safety(command)
+    Security->>CmdTool: Safety check result
+
+    alt Command is in allowlist or auto_approve_commands is enabled
+        CmdTool->>Shell: Execute command directly
+        Shell->>CmdTool: Command output
+    else Command requires confirmation
+        CmdTool->>CLI: Request confirmation for command
+        CLI->>User: Display command and prompt for confirmation
+        User->>CLI: Confirm or deny command
+        CLI->>CmdTool: User decision
+
+        alt User confirms
+            CmdTool->>Shell: Execute command
+            Shell->>CmdTool: Command output
+        else User denies
+            CmdTool->>Agent: Command execution rejected
+        end
+    end
+
+    alt Command executed successfully
+        CmdTool->>Agent: Return command output
+    else Command execution failed
+        CmdTool->>Agent: Return error message
+    end
+
+    Agent->>LLM: Request follow-up with command result
+    LLM->>Agent: Return follow-up completion
+
+    Agent->>CLI: Return final response
+    CLI->>User: Display response
+```
+
+This diagram illustrates:
+1. How command execution requests flow through the system
+2. The security validation that occurs for all commands
+3. The confirmation flow for commands that require user approval
+4. How the command output is returned to the agent for further processing
+5. The different paths for allowlisted/auto-approved vs. manually confirmed commands

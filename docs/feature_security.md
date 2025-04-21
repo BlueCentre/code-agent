@@ -111,3 +111,69 @@ When using Code Agent, follow these best practices:
 5. Run the agent with the least privileged user account possible
 6. Monitor output for any unexpected actions
 7. Keep the agent updated to receive security patches
+
+## Sequence Diagram
+
+The following sequence diagram illustrates how security checks are performed for file operations and command execution:
+
+```mermaid
+sequenceDiagram
+    participant Agent as CodeAgent (agent.py)
+    participant FileTool as File Tools Module
+    participant CmdTool as Command Tools Module
+    participant Security as Security Module (security.py)
+    participant Config as Configuration System
+
+    Agent->>FileTool: read_file(path) or apply_edit(target_file, code_edit)
+    FileTool->>Security: check_file_read_safety(path) or check_file_write_safety(path)
+
+    Security->>Config: Get security settings
+    Config->>Security: Return settings (disabled_checks, allowlists, etc.)
+
+    alt All security checks disabled
+        Security->>FileTool: Return safe (bypassing checks)
+    else Some or all security checks enabled
+        Security->>Security: Check file path against forbidden patterns
+        Security->>Security: Check file path against allowlist
+        Security->>Security: Check path traversal attempts
+        Security->>Security: Check sensitive file patterns
+
+        alt Any security check fails
+            Security->>FileTool: Return unsafe with reason
+            FileTool->>Agent: Return security error
+        else All security checks pass
+            Security->>FileTool: Return safe
+            FileTool->>FileTool: Proceed with operation
+        end
+    end
+
+    Agent->>CmdTool: run_native_command(command)
+    CmdTool->>Security: check_command_safety(command)
+
+    Security->>Config: Get security settings
+    Config->>Security: Return settings (disabled_checks, allowlists, etc.)
+
+    alt All security checks disabled
+        Security->>CmdTool: Return safe (bypassing checks)
+    else Some or all security checks enabled
+        Security->>Security: Check command against allowlist
+        Security->>Security: Check for forbidden commands
+        Security->>Security: Check for command injection patterns
+        Security->>Security: Check for sensitive operations (rm, sudo, etc.)
+
+        alt Any security check fails
+            Security->>CmdTool: Return unsafe with reason
+            CmdTool->>Agent: Return security error or request confirmation
+        else All security checks pass
+            Security->>CmdTool: Return safe
+            CmdTool->>CmdTool: Proceed with operation
+        end
+    end
+```
+
+This diagram illustrates:
+1. How security checks are performed for both file operations and command execution
+2. The different types of security checks applied to each operation type
+3. How configuration settings influence security behavior
+4. The flow when security checks pass vs. when they fail
+5. How the security module interacts with the tool modules

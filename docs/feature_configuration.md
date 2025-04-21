@@ -90,3 +90,77 @@ Use the `--verbose` flag to see detailed validation results even when the config
 - **Dynamic validation**: Configuration is validated with clear error messages
 - **Security options**: Control auto-approval of potentially dangerous operations
 - **Multiple model support**: Each provider offers multiple models with different capabilities
+
+## Sequence Diagram
+
+The following sequence diagram illustrates how the configuration system loads, validates, and provides access to configuration settings:
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant CLI as CLI Application (main.py)
+    participant ConfigLoader as Config Loader (__init__.py)
+    participant ConfigHandler as Config Handler (config.py)
+    participant SettingsConfig as Settings Config (settings_based_config.py)
+    participant Validation as Config Validation (validation.py)
+    participant FileSystem as File System
+
+    User->>CLI: Start application with args
+
+    CLI->>ConfigLoader: get_config()
+
+    ConfigLoader->>ConfigLoader: Check for cached config
+
+    alt Config not cached
+        ConfigLoader->>ConfigHandler: load_config()
+
+        ConfigHandler->>FileSystem: Check for config file
+        FileSystem->>ConfigHandler: Config file existence/contents
+
+        alt Config file exists
+            ConfigHandler->>ConfigHandler: Parse YAML
+        else Use default config
+            ConfigHandler->>ConfigHandler: Create default config
+        end
+
+        ConfigHandler->>ConfigHandler: Apply environment variables
+        ConfigHandler->>ConfigHandler: Apply CLI overrides
+
+        ConfigHandler->>SettingsConfig: Create SettingsConfig instance
+        SettingsConfig->>Validation: Validate config settings
+
+        alt Validation succeeds
+            Validation->>SettingsConfig: Return validated settings
+            SettingsConfig->>ConfigHandler: Return config instance
+        else Validation fails
+            Validation->>SettingsConfig: Raise validation error
+            SettingsConfig->>ConfigHandler: Propagate error
+            ConfigHandler->>ConfigLoader: Propagate error
+            ConfigLoader->>CLI: Propagate error
+            CLI->>User: Display error message
+        end
+
+        ConfigHandler->>ConfigLoader: Return config instance
+        ConfigLoader->>ConfigLoader: Cache config instance
+    end
+
+    ConfigLoader->>CLI: Return config instance
+
+    CLI->>CLI: Apply config settings to application
+
+    alt User requests config update
+        User->>CLI: Request config change
+        CLI->>ConfigHandler: update_config(setting, value)
+        ConfigHandler->>FileSystem: Write updated config to file
+        FileSystem->>ConfigHandler: Write confirmation
+        ConfigHandler->>CLI: Config update result
+        CLI->>User: Confirm config change
+    end
+```
+
+This diagram illustrates:
+1. How the configuration is loaded when the application starts
+2. The validation process for configuration settings
+3. How CLI arguments, environment variables, and config files interact
+4. The fallback to default configuration when a config file doesn't exist
+5. How configuration updates are handled and persisted
