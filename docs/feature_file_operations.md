@@ -135,3 +135,84 @@ Planned improvements to file operations include:
 - Directory operations (create, list, etc.)
 - Enhanced file type detection
 - Intelligent file splitting for very large files
+
+## Sequence Diagram
+
+The following sequence diagram illustrates the flow of file operations, focusing on reading a file and applying an edit:
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant CLI as CLI Application (main.py)
+    participant Agent as CodeAgent (agent.py)
+    participant LLM as LLM Client
+    participant FileTool as File Tools Module
+    participant Security as Security Module
+    participant FS as File System
+
+    User->>CLI: Request involving files
+    CLI->>Agent: run_turn(prompt)
+    Agent->>LLM: Request completion with history
+    LLM->>Agent: Return completion with file tool call
+
+    alt Read File Operation
+        Agent->>FileTool: read_file(path)
+        FileTool->>Security: check_file_read_safety(path)
+        Security->>FileTool: Safety check result
+
+        alt File is safe
+            FileTool->>FS: Open and read file
+            FS->>FileTool: File contents
+            FileTool->>Agent: Return file contents
+        else File is unsafe
+            FileTool->>Agent: Return security error
+        end
+
+        Agent->>LLM: Request follow-up with file contents
+        LLM->>Agent: Return follow-up completion
+    end
+
+    alt Apply Edit Operation
+        Agent->>FileTool: apply_edit(target_file, code_edit)
+        FileTool->>Security: check_file_write_safety(target_file)
+        Security->>FileTool: Safety check result
+
+        alt File is safe to edit
+            FileTool->>FS: Check if file exists
+            FS->>FileTool: File existence status
+
+            alt auto_approve_edits is enabled
+                FileTool->>FS: Write file directly
+                FS->>FileTool: Write confirmation
+            else Require confirmation
+                FileTool->>CLI: Generate diff and request confirmation
+                CLI->>User: Display diff and prompt for confirmation
+                User->>CLI: Confirm or deny edit
+                CLI->>FileTool: User decision
+
+                alt User confirms
+                    FileTool->>FS: Write file
+                    FS->>FileTool: Write confirmation
+                else User denies
+                    FileTool->>Agent: Edit rejected
+                end
+            end
+
+            FileTool->>Agent: Return edit result
+        else File is unsafe to edit
+            FileTool->>Agent: Return security error
+        end
+
+        Agent->>LLM: Request follow-up with edit result
+        LLM->>Agent: Return follow-up completion
+    end
+
+    Agent->>CLI: Return final response
+    CLI->>User: Display response
+```
+
+This diagram illustrates:
+1. How file read operations are processed, including safety checks
+2. How file edit operations work, including the confirmation flow
+3. The security validation that occurs for all file operations
+4. The different paths for auto-approved vs. manually confirmed edits
