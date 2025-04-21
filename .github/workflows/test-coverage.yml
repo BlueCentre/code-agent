@@ -5,6 +5,13 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      modules:
+        description: 'Specific module to test (e.g., code_agent.tools.native_tools)'
+        required: false
+        default: 'code_agent'
+        type: string
 
 jobs:
   coverage-analysis:
@@ -33,14 +40,20 @@ jobs:
 
     - name: Run tests with coverage
       run: |
-        python -m pytest tests/ --cov=code_agent --cov-report=xml --cov-report=term --cov-fail-under=80
+        if [[ "${{ github.event.inputs.modules }}" == "code_agent.tools.native_tools" ]]; then
+          echo "Running tests for native_tools module only"
+          python -m pytest tests/test_native_tools.py tests/test_native_tools_additional.py --cov=code_agent.tools.native_tools --cov-report=xml --cov-report=term --cov-fail-under=80
+        else
+          echo "Running tests for all modules"
+          python -m pytest tests/ --cov=code_agent --cov-report=xml --cov-report=term --cov-fail-under=80
+        fi
 
     - name: Upload coverage report
       uses: actions/upload-artifact@v4
       with:
         name: coverage-report
         path: coverage.xml
-        
+
   coverage-report:
     name: SonarQube
     needs: coverage-analysis
@@ -54,11 +67,11 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: coverage-report
-          
+
       - name: Make extract_version.sh executable
         run: |
           chmod +x scripts/extract_version.sh
-          
+
       - name: Extract version
         id: get_version
         run: |
