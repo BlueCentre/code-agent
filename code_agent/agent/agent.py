@@ -199,9 +199,10 @@ class CodeAgent:
             except ImportError:
                 print("[yellow]Google GenerativeAI package not installed. Cannot check for available models.[/yellow]")
                 return "Cannot list available models. Try installing google-generativeai package."
+
         except Exception as e:
-            print(f"[bold red]Error while checking for available models:[/bold red] {e}")
-            return f"Error checking for available models: {e}"
+            print(f"[bold red]Error checking for available models:[/bold red] {e}")
+            return f"Error checking for available models: {e!s}. Please verify your configuration."
 
     def run_turn(
         self,

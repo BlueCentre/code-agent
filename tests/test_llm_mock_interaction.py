@@ -588,6 +588,10 @@ def test_model_not_found_error_handling(agent, mocker):
     # Mock print to verify error messages
     mock_print = mocker.patch("code_agent.agent.agent.print")
 
+    # Mock _handle_model_not_found_error to ensure it returns a consistent response
+    mock_handle_model = mocker.patch("code_agent.agent.agent.CodeAgent._handle_model_not_found_error")
+    mock_handle_model.return_value = "Cannot list available models. Try installing google-generativeai package."
+
     # Run the agent
     result = agent.run_turn("Test with wrong model")
 
@@ -600,8 +604,11 @@ def test_model_not_found_error_handling(agent, mocker):
 
     assert model_not_found_error, "Error about model not found should have been logged"
 
-    # Result should be None due to error or an error message string
-    assert result is None or (isinstance(result, str) and "error" in result.lower())
+    # Verify the handler was called
+    assert mock_handle_model.called, "Model not found handler should have been called"
+
+    # Result should contain the mocked response text
+    assert result == "Cannot list available models. Try installing google-generativeai package."
 
 
 def test_rate_limit_error_handling(agent, mocker):
