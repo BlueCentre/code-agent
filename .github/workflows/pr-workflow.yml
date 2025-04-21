@@ -40,7 +40,7 @@ jobs:
       run: |
         # Generate coverage report in Markdown format
         echo "## Test Coverage Report" > coverage_report.md
-        echo "### Overall Coverage: $(python -c 'import xml.etree.ElementTree as ET; tree = ET.parse("coverage.xml"); print(f"{float(tree.getroot().attrib[\"line-rate\"]) * 100:.2f}%")')" >> coverage_report.md
+        python -c 'import xml.etree.ElementTree as ET; tree = ET.parse("coverage.xml"); print(f"### Overall Coverage: {float(tree.getroot().attrib[\"line-rate\"]) * 100:.2f}%")' >> coverage_report.md
         echo "" >> coverage_report.md
         echo "| Module | Coverage |" >> coverage_report.md
         echo "| ------ | -------- |" >> coverage_report.md
