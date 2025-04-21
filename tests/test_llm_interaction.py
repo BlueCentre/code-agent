@@ -213,17 +213,13 @@ def test_openai_model_string_formatting(agent_with_mock_config):
 
 def test_ai_studio_model_string_formatting(agent_with_mock_config):
     """Test that AI Studio model strings are formatted correctly."""
-    model_string = agent_with_mock_config._get_model_string(
-        "ai_studio", "gemini-1.5-pro"
-    )
+    model_string = agent_with_mock_config._get_model_string("ai_studio", "gemini-1.5-pro")
     assert model_string == "gemini-1.5-pro"
 
 
 def test_anthropic_model_string_formatting(agent_with_mock_config):
     """Test that Anthropic model strings are formatted correctly."""
-    model_string = agent_with_mock_config._get_model_string(
-        "anthropic", "claude-3-opus"
-    )
+    model_string = agent_with_mock_config._get_model_string("anthropic", "claude-3-opus")
     assert model_string == "anthropic/claude-3-opus"
 
 
@@ -241,9 +237,7 @@ def test_api_base_selection(agent_with_mock_config):
 
 def test_connection_error(agent_with_mock_config, mocker):
     """Test handling of connection errors."""
-    connection_error = litellm.exceptions.ServiceUnavailableError(
-        message="Connection refused", model="gpt-4", llm_provider="openai"
-    )
+    connection_error = litellm.exceptions.ServiceUnavailableError(message="Connection refused", model="gpt-4", llm_provider="openai")
 
     # Patch litellm to raise the error
     patch_litellm_with_exception(mocker, connection_error)
@@ -256,16 +250,12 @@ def test_connection_error(agent_with_mock_config, mocker):
 
     # Verify error handling
     assert result is None
-    mock_print.assert_any_call(
-        "[bold red]Error during agent execution (ServiceUnavailableError):[/bold red]"
-    )
+    mock_print.assert_any_call("[bold red]Error during agent execution (ServiceUnavailableError):[/bold red]")
 
 
 def test_api_key_error(agent_with_mock_config, mocker):
     """Test handling of invalid API key errors."""
-    auth_error = litellm.exceptions.AuthenticationError(
-        message="Invalid API key", model="gpt-4", llm_provider="openai"
-    )
+    auth_error = litellm.exceptions.AuthenticationError(message="Invalid API key", model="gpt-4", llm_provider="openai")
 
     # Patch litellm to raise the error
     patch_litellm_with_exception(mocker, auth_error)
@@ -278,16 +268,12 @@ def test_api_key_error(agent_with_mock_config, mocker):
 
     # Verify error handling
     assert result is None
-    mock_print.assert_any_call(
-        "[bold red]Error during agent execution (AuthenticationError):[/bold red]"
-    )
+    mock_print.assert_any_call("[bold red]Error during agent execution (AuthenticationError):[/bold red]")
 
 
 def test_rate_limit_error(agent_with_mock_config, mocker):
     """Test handling of rate limit errors."""
-    rate_limit_error = litellm.exceptions.RateLimitError(
-        message="Rate limit exceeded", model="gpt-4", llm_provider="openai"
-    )
+    rate_limit_error = litellm.exceptions.RateLimitError(message="Rate limit exceeded", model="gpt-4", llm_provider="openai")
 
     # Patch litellm to raise the error
     patch_litellm_with_exception(mocker, rate_limit_error)
@@ -300,9 +286,7 @@ def test_rate_limit_error(agent_with_mock_config, mocker):
 
     # Verify error handling
     assert result is None
-    mock_print.assert_any_call(
-        "[bold red]Error during agent execution (RateLimitError):[/bold red]"
-    )
+    mock_print.assert_any_call("[bold red]Error during agent execution (RateLimitError):[/bold red]")
 
 
 def test_context_length_error(agent_with_mock_config, mocker):
@@ -324,9 +308,7 @@ def test_context_length_error(agent_with_mock_config, mocker):
 
     # Verify error handling
     assert result is None
-    mock_print.assert_any_call(
-        "[bold red]Error during agent execution (ContextWindowExceededError):[/bold red]"
-    )
+    mock_print.assert_any_call("[bold red]Error during agent execution (ContextWindowExceededError):[/bold red]")
 
 
 # --- Tool Error Tests ---
@@ -337,9 +319,7 @@ def test_tool_error_handled_gracefully(agent_with_mock_config, mocker):
     # Define the sequence: LLM asks to read file -> tool raises error -> LLM handles error
     mock_responses = [
         READ_FILE_TOOL_CALL,
-        create_text_response(
-            "I couldn't access that file. Let me suggest an alternative."
-        ),
+        create_text_response("I couldn't access that file. Let me suggest an alternative."),
     ]
 
     # Patch litellm and make read_file raise an error
@@ -374,9 +354,7 @@ def test_max_tool_calls_limit(agent_with_mock_config, mocker):
     assert result is None
 
     # Verify error was logged
-    mock_print.assert_any_call(
-        "[bold red]Error during agent execution (StopIteration):[/bold red]"
-    )
+    mock_print.assert_any_call("[bold red]Error during agent execution (StopIteration):[/bold red]")
 
     # Verify read_file was called multiple times
     assert mock_read_file.call_count > 0

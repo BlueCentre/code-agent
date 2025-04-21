@@ -90,9 +90,7 @@ def mock_history_utils():
 # --- Test Cases ---
 
 
-def test_chat_basic_interaction(
-    runner, mock_agent_class, mock_config, mock_history_utils
-):
+def test_chat_basic_interaction(runner, mock_agent_class, mock_config, mock_history_utils):
     """Test basic chat interaction with simulated input."""
     _, mock_agent = mock_agent_class
 
@@ -132,9 +130,7 @@ def test_chat_multiple_turns(runner, mock_agent_class, mock_config, mock_history
     assert len(mock_agent.history) == 6  # 3 user messages + 3 responses
 
 
-def test_chat_with_empty_input(
-    runner, mock_agent_class, mock_config, mock_history_utils
-):
+def test_chat_with_empty_input(runner, mock_agent_class, mock_config, mock_history_utils):
     """Test handling of empty inputs during chat."""
     _, mock_agent = mock_agent_class
 
@@ -182,9 +178,7 @@ def test_test_command(runner, mock_agent_class, mock_config, mock_history_utils)
     mock_save.assert_not_called()
 
 
-def test_chat_with_existing_history(
-    runner, mock_agent_class, mock_config, mock_history_utils
-):
+def test_chat_with_existing_history(runner, mock_agent_class, mock_config, mock_history_utils):
     """Test loading and continuing from existing history."""
     _, mock_agent = mock_agent_class
     mock_save, mock_load = mock_history_utils
@@ -253,9 +247,7 @@ def test_history_saving_mechanism(runner, mock_agent_class, mock_config):
         assert '"role": "assistant"' in json_parts
 
 
-def test_chat_with_cli_overrides(
-    runner, mock_agent_class, mock_config, mock_history_utils
-):
+def test_chat_with_cli_overrides(runner, mock_agent_class, mock_config, mock_history_utils):
     """Test chat when CLI overrides for provider and model are provided."""
     mock_class, mock_agent = mock_agent_class
 

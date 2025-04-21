@@ -180,10 +180,7 @@ def run_native_command(command: str) -> str:
     if not is_allowed and not config.auto_approve_native_commands:
         return f"Error: Command '{base_command}' is not in the configured allowlist " f"and auto-approval is disabled."
     elif not is_allowed and config.auto_approve_native_commands:
-        print(
-            f"[yellow]Warning:[/yellow] Command '{base_command}' is not in the allowlist, "
-            f"but executing due to auto-approval."
-        )
+        print(f"[yellow]Warning:[/yellow] Command '{base_command}' is not in the allowlist, " f"but executing due to auto-approval.")
 
     # 2. User Confirmation
     confirmed = False
@@ -240,9 +237,6 @@ def run_native_command(command: str) -> str:
     except FileNotFoundError:
         return f"Error: Command not found: '{base_command}'. Please check if it's installed and available in PATH."
     except PermissionError:
-        return (
-            f"Error: Permission denied when executing '{base_command}'. "
-            f"Check file permissions or if elevated privileges are required."
-        )
+        return f"Error: Permission denied when executing '{base_command}'. " f"Check file permissions or if elevated privileges are required."
     except Exception as e:
         return f"Error executing command: {e}"

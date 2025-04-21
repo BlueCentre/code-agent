@@ -78,9 +78,7 @@ def mock_service_unavailable_error():
 # --- Tests ---
 
 
-def test_agent_handles_invalid_api_key(
-    mock_config_with_invalid_key, mock_invalid_key_error, mocker
-):
+def test_agent_handles_invalid_api_key(mock_config_with_invalid_key, mock_invalid_key_error, mocker):
     """Test that the agent gracefully handles an invalid API key error."""
     # Patch the get_config function to return our mock config with invalid key
     with patch("code_agent.agent.agent.get_config") as mock_get_config:
@@ -103,9 +101,7 @@ def test_agent_handles_invalid_api_key(
         assert kwargs["api_key"] == "sk-invalid-key-12345"
 
 
-def test_agent_handles_rate_limit_error(
-    mock_config_with_invalid_key, mock_rate_limit_error, mocker
-):
+def test_agent_handles_rate_limit_error(mock_config_with_invalid_key, mock_rate_limit_error, mocker):
     """Test that the agent gracefully handles a rate limit error."""
     # Patch the get_config function
     with patch("code_agent.agent.agent.get_config") as mock_get_config:
@@ -123,9 +119,7 @@ def test_agent_handles_rate_limit_error(
         assert result is None
 
 
-def test_agent_handles_service_unavailable(
-    mock_config_with_invalid_key, mock_service_unavailable_error, mocker
-):
+def test_agent_handles_service_unavailable(mock_config_with_invalid_key, mock_service_unavailable_error, mocker):
     """Test that the agent gracefully handles a service unavailable error."""
     # Patch the get_config function
     with patch("code_agent.agent.agent.get_config") as mock_get_config:
@@ -223,7 +217,5 @@ def test_api_key_from_env_vars(mocker):
 
         # Verify that fallback mechanism was used due to missing API key
         assert "current working directory" in result.lower()
-        mock_print.assert_any_call(
-            "[bold red]Error: No API key found for provider openai[/bold red]"
-        )
+        mock_print.assert_any_call("[bold red]Error: No API key found for provider openai[/bold red]")
         mock_run_cmd.assert_called_once()

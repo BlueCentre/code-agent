@@ -67,9 +67,7 @@ def mock_history_io():
 # --- Test Cases ---
 
 
-def test_chat_new_session(
-    mock_get_config, mock_agent, mock_prompt_ask, mock_print, mock_history_io
-):
+def test_chat_new_session(mock_get_config, mock_agent, mock_prompt_ask, mock_print, mock_history_io):
     """Test starting a new chat session and handling multiple turns."""
     mock_save, mock_load = mock_history_io
 
@@ -101,9 +99,7 @@ def test_chat_new_session(
     mock_save.assert_called_once()
 
 
-def test_chat_load_history(
-    mock_get_config, mock_agent, mock_prompt_ask, mock_print, mock_history_io
-):
+def test_chat_load_history(mock_get_config, mock_agent, mock_prompt_ask, mock_print, mock_history_io):
     """Test loading existing history and continuing the conversation."""
     mock_save, mock_load = mock_history_io
 
@@ -131,9 +127,7 @@ def test_chat_load_history(
     mock_save.assert_called_once()
 
 
-def test_chat_empty_input_handling(
-    mock_get_config, mock_agent, mock_prompt_ask, mock_print, mock_history_io
-):
+def test_chat_empty_input_handling(mock_get_config, mock_agent, mock_prompt_ask, mock_print, mock_history_io):
     """Test handling of empty inputs during chat."""
     # Mock user entering empty strings then valid input then exit
     mock_prompt_ask.side_effect = ["", "  ", "valid input", "exit"]
@@ -174,9 +168,7 @@ def test_chat_command_errors(mock_get_config, mock_agent, mock_prompt_ask):
     assert mock_prompt_ask.call_count == 2
 
 
-def test_chat_special_commands(
-    mock_get_config, mock_agent, mock_prompt_ask, mock_print, mock_history_io
-):
+def test_chat_special_commands(mock_get_config, mock_agent, mock_prompt_ask, mock_print, mock_history_io):
     """Test handling of special commands in chat mode."""
     mock_save, mock_load = mock_history_io
 
@@ -193,9 +185,7 @@ def test_chat_special_commands(
     assert mock_prompt_ask.call_count == 3
 
 
-def test_chat_with_model_provider_overrides(
-    mock_get_config, mock_agent, mock_prompt_ask
-):
+def test_chat_with_model_provider_overrides(mock_get_config, mock_agent, mock_prompt_ask):
     """Test chat with CLI overrides for model and provider."""
     # Setup single message then exit
     mock_prompt_ask.side_effect = ["test message", "exit"]
@@ -205,9 +195,7 @@ def test_chat_with_model_provider_overrides(
     custom_model = "custom-model"
 
     # Run with overrides
-    result = runner.invoke(
-        app, ["--provider", custom_provider, "--model", custom_model, "chat"]
-    )
+    result = runner.invoke(app, ["--provider", custom_provider, "--model", custom_model, "chat"])
 
     # Verify success
     assert result.exit_code == 0

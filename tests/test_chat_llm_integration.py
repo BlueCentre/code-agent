@@ -68,9 +68,7 @@ def mock_history_utils():
 # --- Test Cases ---
 
 
-def test_chat_with_simple_llm_response(
-    runner, mock_config, mock_agent, mock_history_utils
-):
+def test_chat_with_simple_llm_response(runner, mock_config, mock_agent, mock_history_utils):
     """Test chat command with a simple LLM text response."""
     # Configure the agent's run_turn method to return a response
     mock_agent.run_turn.return_value = "This is a simple test response."

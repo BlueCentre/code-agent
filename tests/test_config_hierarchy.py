@@ -114,9 +114,7 @@ def test_config_defaults_only():
     assert config.default_model == "gemini-2.0-flash"  # Matches the actual default
     assert isinstance(config.api_keys, ApiKeys)
     assert config.auto_approve_edits is False  # Updated to match actual default
-    assert (
-        config.auto_approve_native_commands is False
-    )  # Updated to match actual default
+    assert config.auto_approve_native_commands is False  # Updated to match actual default
     assert isinstance(config.native_command_allowlist, list)
     assert config.native_command_allowlist == []  # Empty by default
     assert isinstance(config.rules, list)
@@ -140,13 +138,8 @@ def test_config_file_only(mock_config_file, reset_config_cache):
     assert config.default_provider == mock_config_file["default_provider"]
     assert config.default_model == mock_config_file["default_model"]
     assert config.auto_approve_edits == mock_config_file["auto_approve_edits"]
-    assert (
-        config.auto_approve_native_commands
-        == mock_config_file["auto_approve_native_commands"]
-    )
-    assert sorted(config.native_command_allowlist) == sorted(
-        mock_config_file["native_command_allowlist"]
-    )
+    assert config.auto_approve_native_commands == mock_config_file["auto_approve_native_commands"]
+    assert sorted(config.native_command_allowlist) == sorted(mock_config_file["native_command_allowlist"])
     assert config.rules == mock_config_file["rules"]
 
     # API keys should match file (ignoring keys not in file)
@@ -189,9 +182,7 @@ def test_config_env_vars_only(mock_env_vars, monkeypatch, reset_config_cache):
     # assert vars(config.api_keys)["ai_studio"] is None  # Not in env
 
 
-def test_config_env_overrides_file(
-    mock_config_file, mock_env_vars, monkeypatch, reset_config_cache
-):
+def test_config_env_overrides_file(mock_config_file, mock_env_vars, monkeypatch, reset_config_cache):
     """Test environment variables override file config."""
     # Apply the mock environment variables
     mock_env_vars(monkeypatch)
@@ -219,9 +210,7 @@ def test_config_env_overrides_file(
     assert vars(config.api_keys)["groq"] == "file_groq_key"  # From file
 
     # Other settings should come from file if not in env
-    assert sorted(config.native_command_allowlist) == sorted(
-        mock_config_file["native_command_allowlist"]
-    )
+    assert sorted(config.native_command_allowlist) == sorted(mock_config_file["native_command_allowlist"])
     assert config.rules == mock_config_file["rules"]
 
 
@@ -356,9 +345,7 @@ def test_config_boolean_conversion_from_env(reset_config_cache):
             config = get_config()
 
             # Check correct conversion
-            assert (
-                config.auto_approve_edits is expected_bool
-            ), f"Failed to convert '{env_str}' to {expected_bool}"
+            assert config.auto_approve_edits is expected_bool, f"Failed to convert '{env_str}' to {expected_bool}"
 
 
 @pytest.mark.skip(reason="Validation rules have changed")
@@ -394,7 +381,4 @@ def test_config_validation_rules():
         get_config()
 
     # Should raise validation error about dangerous commands with auto approve
-    assert (
-        "dangerous" in str(exc_info.value).lower()
-        or "risky" in str(exc_info.value).lower()
-    )
+    assert "dangerous" in str(exc_info.value).lower() or "risky" in str(exc_info.value).lower()

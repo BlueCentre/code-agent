@@ -318,10 +318,7 @@ def config_aistudio():
     if config.default_provider == "ai_studio":
         console.print("✅ AI Studio is currently the [bold green]default provider[/bold green].")
     else:
-        console.print(
-            f"❌ AI Studio is [yellow]NOT[/yellow] the default provider "
-            f"(currently using: [bold]{config.default_provider}[/bold])."
-        )
+        console.print(f"❌ AI Studio is [yellow]NOT[/yellow] the default provider " f"(currently using: [bold]{config.default_provider}[/bold]).")
 
     if api_key:
         console.print("✅ AI Studio API key is [bold green]configured[/bold green].")
@@ -385,10 +382,7 @@ def config_openai():
     if config.default_provider == "openai":
         console.print("✅ OpenAI is currently the [bold green]default provider[/bold green].")
     else:
-        console.print(
-            f"❌ OpenAI is [yellow]NOT[/yellow] the default provider "
-            f"(currently using: [bold]{config.default_provider}[/bold])."
-        )
+        console.print(f"❌ OpenAI is [yellow]NOT[/yellow] the default provider " f"(currently using: [bold]{config.default_provider}[/bold]).")
 
     if api_key:
         console.print("✅ OpenAI API key is [bold green]configured[/bold green].")
@@ -455,10 +449,7 @@ def config_groq():
     if config.default_provider == "groq":
         console.print("✅ Groq is currently the [bold green]default provider[/bold green].")
     else:
-        console.print(
-            f"❌ Groq is [yellow]NOT[/yellow] the default provider "
-            f"(currently using: [bold]{config.default_provider}[/bold])."
-        )
+        console.print(f"❌ Groq is [yellow]NOT[/yellow] the default provider " f"(currently using: [bold]{config.default_provider}[/bold]).")
 
     if api_key:
         console.print("✅ Groq API key is [bold green]configured[/bold green].")
@@ -523,10 +514,7 @@ def config_anthropic():
     if config.default_provider == "anthropic":
         console.print("✅ Anthropic is currently the [bold green]default provider[/bold green].")
     else:
-        console.print(
-            f"❌ Anthropic is [yellow]NOT[/yellow] the default provider "
-            f"(currently using: [bold]{config.default_provider}[/bold])."
-        )
+        console.print(f"❌ Anthropic is [yellow]NOT[/yellow] the default provider " f"(currently using: [bold]{config.default_provider}[/bold]).")
 
     if api_key:
         console.print("✅ Anthropic API key is [bold green]configured[/bold green].")
@@ -571,10 +559,7 @@ def config_anthropic():
     console.print('default_model: "claude-3-sonnet"')
 
     # Show documentation links for Anthropic
-    console.print(
-        "\n[italic]For more information, see "
-        "https://docs.anthropic.com/claude/reference/getting-started-with-the-api[/italic]"
-    )
+    console.print("\n[italic]For more information, see " "https://docs.anthropic.com/claude/reference/getting-started-with-the-api[/italic]")
 
 
 @config_app.command("validate")

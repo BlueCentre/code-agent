@@ -243,9 +243,7 @@ def test_agent_run_turn_multiple_tool_calls(agent_with_mock_config, mock_litellm
     assert agent.history[0]["role"] == "user"
     assert agent.history[0]["content"] == "Analyze my project files"
     assert agent.history[1]["role"] == "assistant"
-    assert (
-        agent.history[1]["content"] == "I've examined the file and directory contents."
-    )
+    assert agent.history[1]["content"] == "I've examined the file and directory contents."
 
 
 def test_agent_no_api_key_fallback(agent_with_mock_config, mock_litellm):
@@ -323,10 +321,10 @@ def test_agent_max_tool_calls_limit(agent_with_mock_config, mock_litellm):
         final_response.choices = [MagicMock(message=final_message)]
 
         # Add all responses to the side effect sequence
-        mock_litellm.side_effect = tool_responses + [final_response]
+        mock_litellm.side_effect = [*tool_responses, final_response]
 
         # Run the agent - it should loop tool calls until the limit
-        result = agent.run_turn("Analyze files with multiple tool calls")
+        _ = agent.run_turn("Analyze files with multiple tool calls")
 
         # Should have stopped exactly at the default limit (20)
         assert mock_litellm.call_count == DEFAULT_MAX_TOOL_CALLS

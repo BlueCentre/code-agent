@@ -82,18 +82,13 @@ def validate_model_compatibility(provider: str, model: str, result: ValidationRe
 
     if model not in PROVIDER_MODEL_MAP[provider]:
         # Check for model name pattern matches (some providers use pattern-based names)
-        if provider == "openai" and (
-            model.startswith("ft:") or model.startswith("gpt-4-vision") or model.startswith("gpt-4-32k")
-        ):
+        if provider == "openai" and (model.startswith("ft:") or model.startswith("gpt-4-vision") or model.startswith("gpt-4-32k")):
             # These are likely fine - OpenAI has many fine-tuned and specialized models
             return
 
         # Add clear error with helpful suggestions
         supported_models = ", ".join(f"'{m}'" for m in sorted(PROVIDER_MODEL_MAP[provider]))
-        result.add_error(
-            f"Model '{model}' is not recognized for provider '{provider}'. "
-            f"Supported models include: {supported_models}."
-        )
+        result.add_error(f"Model '{model}' is not recognized for provider '{provider}'. " f"Supported models include: {supported_models}.")
 
 
 def validate_api_keys(api_keys: ApiKeys, result: ValidationResult) -> None:
@@ -112,9 +107,7 @@ def validate_api_keys(api_keys: ApiKeys, result: ValidationResult) -> None:
 
     # Check if any keys were provided
     if not any(v for v in keys_dict.values() if v is not None):
-        result.add_warning(
-            "No API keys found in configuration. " "You will need to set them via environment variables."
-        )
+        result.add_warning("No API keys found in configuration. " "You will need to set them via environment variables.")
 
     # Validate format of provided keys
     for provider, key in keys_dict.items():
@@ -127,9 +120,7 @@ def validate_api_keys(api_keys: ApiKeys, result: ValidationResult) -> None:
 
         # Check key format
         if not re.match(API_KEY_REGEXES[provider], key):
-            result.add_warning(
-                f"API key for {provider} doesn't match the expected format. " f"Please check that it's correct."
-            )
+            result.add_warning(f"API key for {provider} doesn't match the expected format. " f"Please check that it's correct.")
 
 
 def validate_native_command_allowlist(allowlist: List[str], result: ValidationResult) -> None:
@@ -156,8 +147,7 @@ def validate_native_command_allowlist(allowlist: List[str], result: ValidationRe
     if dangerous_patterns:
         patterns_str = ", ".join(f"'{p}'" for p in dangerous_patterns)
         result.add_warning(
-            f"Potentially insecure command patterns in allowlist: {patterns_str}. "
-            f"Consider using more specific command patterns for security."
+            f"Potentially insecure command patterns in allowlist: {patterns_str}. " f"Consider using more specific command patterns for security."
         )
 
 
@@ -183,15 +173,10 @@ def validate_config(config: SettingsConfig) -> ValidationResult:
 
     # Check for security risks
     if config.auto_approve_native_commands:
-        result.add_warning(
-            "SECURITY RISK: auto_approve_native_commands is enabled. "
-            "This allows execution of commands without confirmation."
-        )
+        result.add_warning("SECURITY RISK: auto_approve_native_commands is enabled. " "This allows execution of commands without confirmation.")
 
     if config.auto_approve_edits:
-        result.add_warning(
-            "SECURITY RISK: auto_approve_edits is enabled. " "This allows file modifications without confirmation."
-        )
+        result.add_warning("SECURITY RISK: auto_approve_edits is enabled. " "This allows file modifications without confirmation.")
 
     return result
 

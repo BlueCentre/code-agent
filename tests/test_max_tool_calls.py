@@ -64,9 +64,7 @@ def tool_call_response_chain(mocker):
     return responses
 
 
-def test_agent_enforces_max_tool_calls_limit(
-    mock_config, tool_call_response_chain, mocker
-):
+def test_agent_enforces_max_tool_calls_limit(mock_config, tool_call_response_chain, mocker):
     """Test that the agent enforces the maximum number of tool calls."""
     # Patch the get_config function to return our mock
     with patch("code_agent.agent.agent.get_config") as mock_get_config:

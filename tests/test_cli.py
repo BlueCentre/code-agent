@@ -119,9 +119,7 @@ def test_cli_providers_list(mock_get_config: MagicMock):
 def test_cli_run_basic(mock_run_agent_turn: MagicMock):
     """Test the basic 'run' command, mocking the agent call."""
     prompt_text = "Tell me a joke."
-    mock_run_agent_turn.return_value = (
-        "Why don't scientists trust atoms? Because they make up everything!"
-    )
+    mock_run_agent_turn.return_value = "Why don't scientists trust atoms? Because they make up everything!"
     result = runner.invoke(app, ["run", prompt_text])
 
     assert result.exit_code == 0
@@ -137,9 +135,7 @@ def test_cli_run_with_overrides(mock_run_agent_turn: MagicMock):
     provider = "test_provider"
     model = "test_model_xl"
     mock_run_agent_turn.return_value = "FastAPI is a modern, fast web framework."
-    result = runner.invoke(
-        app, ["--provider", provider, "--model", model, "run", prompt_text]
-    )
+    result = runner.invoke(app, ["--provider", provider, "--model", model, "run", prompt_text])
 
     assert result.exit_code == 0
     mock_run_agent_turn.assert_called_once_with(prompt=prompt_text)

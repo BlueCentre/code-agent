@@ -182,9 +182,7 @@ async def test_run_turn_with_function_calling(agent, mock_chat_completion):
 @pytest.mark.asyncio
 async def test_execute_function_calls(agent):
     """Test executing function calls."""
-    function_calls = [
-        {"id": "call-id", "type": "function", "function": {"name": "test_function", "arguments": '{"arg1": "value1"}'}}
-    ]
+    function_calls = [{"id": "call-id", "type": "function", "function": {"name": "test_function", "arguments": '{"arg1": "value1"}'}}]
 
     # Mock the function registry
     test_function = MagicMock(return_value="Function output")
@@ -199,9 +197,7 @@ async def test_execute_function_calls(agent):
 @pytest.mark.asyncio
 async def test_execute_function_error_handling(agent):
     """Test error handling in function execution."""
-    function_calls = [
-        {"id": "call-id", "type": "function", "function": {"name": "test_function", "arguments": '{"arg1": "value1"}'}}
-    ]
+    function_calls = [{"id": "call-id", "type": "function", "function": {"name": "test_function", "arguments": '{"arg1": "value1"}'}}]
 
     # Mock function that raises an exception
     test_function = MagicMock(side_effect=Exception("Function error"))

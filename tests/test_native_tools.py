@@ -68,9 +68,7 @@ def test_run_command_confirmed(mock_subprocess_run: MagicMock, mock_confirm: Mag
                 result = run_native_command("echo 'hello'")
 
                 mock_confirm.assert_called_once()
-                mock_subprocess_run.assert_called_once_with(
-                    ["echo", "hello"], capture_output=True, text=True, check=False
-                )
+                mock_subprocess_run.assert_called_once_with(["echo", "hello"], capture_output=True, text=True, check=False)
                 assert "return code: 0" in result.lower()
                 assert "success!" in result.lower()
 
@@ -109,9 +107,7 @@ def test_run_command_auto_approved(mock_subprocess_run: MagicMock, mock_confirm:
                 result = run_native_command("do-something --fast")
 
                 mock_confirm.assert_not_called()  # Confirmation should be skipped
-                mock_subprocess_run.assert_called_once_with(
-                    ["do-something", "--fast"], capture_output=True, text=True, check=False
-                )
+                mock_subprocess_run.assert_called_once_with(["do-something", "--fast"], capture_output=True, text=True, check=False)
                 assert "return code: 0" in result.lower()
                 assert "auto approved output" in result.lower()
 
@@ -128,9 +124,7 @@ def test_run_command_allowlisted_exact_match(mock_subprocess_run: MagicMock, moc
                 result = run_native_command("git status -s")
 
                 mock_confirm.assert_called_once()
-                mock_subprocess_run.assert_called_once_with(
-                    ["git", "status", "-s"], capture_output=True, text=True, check=False
-                )
+                mock_subprocess_run.assert_called_once_with(["git", "status", "-s"], capture_output=True, text=True, check=False)
                 assert "git output" in result
 
 
@@ -175,15 +169,11 @@ def test_run_command_disallowed_but_auto_approved(mock_subprocess_run: MagicMock
                 result = run_native_command("dangerous --op")
 
                 mock_confirm.assert_not_called()
-                mock_subprocess_run.assert_called_once_with(
-                    ["dangerous", "--op"], capture_output=True, text=True, check=False
-                )
+                mock_subprocess_run.assert_called_once_with(["dangerous", "--op"], capture_output=True, text=True, check=False)
                 assert "return code: 0" in result.lower()
 
 
-def test_run_command_disallowed_but_auto_approved_warns(
-    mock_subprocess_run: MagicMock, mock_confirm: MagicMock, capsys
-):
+def test_run_command_disallowed_but_auto_approved_warns(mock_subprocess_run: MagicMock, mock_confirm: MagicMock, capsys):
     """Test that a warning is printed when running a disallowed command
     with auto-approve."""
     mock_config = configure_mock_config(auto_approve=True, allowlist=["ls"])

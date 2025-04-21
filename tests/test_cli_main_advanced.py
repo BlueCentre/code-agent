@@ -1,12 +1,5 @@
 """
-Advanced tests for the cli/main.py module, focusing on previously uncovered areas.
-
-These tests cover features like:
-- Config subcommands
-- Provider subcommands
-- History handling
-- Error cases and edge conditions
-- CLI options like auto-approve settings
+Tests for the main CLI module focusing on more advanced and edge case behaviors.
 """
 
 import json
@@ -16,7 +9,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from typer.testing import CliRunner
-from rich.prompt import Confirm
 
 from code_agent.cli.main import app
 from code_agent.config import ApiKeys, SettingsConfig
@@ -373,11 +365,7 @@ def test_provider_and_model_override(runner, mock_config):
         # We can check that the provider and model are passed to the command
     ):
         # Run command with provider and model options
-        cmd = [
-            "--provider", "anthropic", 
-            "--model", "claude-3-opus", 
-            "run", "test prompt"
-        ]
+        cmd = ["--provider", "anthropic", "--model", "claude-3-opus", "run", "test prompt"]
         result = runner.invoke(app, cmd)
 
     # Check the command executed successfully

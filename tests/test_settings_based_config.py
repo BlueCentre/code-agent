@@ -178,9 +178,7 @@ def test_build_effective_config():
 def test_build_effective_config_error_handling():
     """Test error handling in build_effective_config."""
     # Test with invalid config that causes ValidationError
-    with patch(
-        "code_agent.config.settings_based_config.load_config_from_file", return_value={"default_provider": 123}
-    ):  # Invalid type for provider
+    with patch("code_agent.config.settings_based_config.load_config_from_file", return_value={"default_provider": 123}):  # Invalid type for provider
         config = build_effective_config()
 
         # Should fall back to defaults

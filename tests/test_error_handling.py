@@ -44,9 +44,7 @@ def cli_runner():
 def test_agent_api_connection_error(agent_with_mock_config, mock_litellm):
     """Test handling of connection errors from the API"""
     # Mock litellm to raise a connection error
-    mock_litellm.side_effect = litellm.exceptions.ServiceUnavailableError(
-        message="API is currently unavailable", model="gpt-4", llm_provider="openai"
-    )
+    mock_litellm.side_effect = litellm.exceptions.ServiceUnavailableError(message="API is currently unavailable", model="gpt-4", llm_provider="openai")
 
     # Try to run the agent
     with patch("code_agent.agent.agent.print") as mock_print:
@@ -56,9 +54,7 @@ def test_agent_api_connection_error(agent_with_mock_config, mock_litellm):
     assert result is None
 
     # Should log appropriate error message
-    mock_print.assert_any_call(
-        "[bold red]Error during agent execution (ServiceUnavailableError):[/bold red]"
-    )
+    mock_print.assert_any_call("[bold red]Error during agent execution (ServiceUnavailableError):[/bold red]")
 
 
 def test_agent_api_rate_limit_error(agent_with_mock_config, mock_litellm):
@@ -78,17 +74,13 @@ def test_agent_api_rate_limit_error(agent_with_mock_config, mock_litellm):
     assert result is None
 
     # Should log appropriate error message
-    mock_print.assert_any_call(
-        "[bold red]Error during agent execution (RateLimitError):[/bold red]"
-    )
+    mock_print.assert_any_call("[bold red]Error during agent execution (RateLimitError):[/bold red]")
 
 
 def test_agent_api_invalid_key_error(agent_with_mock_config, mock_litellm):
     """Test handling of invalid API key errors"""
     # Mock litellm to raise an authentication error
-    mock_litellm.side_effect = litellm.exceptions.AuthenticationError(
-        message="Invalid API key provided", model="gpt-4", llm_provider="openai"
-    )
+    mock_litellm.side_effect = litellm.exceptions.AuthenticationError(message="Invalid API key provided", model="gpt-4", llm_provider="openai")
 
     # Try to run the agent
     with patch("code_agent.agent.agent.print") as mock_print:
@@ -98,9 +90,7 @@ def test_agent_api_invalid_key_error(agent_with_mock_config, mock_litellm):
     assert result is None
 
     # Should log appropriate error message
-    mock_print.assert_any_call(
-        "[bold red]Error during agent execution (AuthenticationError):[/bold red]"
-    )
+    mock_print.assert_any_call("[bold red]Error during agent execution (AuthenticationError):[/bold red]")
 
 
 def test_agent_api_context_length_error(agent_with_mock_config, mock_litellm):
@@ -120,9 +110,7 @@ def test_agent_api_context_length_error(agent_with_mock_config, mock_litellm):
     assert result is None
 
     # Should log appropriate error message
-    mock_print.assert_any_call(
-        "[bold red]Error during agent execution (ContextWindowExceededError):[/bold red]"
-    )
+    mock_print.assert_any_call("[bold red]Error during agent execution (ContextWindowExceededError):[/bold red]")
 
 
 # --- Tool Error Tests ---
@@ -187,9 +175,7 @@ def test_agent_apply_edit_error(agent_with_mock_config, mock_litellm):
     tool_call.function = MagicMock()
     tool_call.function.name = "apply_edit"
     # Break long argument dictionary into multiple lines
-    tool_call.function.arguments = json.dumps(
-        {"target_file": "/etc/passwd", "code_edit": "malicious content"}
-    )
+    tool_call.function.arguments = json.dumps({"target_file": "/etc/passwd", "code_edit": "malicious content"})
 
     first_message.tool_calls = [tool_call]
 
@@ -210,10 +196,7 @@ def test_agent_apply_edit_error(agent_with_mock_config, mock_litellm):
     # Mock the apply_edit function to return an error message
     with patch("code_agent.agent.agent.apply_edit") as mock_apply_edit:
         # Break this long error message into multiple lines
-        error_msg = (
-            "Error: Path access restricted. "
-            "Can only edit files within the current working directory."
-        )
+        error_msg = "Error: Path access restricted. " "Can only edit files within the current working directory."
         mock_apply_edit.return_value = error_msg
 
         # Run the agent
@@ -223,9 +206,7 @@ def test_agent_apply_edit_error(agent_with_mock_config, mock_litellm):
     assert result == "I cannot modify that file due to permission restrictions."
 
     # Verify apply_edit was called with the correct arguments
-    mock_apply_edit.assert_called_once_with(
-        target_file="/etc/passwd", code_edit="malicious content"
-    )
+    mock_apply_edit.assert_called_once_with(target_file="/etc/passwd", code_edit="malicious content")
 
     # Verify litellm was called twice (initial call + after tool response)
     assert mock_litellm.call_count == 2
