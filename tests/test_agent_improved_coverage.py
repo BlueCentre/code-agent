@@ -68,35 +68,35 @@ def test_init(agent, mock_config):
 def test_add_user_message(agent):
     """Test adding a user message."""
     agent.add_user_message("Hello agent")
-    assert len(agent.messages) == 1
-    assert agent.messages[0]["role"] == "user"
-    assert agent.messages[0]["content"] == "Hello agent"
+    assert len(agent.history) == 1
+    assert agent.history[0]["role"] == "user"
+    assert agent.history[0]["content"] == "Hello agent"
 
 
 def test_add_system_message(agent):
     """Test adding a system message."""
     agent.add_system_message("You are a helpful assistant")
-    assert len(agent.messages) == 1
-    assert agent.messages[0]["role"] == "system"
-    assert agent.messages[0]["content"] == "You are a helpful assistant"
+    assert len(agent.history) == 1
+    assert agent.history[0]["role"] == "system"
+    assert agent.history[0]["content"] == "You are a helpful assistant"
 
 
 def test_add_assistant_message(agent):
     """Test adding an assistant message."""
     agent.add_assistant_message("I'm here to help")
-    assert len(agent.messages) == 1
-    assert agent.messages[0]["role"] == "assistant"
-    assert agent.messages[0]["content"] == "I'm here to help"
+    assert len(agent.history) == 1
+    assert agent.history[0]["role"] == "assistant"
+    assert agent.history[0]["content"] == "I'm here to help"
 
 
 def test_clear_messages(agent):
     """Test clearing messages."""
     agent.add_user_message("Hello")
     agent.add_assistant_message("Hi")
-    assert len(agent.messages) == 2
+    assert len(agent.history) == 2
 
     agent.clear_messages()
-    assert len(agent.messages) == 0
+    assert len(agent.history) == 0
 
 
 def test_set_verbosity(agent):

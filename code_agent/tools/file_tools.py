@@ -1,11 +1,10 @@
 import difflib
 from pathlib import Path
-from typing import Dict, Optional, Union, Any
 
 from pydantic import BaseModel, Field
 from rich import print
 from rich.console import Console
-from rich.prompt import Confirm  # For user confirmation
+from rich.prompt import Confirm
 from rich.syntax import Syntax
 
 console = Console()
@@ -13,9 +12,11 @@ console = Console()
 # Define a max file size limit (e.g., 1MB)
 MAX_FILE_SIZE_BYTES = 1 * 1024 * 1024
 
+
 # --- Tool Input Schema ---
 class ReadFileArgs(BaseModel):
     path: str = Field(..., description="The path to the file to read.")
+
 
 # --- Helper for Path Validation ---
 def is_path_within_cwd(path_str: str) -> bool:
@@ -26,6 +27,7 @@ def is_path_within_cwd(path_str: str) -> bool:
         return resolved_path.is_relative_to(cwd)
     except (ValueError, OSError):
         return False
+
 
 # --- Tool Implementation ---
 def read_file(path: str) -> str:
@@ -51,10 +53,7 @@ def read_file(path: str) -> str:
                 mb_size = file_size / 1024 / 1024
                 max_mb_size = MAX_FILE_SIZE_BYTES / 1024 / 1024
                 # Break long f-string
-                return (
-                    f"Error: File is too large ({mb_size:.2f} MB). "
-                    f"Maximum allowed size is {max_mb_size:.2f} MB."
-                )
+                return f"Error: File is too large ({mb_size:.2f} MB). " f"Maximum allowed size is {max_mb_size:.2f} MB."
         except Exception as stat_e:
             return f"Error getting file size for {path}: {stat_e}"
 
@@ -67,6 +66,7 @@ def read_file(path: str) -> str:
         return f"Error: Permission denied when trying to read file: {path}"
     except Exception as e:
         return f"Error reading file {path}: {e}"
+
 
 # --- Delete File Tool Function ---
 def delete_file(path: str) -> str:
@@ -96,10 +96,12 @@ def delete_file(path: str) -> str:
     except Exception as e:
         return f"Error deleting file {path}: {e}"
 
+
 # --- Apply Edit Tool Input Schema ---
 class ApplyEditArgs(BaseModel):
     target_file: str = Field(..., description="The path to the file to edit.")
     code_edit: str = Field(..., description="The proposed content to apply to the file.")
+
 
 # _is_path_safe helper should remain as introduced by previous edits
 def _is_path_safe(base_path: Path, target_path: Path) -> bool:
@@ -111,10 +113,13 @@ def _is_path_safe(base_path: Path, target_path: Path) -> bool:
     except Exception:
         return False
 
+
 # apply_edit function with updated signature
 def apply_edit(target_file: str, code_edit: str) -> str:
-    """Applies proposed content changes to a file after showing a diff and requesting user confirmation. Restricted to CWD."""
+    """Applies proposed content changes to a file after showing a diff and requesting user confirmation.
+    Restricted to CWD."""
     from code_agent.config import get_config
+
     config = get_config()
     file_path_str = target_file
     proposed_content = code_edit
@@ -138,13 +143,15 @@ def apply_edit(target_file: str, code_edit: str) -> str:
             return f"Error: Path exists but is not a regular file: {target_file}"
 
         # --- Calculate and Display Diff ---
-        diff = list(difflib.unified_diff(
-            current_content.splitlines(keepends=True),
-            proposed_content.splitlines(keepends=True),
-            fromfile=f"a/{target_file}",
-            tofile=f"b/{target_file}",
-            lineterm='\n'
-        ))
+        diff = list(
+            difflib.unified_diff(
+                current_content.splitlines(keepends=True),
+                proposed_content.splitlines(keepends=True),
+                fromfile=f"a/{target_file}",
+                tofile=f"b/{target_file}",
+                lineterm="\n",
+            )
+        )
 
         if not diff:
             return "No changes detected. File content is the same."
@@ -156,15 +163,14 @@ def apply_edit(target_file: str, code_edit: str) -> str:
         console.print(syntax)
 
         # --- Request Confirmation ---
+        # Auto-approve or ask for confirmation
         confirmed = False
         if config.auto_approve_edits:
             print("[yellow]Auto-approving edit based on configuration.[/yellow]")
             confirmed = True
         else:
-            # Break long Confirm.ask call
-            confirmed = Confirm.ask(
-                f"Apply these changes to {target_file}?", default=False
-            )
+            # Ask for confirmation only if not auto-approved
+            confirmed = Confirm.ask(f"Apply these changes to {target_file}?", default=False)
 
         # --- Apply Changes if Confirmed ---
         if confirmed:
@@ -181,15 +187,17 @@ def apply_edit(target_file: str, code_edit: str) -> str:
     except FileNotFoundError:
         # This case might be handled by the initial check, but added for safety
         # If the intention is to create a new file, the logic handles it.
-        pass # Let the diff/write logic handle file creation
+        pass  # Let the diff/write logic handle file creation
     except PermissionError:
         return f"Error: Permission denied when accessing file: {target_file}"
     except Exception as e:
         return f"Error applying edit to {target_file}: {e}"
 
+
 # For compatibility with legacy code that might expect ReadFileArgs
 def read_file_legacy(args: ReadFileArgs) -> str:
     return read_file(args.path)
+
 
 # Example usage (can be removed later)
 if __name__ == "__main__":
@@ -231,10 +239,10 @@ if __name__ == "__main__":
     new_file = Path(new_file_path)
     if new_file.exists():
         print(f"Current content:\n{new_file.read_text()}")
-        new_file.unlink() # Clean up
+        new_file.unlink()  # Clean up
     else:
         print(f"{new_file_path} was not created.")
 
     # Clean up initial dummy file
-    if edit_path.exists(): # Check if it exists before unlinking
+    if edit_path.exists():  # Check if it exists before unlinking
         edit_path.unlink()

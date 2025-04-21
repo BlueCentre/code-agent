@@ -8,7 +8,6 @@ import shlex
 import subprocess
 from pathlib import Path
 
-from pydantic import BaseModel, Field
 from rich import print
 from rich.console import Console
 from rich.prompt import Confirm
@@ -19,6 +18,7 @@ console = Console()
 # Define a max file size limit (e.g., 1MB)
 MAX_FILE_SIZE_BYTES = 1 * 1024 * 1024
 
+
 # --- Helper for Path Validation ---
 def is_path_within_cwd(path_str: str) -> bool:
     """Checks if the resolved path is within the current working directory."""
@@ -28,6 +28,7 @@ def is_path_within_cwd(path_str: str) -> bool:
         return resolved_path.is_relative_to(cwd)
     except (ValueError, OSError):
         return False
+
 
 # --- READ FILE Tool ---
 def read_file(path: str) -> str:
@@ -50,10 +51,7 @@ def read_file(path: str) -> str:
             if file_size > MAX_FILE_SIZE_BYTES:
                 mb_size = file_size / 1024 / 1024
                 max_mb_size = MAX_FILE_SIZE_BYTES / 1024 / 1024
-                return (
-                    f"Error: File is too large ({mb_size:.2f} MB). "
-                    f"Maximum allowed size is {max_mb_size:.2f} MB."
-                )
+                return f"Error: File is too large ({mb_size:.2f} MB). " f"Maximum allowed size is {max_mb_size:.2f} MB."
         except Exception as stat_e:
             return f"Error getting file size for {path}: {stat_e}"
 
@@ -67,12 +65,14 @@ def read_file(path: str) -> str:
     except Exception as e:
         return f"Error reading file {path}: {e}"
 
+
 # --- APPLY EDIT Tool ---
 def apply_edit(target_file: str, code_edit: str) -> str:
     """Applies proposed content changes to a file after showing a diff and requesting user confirmation."""
     from code_agent.config.config import get_config
+
     config = get_config()
-    
+
     if not is_path_within_cwd(target_file):
         return (
             f"Error: Path access restricted. Can only edit files within the "
@@ -91,13 +91,15 @@ def apply_edit(target_file: str, code_edit: str) -> str:
             return f"Error: Path exists but is not a regular file: {target_file}"
 
         # --- Calculate and Display Diff ---
-        diff = list(difflib.unified_diff(
-            current_content.splitlines(keepends=True),
-            code_edit.splitlines(keepends=True),
-            fromfile=f"a/{target_file}",
-            tofile=f"b/{target_file}",
-            lineterm='\n'
-        ))
+        diff = list(
+            difflib.unified_diff(
+                current_content.splitlines(keepends=True),
+                code_edit.splitlines(keepends=True),
+                fromfile=f"a/{target_file}",
+                tofile=f"b/{target_file}",
+                lineterm="\n",
+            )
+        )
 
         if not diff:
             return "No changes detected. File content is the same."
@@ -114,9 +116,7 @@ def apply_edit(target_file: str, code_edit: str) -> str:
             print("[yellow]Auto-approving edit based on configuration.[/yellow]")
             confirmed = True
         else:
-            confirmed = Confirm.ask(
-                f"Apply these changes to {target_file}?", default=False
-            )
+            confirmed = Confirm.ask(f"Apply these changes to {target_file}?", default=False)
 
         # --- Apply Changes if Confirmed ---
         if confirmed:
@@ -135,13 +135,15 @@ def apply_edit(target_file: str, code_edit: str) -> str:
     except Exception as e:
         return f"Error applying edit to {target_file}: {e}"
 
+
 # --- RUN NATIVE COMMAND Tool ---
 def run_native_command(command: str) -> str:
     """Executes a native terminal command after checking allowlist and requesting user confirmation."""
     from code_agent.config.config import get_config
+
     config = get_config()
-    
-    command_str = command.strip() # Ensure no leading/trailing whitespace
+
+    command_str = command.strip()  # Ensure no leading/trailing whitespace
     if not command_str:
         return "Error: Empty command string provided."
 
@@ -158,29 +160,23 @@ def run_native_command(command: str) -> str:
     # 1. Allowlist Check (Exact match on base command)
     allowlist = config.native_command_allowlist
     is_allowed = False
-    if not allowlist: # Empty allowlist means all commands require confirmation
+    if not allowlist:  # Empty allowlist means all commands require confirmation
         is_allowed = True
-    elif base_command in allowlist: # Check if the base command is in the list
+    elif base_command in allowlist:  # Check if the base command is in the list
         is_allowed = True
 
     if not is_allowed and not config.auto_approve_native_commands:
-        return (
-            f"Error: Command '{base_command}' is not in the configured allowlist "
-            f"and auto-approval is disabled."
-        )
+        return f"Error: Command '{base_command}' is not in the configured allowlist " f"and auto-approval is disabled."
     elif not is_allowed and config.auto_approve_native_commands:
-         print(
-             f"[yellow]Warning:[/yellow] Command '{base_command}' is not in the allowlist, "
-             f"but executing due to auto-approval."
-         )
+        print(
+            f"[yellow]Warning:[/yellow] Command '{base_command}' is not in the allowlist, "
+            f"but executing due to auto-approval."
+        )
 
     # 2. User Confirmation
     confirmed = False
     if config.auto_approve_native_commands:
-        print(
-            f"[yellow]Auto-approving native command execution based on configuration:[/yellow] "
-            f"{command_str}"
-        )
+        print(f"[yellow]Auto-approving native command execution based on configuration:[/yellow] " f"{command_str}")
         confirmed = True
     else:
         # Show the command clearly before asking
@@ -194,27 +190,16 @@ def run_native_command(command: str) -> str:
     try:
         # Check if the command contains a pipe or other shell operators
         use_shell = "|" in command_str or ">" in command_str or "<" in command_str
-        
+
         print(f"[grey50]Executing command:[/grey50] {command_parts}")
-        
+
         if use_shell:
             # Use shell=True for commands with pipes or redirection
-            print(f"[grey50]Using shell for complex command[/grey50]")
-            result = subprocess.run(
-                command_str,
-                shell=True,
-                capture_output=True,
-                text=True,
-                check=False
-            )
+            print("[grey50]Using shell for complex command[/grey50]")
+            result = subprocess.run(command_str, shell=True, capture_output=True, text=True, check=False)
         else:
             # Use normal execution for simple commands
-            result = subprocess.run(
-                command_parts,
-                capture_output=True,
-                text=True,
-                check=False
-            )
+            result = subprocess.run(command_parts, capture_output=True, text=True, check=False)
 
         output = f"Command: {command_str}\nExit Code: {result.returncode}\n"
         if result.stdout:
@@ -225,6 +210,6 @@ def run_native_command(command: str) -> str:
         return output.strip()
 
     except FileNotFoundError:
-         return f"Error: Command not found: {command_parts[0]}"
+        return f"Error: Command not found: {base_command}"
     except Exception as e:
-        return f"Error executing command '{command_str}': {e}" 
+        return f"Error executing command '{command_str}': {e}"

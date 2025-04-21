@@ -16,23 +16,16 @@ class CodeAgent:
     def __init__(self):
         self.config: SettingsConfig = get_config()
         self.history: List[Dict[str, str]] = []
+        self.verbosity: int = 1  # Default verbosity level
 
         # Prepare base instruction parts (can be refined later)
-        self.base_instruction_parts = [
-            "You are a helpful AI assistant specialized in coding tasks."
-        ]
+        self.base_instruction_parts = ["You are a helpful AI assistant specialized in coding tasks."]
         if self.config.rules:
             self.base_instruction_parts.append("Follow these instructions:")
-            self.base_instruction_parts.extend(
-                [f"- {rule}" for rule in self.config.rules]
-            )
+            self.base_instruction_parts.extend([f"- {rule}" for rule in self.config.rules])
 
-        self.base_instruction_parts.append(
-            "You have access to the following functions:"
-        )
-        self.base_instruction_parts.append(
-            "- read_file(path): Reads the content of a specified file path."
-        )
+        self.base_instruction_parts.append("You have access to the following functions:")
+        self.base_instruction_parts.append("- read_file(path): Reads the content of a specified file path.")
         self.base_instruction_parts.append(
             "- apply_edit(target_file, code_edit): Creates a new file or edits an existing file by providing the "
             "complete content. It can create and modify files including documentation, code, or any text files. "
@@ -44,21 +37,16 @@ class CodeAgent:
         )
 
         # Add specific guidance for file listing
-        self.base_instruction_parts.append(
-            "When asked to list files, especially Python files in directories:"
-        )
+        self.base_instruction_parts.append("When asked to list files, especially Python files in directories:")
         self.base_instruction_parts.append(
             "- For listing Python files recursively in a directory, use: "
             "run_native_command(command=\"find directory_path -type f -name '*.py' | sort\")"
         )
         self.base_instruction_parts.append(
-            "- Never use simple 'ls' commands with wildcards like 'ls *.py' "
-            "as they don't search recursively."
+            "- Never use simple 'ls' commands with wildcards like 'ls *.py' " "as they don't search recursively."
         )
 
-        self.base_instruction_parts.append(
-            "When asked to create or update documentation:"
-        )
+        self.base_instruction_parts.append("When asked to create or update documentation:")
         self.base_instruction_parts.append(
             "- Use apply_edit to create or modify documentation files directly in the appropriate directory."
         )
@@ -66,9 +54,31 @@ class CodeAgent:
             "- For user requests about documenting features or improvements, create a relevant markdown file in the 'docs/' directory."
         )
 
-        self.base_instruction_parts.append(
-            "Use these functions when necessary to fulfill the user's request."
-        )
+        self.base_instruction_parts.append("Use these functions when necessary to fulfill the user's request.")
+
+    def add_user_message(self, message: str) -> None:
+        """Add a user message to the history."""
+        self.history.append({"role": "user", "content": message})
+
+    def add_system_message(self, message: str) -> None:
+        """Add a system message to the history."""
+        self.history.append({"role": "system", "content": message})
+
+    def add_assistant_message(self, message: str) -> None:
+        """Add an assistant message to the history."""
+        self.history.append({"role": "assistant", "content": message})
+
+    def clear_messages(self) -> None:
+        """Clear all messages from the history."""
+        self.history = []
+
+    def set_verbosity(self, level: int) -> None:
+        """Set the verbosity level for the agent.
+
+        Args:
+            level: The verbosity level (0=quiet, 1=normal, 2=verbose)
+        """
+        self.verbosity = max(0, min(level, 2))  # Clamp between 0-2
 
     def _get_model_string(self, provider: Optional[str], model: Optional[str]) -> str:
         """Determines the model string format expected by LiteLLM."""
@@ -119,13 +129,9 @@ class CodeAgent:
                 suggested_models = []
                 for model in models:
                     if "gemini" in model.name.lower():
-                        model_name = model.name.split("/")[
-                            -1
-                        ]  # Extract model name from path
+                        model_name = model.name.split("/")[-1]  # Extract model name from path
                         # Check if the model name is similar to the requested one
-                        if model_string.replace(
-                            ".", "-"
-                        ) in model_name or model_name in model_string.replace(".", "-"):
+                        if model_string.replace(".", "-") in model_name or model_name in model_string.replace(".", "-"):
                             suggested_models.append(model_name)
 
                 if not suggested_models:
@@ -133,25 +139,15 @@ class CodeAgent:
                     for model in models:
                         if "gemini" in model.name.lower():
                             model_name = model.name.split("/")[-1]
-                            if (
-                                "pro" in model_string.lower()
-                                and "pro" in model_name.lower()
-                            ):
+                            if "pro" in model_string.lower() and "pro" in model_name.lower():
                                 suggested_models.append(model_name)
-                            elif (
-                                "flash" in model_string.lower()
-                                and "flash" in model_name.lower()
-                            ):
+                            elif "flash" in model_string.lower() and "flash" in model_name.lower():
                                 suggested_models.append(model_name)
 
                 # Display suggestions
                 if suggested_models:
-                    print(
-                        "\n[bold green]Available models that might work:[/bold green]"
-                    )
-                    for i, model_name in enumerate(
-                        suggested_models[:5], 1
-                    ):  # Show top 5
+                    print("\n[bold green]Available models that might work:[/bold green]")
+                    for i, model_name in enumerate(suggested_models[:5], 1):  # Show top 5
                         print(f"  {i}. {model_name}")
 
                     # Offer to update config
@@ -177,9 +173,7 @@ class CodeAgent:
                         selected_model = suggested_models[choice - 1]
 
                         # Update config file
-                        config_path = (
-                            Path.home() / ".config" / "code-agent" / "config.yaml"
-                        )
+                        config_path = Path.home() / ".config" / "code-agent" / "config.yaml"
                         if config_path.exists():
                             try:
                                 # Read the current config
@@ -199,13 +193,9 @@ class CodeAgent:
                                 )
                                 return f"Configuration updated to use model '{selected_model}'. Please try your request again."
                             except Exception as e:
-                                print(
-                                    f"[bold red]Error updating config:[/bold red] {e}"
-                                )
+                                print(f"[bold red]Error updating config:[/bold red] {e}")
                         else:
-                            print(
-                                f"[bold yellow]Warning:[/bold yellow] Config file not found at {config_path}"
-                            )
+                            print(f"[bold yellow]Warning:[/bold yellow] Config file not found at {config_path}")
 
                     return f"Available models: {', '.join(suggested_models[:5])}. Please update your configuration to use one of these models."
                 else:
@@ -213,14 +203,10 @@ class CodeAgent:
                     return "Could not find similar models. Please check your API key and provider configuration."
 
             except ImportError:
-                print(
-                    "[yellow]Google GenerativeAI package not installed. Cannot check for available models.[/yellow]"
-                )
+                print("[yellow]Google GenerativeAI package not installed. Cannot check for available models.[/yellow]")
                 return "Cannot list available models. Try installing google-generativeai package."
         except Exception as e:
-            print(
-                f"[bold red]Error while checking for available models:[/bold red] {e}"
-            )
+            print(f"[bold red]Error while checking for available models:[/bold red] {e}")
             return f"Error checking for available models: {e}"
 
     def run_turn(
@@ -244,19 +230,13 @@ class CodeAgent:
         api_key = vars(self.config.api_keys).get(target_provider)
 
         if not api_key:
-            print(
-                f"[bold red]Error: No API key found for provider {target_provider}[/bold red]"
-            )
+            print(f"[bold red]Error: No API key found for provider {target_provider}[/bold red]")
             print("  - Please set the API key in one of the following ways:")
-            print(
-                "  - Set environment variable" f" ({target_provider.upper()}_API_KEY)"
-            )
+            print("  - Set environment variable" f" ({target_provider.upper()}_API_KEY)")
             print("  - Add to config: ~/.config/code-agent/config.yaml")
 
             # Fallback to simple command handling for demo purposes
-            print(
-                "[yellow]Using fallback simple command handling for demonstration[/yellow]"
-            )
+            print("[yellow]Using fallback simple command handling for demonstration[/yellow]")
 
             # Process a few basic commands without a real LLM
             if (
@@ -297,9 +277,7 @@ class CodeAgent:
                         potential_dir = prompt_parts[i + 1].strip("\"'.,;:")
                         if potential_dir != "the" and len(potential_dir) > 1:
                             # If using more specific references like "code_agent directory"
-                            if "directory" in prompt_parts[
-                                i + 1 : i + 3
-                            ] and i + 2 < len(prompt_parts):
+                            if "directory" in prompt_parts[i + 1 : i + 3] and i + 2 < len(prompt_parts):
                                 target_dir = potential_dir
                                 break
                             # Otherwise just use the word after the indicator
@@ -311,9 +289,7 @@ class CodeAgent:
                     if target_dir != ".":
                         target_dir = f"./{target_dir}"
 
-                result = run_native_command(
-                    f"find {target_dir} -type f -name '*.py' | sort"
-                )
+                result = run_native_command(f"find {target_dir} -type f -name '*.py' | sort")
                 self.history.append({"role": "user", "content": prompt})
                 self.history.append(
                     {
@@ -406,9 +382,7 @@ class CodeAgent:
         }
 
         try:
-            with Status(
-                "[bold green]Agent is thinking...[/bold green]", spinner="dots"
-            ) as _:
+            with Status("[bold green]Agent is thinking...[/bold green]", spinner="dots") as _:
                 assistant_response = None
 
                 # Keep track if we're in a tool calling loop
@@ -436,10 +410,7 @@ class CodeAgent:
                     assistant_message = response.choices[0].message
 
                     # If there are tool calls, execute them
-                    if (
-                        hasattr(assistant_message, "tool_calls")
-                        and assistant_message.tool_calls
-                    ):
+                    if hasattr(assistant_message, "tool_calls") and assistant_message.tool_calls:
                         tool_call_count += 1
 
                         # Add the assistant's message to our conversation
@@ -462,17 +433,13 @@ class CodeAgent:
                             try:
                                 args_dict = json.loads(function_args)
                             except json.JSONDecodeError:
-                                print(
-                                    f"[red]Error parsing function arguments: {function_args}[/red]"
-                                )
+                                print(f"[red]Error parsing function arguments: {function_args}[/red]")
                                 continue
 
                             # Execute the tool
                             if function_name in available_tools:
                                 try:
-                                    function_result = available_tools[function_name](
-                                        **args_dict
-                                    )
+                                    function_result = available_tools[function_name](**args_dict)
 
                                     # Add the tool response to messages
                                     messages.append(
@@ -484,14 +451,10 @@ class CodeAgent:
                                         }
                                     )
                                 except Exception as e:
-                                    error_msg = (
-                                        f"Error executing {function_name}: {e!s}"
-                                    )
+                                    error_msg = f"Error executing {function_name}: {e!s}"
                                     print(f"[red]{error_msg}[/red]")
                                     # Add the specific print for test_agent_malformed_tool_call
-                                    print(
-                                        f"[bold red]Error executing tool '{function_name}'[/bold red]"
-                                    )
+                                    print(f"[bold red]Error executing tool '{function_name}'[/bold red]")
                                     messages.append(
                                         {
                                             "role": "tool",
@@ -502,12 +465,8 @@ class CodeAgent:
                                     )
                             else:
                                 # Handle unknown tool
-                                error_msg = (
-                                    f"Error: Unknown tool '{function_name}' requested."
-                                )
-                                print(
-                                    f"[bold red]Unknown tool '{function_name}' requested by LLM[/bold red]"
-                                )
+                                error_msg = f"Error: Unknown tool '{function_name}' requested."
+                                print(f"[bold red]Unknown tool '{function_name}' requested by LLM[/bold red]")
                                 messages.append(
                                     {
                                         "role": "tool",
@@ -526,18 +485,14 @@ class CodeAgent:
 
                 # If we maxed out tool calls, explain the situation
                 if tool_call_count >= max_tool_calls:
-                    print(
-                        f"[yellow]Warning: Maximum tool call limit reached ({max_tool_calls})[/yellow]"
-                    )
+                    print(f"[yellow]Warning: Maximum tool call limit reached ({max_tool_calls})[/yellow]")
 
             # Store the conversation turns in history
             self.history.append({"role": "user", "content": prompt})
 
             # If we got a response, store it and return it
             if assistant_response:
-                self.history.append(
-                    {"role": "assistant", "content": assistant_response}
-                )
+                self.history.append({"role": "assistant", "content": assistant_response})
                 return assistant_response
             else:
                 return "No clear response was generated after tool execution. "
@@ -551,10 +506,7 @@ class CodeAgent:
 
             if "api key" in error_message.lower():
                 print("  - Check API key config (config file or ENV vars).")
-            elif (
-                "model not found" in error_message.lower()
-                or "is not found" in error_message.lower()
-            ):
+            elif "model not found" in error_message.lower() or "is not found" in error_message.lower():
                 # Use the helper function to handle model not found errors
                 return self._handle_model_not_found_error(model_string)
             elif "rate limit" in error_message.lower():
