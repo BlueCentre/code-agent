@@ -1,7 +1,8 @@
 import difflib
 from pathlib import Path
+from typing import List, Optional, Tuple
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from rich import print
 from rich.console import Console
 from rich.prompt import Confirm
@@ -18,13 +19,34 @@ from code_agent.tools.security import is_path_safe
 
 console = Console()
 
-# Define a max file size limit (e.g., 1MB)
+# Default values (will be overridden by config)
+DEFAULT_MAX_FILE_SIZE_KB = 1024  # 1MB
+DEFAULT_MAX_LINES = 1000
+
+# For backward compatibility with existing tests
 MAX_FILE_SIZE_BYTES = 1 * 1024 * 1024
 
 
 # --- Tool Input Schema ---
 class ReadFileArgs(BaseModel):
     path: str = Field(..., description="The path to the file to read.")
+    offset: Optional[int] = Field(None, description="Line number to start reading from (0-indexed).")
+    limit: Optional[int] = Field(None, description="Maximum number of lines to read.")
+    enable_pagination: bool = Field(False, description="Whether to enable pagination for large files.")
+
+    @field_validator("offset")
+    @classmethod
+    def validate_offset(cls, v):
+        if v is not None and v < 0:
+            raise ValueError("offset must be a non-negative integer")
+        return v
+
+    @field_validator("limit")
+    @classmethod
+    def validate_limit(cls, v):
+        if v is not None and v <= 0:
+            raise ValueError("limit must be a positive integer")
+        return v
 
 
 # --- Helper for Path Validation ---
@@ -34,9 +56,98 @@ def is_path_within_cwd(path_str: str) -> bool:
     return is_safe
 
 
+def _count_file_lines(file_path: Path) -> int:
+    """
+    Count the number of lines in a file efficiently.
+
+    Args:
+        file_path: Path to the file
+
+    Returns:
+        Number of lines in the file
+    """
+    count = 0
+    with file_path.open("r") as f:
+        for _ in f:
+            count += 1
+    return count
+
+
+def _read_file_lines(file_path: Path, offset: int = 0, limit: Optional[int] = None) -> Tuple[List[str], int, int]:
+    """
+    Read lines from a file with pagination support.
+
+    Args:
+        file_path: Path to the file
+        offset: Line number to start reading from (0-indexed)
+        limit: Maximum number of lines to read
+
+    Returns:
+        Tuple of (lines read, total line count, next offset)
+    """
+    all_lines = file_path.read_text().splitlines(keepends=True)
+    total_lines = len(all_lines)
+
+    # Skip to the offset
+    if offset >= total_lines:
+        # Offset beyond file size, return empty list
+        return [], total_lines, total_lines
+
+    # Read up to the limit
+    max_lines = limit if limit is not None else DEFAULT_MAX_LINES
+    end_idx = min(offset + max_lines, total_lines)
+
+    # Get the slice of lines for this range
+    selected_lines = all_lines[offset:end_idx]
+    next_offset = end_idx
+
+    return selected_lines, total_lines, next_offset
+
+
 # --- Tool Implementation ---
-def read_file(path: str) -> str:
-    """Reads the entire content of a file at the given path, restricted to CWD."""
+def read_file(path: str, offset: Optional[int] = None, limit: Optional[int] = None, enable_pagination: bool = False) -> str:
+    """
+    Reads the content of a file at the given path, with optional pagination support.
+
+    Args:
+        path: The path to the file to read
+        offset: Line number to start reading from (0-indexed, optional)
+        limit: Maximum number of lines to read (optional)
+        enable_pagination: Whether to enable pagination for large files
+
+    Returns:
+        The file content or an error message
+    """
+    # Validate the offset and limit parameters
+    if offset is not None and offset < 0:
+        return f"Error: offset must be a non-negative integer, got {offset}"
+
+    if limit is not None and limit <= 0:
+        return f"Error: limit must be a positive integer, got {limit}"
+
+    # Get configuration settings
+    config = get_config()
+
+    # Get file read settings from config or use defaults
+    try:
+        max_file_size_kb = config.file_operations.read_file.max_file_size_kb
+        max_lines = config.file_operations.read_file.max_lines
+        config_enable_pagination = config.file_operations.read_file.enable_pagination
+    except AttributeError:
+        # Fall back to defaults if configuration structure is not available
+        max_file_size_kb = DEFAULT_MAX_FILE_SIZE_KB
+        max_lines = DEFAULT_MAX_LINES
+        config_enable_pagination = False
+
+    # Convert KB to bytes
+    max_file_size_bytes = max_file_size_kb * 1024
+
+    # Use parameter value or config value for enable_pagination (parameter takes precedence)
+    use_pagination = enable_pagination or config_enable_pagination
+
+    # Set limit from parameter or config
+    max_lines_to_read = limit if limit is not None else max_lines
+
     is_safe, reason = is_path_safe(path)
     if not is_safe:
         return format_path_restricted_error(path, reason)
@@ -57,13 +168,41 @@ def read_file(path: str) -> str:
         # Add file size check
         try:
             file_size = file_path.stat().st_size
-            if file_size > MAX_FILE_SIZE_BYTES:
-                return format_file_size_error(path, file_size, MAX_FILE_SIZE_BYTES)
+            if file_size > max_file_size_bytes and not use_pagination:
+                return format_file_size_error(path, file_size, max_file_size_bytes, "To read large files, use pagination by setting enable_pagination=True")
         except Exception as stat_e:
             return format_file_error(stat_e, path, "checking size of")
 
-        content = file_path.read_text()
-        return content
+        # If pagination is enabled, use the pagination logic
+        if use_pagination:
+            try:
+                offset_value = offset if offset is not None else 0
+                lines, total_lines, next_offset = _read_file_lines(file_path, offset_value, max_lines_to_read)
+
+                # Build result with pagination info
+                has_more = next_offset < total_lines
+                content = "".join(lines)
+
+                # Add pagination metadata
+                pagination_info = (
+                    f"\n\n--- Pagination Info ---\n"
+                    f"File: {path}\n"
+                    f"Total Lines: {total_lines}\n"
+                    f"Current Range: Lines {offset_value+1}-{next_offset} (showing {len(lines)} lines)\n"
+                )
+
+                if has_more:
+                    pagination_info += f"More content available: Yes (use offset={next_offset} to continue reading)\n"
+                else:
+                    pagination_info += "More content available: No (reached end of file)\n"
+
+                return content + pagination_info
+            except Exception as e:
+                return format_file_error(e, path, "reading with pagination")
+        else:
+            # Read the whole file if pagination is disabled
+            content = file_path.read_text()
+            return content
 
     except FileNotFoundError as e:
         return format_file_error(e, path, "reading")

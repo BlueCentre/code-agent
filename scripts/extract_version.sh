@@ -37,4 +37,4 @@ if [ -f pyproject.toml ]; then
 fi
 
 # Ultimate fallback
-echo "0.1.0" 
+echo "0.1.0"
