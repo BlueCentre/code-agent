@@ -1,89 +1,60 @@
-# Coverage Pipeline Verification
+# Coverage Verification
 
-This document explains how to manually verify the test coverage pipeline that runs in GitHub Actions.
+This document describes how code coverage is verified in the CLI Code Agent project.
 
-## Prerequisites
+## Coverage Requirements
 
-1. Python 3.10+
-2. Poetry
-3. For SonarQube scanning (optional):
-   - SonarQube/SonarCloud account
-   - SonarScanner CLI tool
-   - API token for SonarCloud or your SonarQube instance
+The project requires at least 80% test coverage, as defined in the following configuration files:
+- `.coveragerc` - Sets coverage configuration for the Python `coverage` library
+- `pyproject.toml` - Includes coverage settings in the `[tool.coverage]` section
 
-## Steps to Run the Pipeline
+## Running Coverage Tests
 
-### Option 1: System-wide Dependencies
+There are two scripts available to run the coverage pipeline:
 
-1. Make sure you're in the project root directory
-2. Run the script: `./scripts/run_coverage_pipeline.sh`
+1. `scripts/run_coverage_pipeline.sh` - Runs coverage tests using system-wide dependencies
+2. `scripts/run_coverage_pipeline_venv.sh` - Runs coverage tests in a virtual environment (recommended)
 
-### Option 2: Using Virtual Environment (Recommended)
+Both scripts perform the following steps:
+- Install necessary dependencies
+- Run tests with coverage reporting
+- Extract the project version
+- Run a SonarQube scan (if configured)
 
-1. Make sure you're in the project root directory
-2. Run the script: `./scripts/run_coverage_pipeline_venv.sh`
-3. This will create a `.venv` directory and install all dependencies there
+## Version Extraction
 
-## What the Scripts Do
+The project version is extracted using `scripts/extract_version.sh`, a robust script that:
+1. Checks `pyproject.toml` for the version number
+2. Falls back to `setup.py` if needed
+3. Searches `__init__.py` files for `__version__` variables
+4. Provides a sensible default if no version is found
 
-Both scripts replicate the GitHub Actions workflow steps:
+This approach is more reliable than using `importlib.metadata`, which requires the package to be installed and can fail if the package isn't found or properly installed.
 
-1. **Install Dependencies**: Uses Poetry to install project dependencies
-2. **Run Tests with Coverage**: Runs pytest with coverage reporting
-   - Generates XML report for SonarQube
-   - Shows terminal report for quick feedback
-   - Enforces 80% minimum coverage
-3. **Extract Version**: Gets the package version using importlib.metadata
-4. **SonarQube Scan**: Uses settings from sonar-project.properties file
+## SonarQube Integration
 
-## Configuring SonarQube
+The coverage pipeline integrates with SonarQube for code quality analysis:
+- Coverage results are uploaded to SonarQube
+- The project version is included in the SonarQube scan
+- A SonarQube token must be provided via the `SONAR_TOKEN` environment variable
 
-By default, the scripts are configured to use SonarCloud. To run the scan:
+## Running Coverage Locally
 
-1. Set your SonarCloud API token using one of these methods:
+To run coverage tests locally:
 
-   **Option A**: Using environment variable:
-   ```bash
-   export SONAR_TOKEN=your-token-here
-   ```
+```bash
+# Run in a virtual environment (recommended)
+./scripts/run_coverage_pipeline_venv.sh
 
-   **Option B**: Using a .env file:
-   ```
-   # .env file in project root
-   SONAR_TOKEN=your-token-here
-   ```
+# Or using system-wide dependencies
+./scripts/run_coverage_pipeline.sh
+```
 
-2. Run one of the pipeline scripts:
-   ```bash
-   ./scripts/run_coverage_pipeline_venv.sh
-   ```
+The tests will fail if coverage drops below 80%.
 
-### Custom Configuration Options
+## Coverage Reports
 
-You can customize the SonarQube scan by setting these environment variables (either directly or in .env):
-
-- `SONAR_HOST_URL`: Override the default SonarCloud URL
-  ```bash
-  # For SonarCloud (default)
-  SONAR_HOST_URL=https://sonarcloud.io
-
-  # For self-hosted SonarQube
-  SONAR_HOST_URL=http://your-sonarqube-server:9000
-  ```
-
-- `SONAR_PROPERTIES`: Specify a custom properties file
-  ```bash
-  SONAR_PROPERTIES=path/to/custom-sonar.properties
-  ```
-
-## Verifying Results
-
-- **Coverage Report**: Check the terminal output for coverage percentage
-- **XML Report**: The file `coverage.xml` will be generated for SonarQube
-- **SonarQube Dashboard**: If configured, check your SonarCloud (or SonarQube instance) for the uploaded results
-
-## Troubleshooting
-
-- If the version extraction fails, make sure the package is properly installed
-- For SonarQube issues, verify your connection settings and token permissions
-- If the scan fails, check that sonar-scanner is installed and in your PATH
+After running the coverage tests, reports will be available in:
+- `coverage.xml` - XML format for integration with tools
+- Terminal output - A summary of coverage is shown in the console
+- `htmlcov/` directory - HTML reports for detailed browsing (if generated)

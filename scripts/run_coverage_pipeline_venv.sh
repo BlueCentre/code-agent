@@ -23,7 +23,8 @@ echo "======= Running tests with coverage ======="
 python -m pytest tests/ --cov=code_agent --cov-report=xml --cov-report=term --cov-fail-under=80
 
 echo "======= Extracting version ======="
-VERSION=$(python -c "from importlib.metadata import version; print(version('cli-code-agent'))")
+# Use our robust extract_version.sh script instead of importlib.metadata
+VERSION=$(./scripts/extract_version.sh)
 echo "PROJECT_VERSION=$VERSION"
 echo "Extracted version: $VERSION"
 
