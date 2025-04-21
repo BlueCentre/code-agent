@@ -43,10 +43,14 @@ jobs:
         with:
           fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
 
+      - name: Make extract_version.sh executable
+        run: |
+          chmod +x scripts/extract_version.sh
+          
       - name: Extract version
         id: get_version
         run: |
-          VERSION=$(python -c "from importlib.metadata import version; print(version('cli-code-agent'))")
+          VERSION=$(./scripts/extract_version.sh)
           echo "PROJECT_VERSION=$VERSION" >> $GITHUB_ENV
           echo "Extracted version: $VERSION"
 
