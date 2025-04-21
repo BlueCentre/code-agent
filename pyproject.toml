@@ -32,7 +32,7 @@ build-backend = "poetry.core.masonry.api"
 # Ruff Configuration
 [tool.ruff]
 # Same as Black.
-line-length = 120
+line-length = 160
 # Assume Python 3.10+.
 target-version = "py310"
 
