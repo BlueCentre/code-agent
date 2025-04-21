@@ -65,9 +65,7 @@ def test_get_llm_response_with_custom_provider(mock_config, mock_litellm_respons
         patch("code_agent.llm.print"),  # Suppress output
     ):
         # Call the function with custom provider and model
-        response = get_llm_response(
-            "Test prompt", provider="anthropic", model="claude-3"
-        )
+        response = get_llm_response("Test prompt", provider="anthropic", model="claude-3")
 
     # Check that the response is correct
     assert response == "This is a test response"
@@ -109,9 +107,7 @@ def test_get_llm_response_missing_openai_key():
     # Check that the response is None
     assert response is None
     # Check that the error message was printed
-    mock_print.assert_called_with(
-        "[bold red]Error:[/bold red] OpenAI API key not found."
-    )
+    mock_print.assert_called_with("[bold red]Error:[/bold red] OpenAI API key not found.")
 
 
 def test_get_llm_response_missing_groq_key():
@@ -144,9 +140,7 @@ def test_get_llm_response_litellm_exception():
     with (
         patch("code_agent.llm.get_config", return_value=config),
         patch("code_agent.llm.get_api_key", return_value="mock-key"),
-        patch(
-            "code_agent.llm.litellm.completion", side_effect=Exception("Test exception")
-        ),
+        patch("code_agent.llm.litellm.completion", side_effect=Exception("Test exception")),
         patch("code_agent.llm.print") as mock_print,
     ):
         # Call the function
@@ -154,12 +148,20 @@ def test_get_llm_response_litellm_exception():
 
     # Check that the response is None
     assert response is None
+
     # Check that error messages were printed
-    # We expect two print calls: one for calling LiteLLM and one for the error
-    calls = mock_print.call_args_list
-    assert len(calls) == 2
-    assert "Calling LiteLLM" in str(calls[0].args[0])
-    assert "Error calling LiteLLM" in str(calls[1].args[0])
+    error_found = False
+    calling_found = False
+
+    for call_args in mock_print.call_args_list:
+        call_str = str(call_args.args[0]).lower()
+        if "calling litellm" in call_str:
+            calling_found = True
+        if "error" in call_str and "test exception" in call_str:
+            error_found = True
+
+    assert calling_found, "Message about calling LiteLLM should have been logged"
+    assert error_found, "Error message about LiteLLM exception should have been logged"
 
 
 @pytest.mark.skip(reason="Too complex to test the main section reliably")

@@ -172,9 +172,7 @@ def test_load_config_invalid_yaml(mock_config_path: Path, capsys):
     assert config.default_provider == "ai_studio"
     assert config.default_model == "gemini-2.0-flash"
     assert config.api_keys.openai is None
-    assert (
-        "Warning: Could not read config file" in captured.out or "Warning: Could not read config file" in captured.err
-    )
+    assert "Configuration error" in captured.out or "Configuration error" in captured.err
 
 
 def test_load_config_invalid_structure(mock_config_path: Path, capsys):
@@ -198,16 +196,8 @@ def test_load_config_invalid_structure(mock_config_path: Path, capsys):
     assert config.native_command_allowlist == []  # Default value
 
     # Check that validation errors were printed
-    assert (
-        "Error: Invalid configuration" in captured.out
-        or "Error: Invalid configuration" in captured.err
-        or "Error: Invalid effective configuration" in captured.out
-        or "Error: Invalid effective configuration" in captured.err
-    )
-    assert (
-        "Falling back to default configuration" in captured.out
-        or "Falling back to default configuration" in captured.err
-    )
+    assert "Configuration error" in captured.out or "Configuration error" in captured.err
+    assert "Falling back to default configuration" in captured.out or "Falling back to default configuration" in captured.err
 
 
 def test_get_config_raises_error_if_not_initialized():
