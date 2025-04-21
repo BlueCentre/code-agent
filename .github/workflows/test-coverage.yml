@@ -46,7 +46,7 @@ jobs:
       - name: Extract version
         id: get_version
         run: |
-          VERSION=$(grep -m 1 '__version__' code_agent/__init__.py | cut -d '"' -f 2)
+          VERSION=$(python -c "from importlib.metadata import version; print(version('cli-code-agent'))")
           echo "PROJECT_VERSION=$VERSION" >> $GITHUB_ENV
           echo "Extracted version: $VERSION"
 

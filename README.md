@@ -10,6 +10,40 @@ It allows interaction with various AI providers (OpenAI, Groq, etc. via LiteLLM)
 
 *(Work in progress)*
 
+## Repository Structure
+
+```
+cli-agent/
+├── code_agent/       # Main package source code
+├── tests/            # Unit and integration tests
+├── docs/             # Documentation files
+│   ├── architecture.md
+│   ├── COVERAGE_VERIFICATION.md
+│   ├── implementation.md
+│   └── ...
+├── scripts/          # Utility scripts
+│   ├── run_coverage_pipeline.sh
+│   ├── run_coverage_pipeline_venv.sh
+│   └── run_tests.sh
+├── .github/          # GitHub Actions workflows
+├── .venv/            # Virtual environment directory (if using venv)
+├── pyproject.toml    # Project dependencies and configuration
+└── README.md         # Project documentation
+```
+
+### Key Directories
+
+- **code_agent/**: Contains the main source code for the CLI tool
+- **tests/**: Test suite for ensuring code quality and functionality
+- **docs/**: Project documentation and guides
+- **scripts/**: Utility scripts for development, testing, and CI/CD pipelines
+
+### Documentation
+
+- **README.md**: Project overview, installation, and usage instructions
+- **docs/**: Detailed documentation about architecture, implementation, and specific features
+- **docs/COVERAGE_VERIFICATION.md**: Guide for verifying test coverage
+
 ## Quick Start
 
 ### Installation

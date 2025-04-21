@@ -164,4 +164,7 @@ cython_debug/
 
 # OS specific files
 .DS_Store
-Thumbs.db 
+Thumbs.db
+
+# SonarCloud
+.scannerwork/
