@@ -1,62 +1,57 @@
 #!/bin/bash
+
+# Script to run coverage pipeline using Python virtual environment
+# This script creates a virtual environment, installs dependencies,
+# runs tests with coverage, and reports to SonarCloud
+
 set -e
 
+VENV_DIR=".venv"
+echo "Starting coverage pipeline with virtual environment..."
+
+# Check for .env file and load environment variables
+if [ -f .env ]; then
+    echo "Loading environment variables from .env"
+    export $(grep -v '^#' .env | xargs)
+fi
+
 # Create and activate virtual environment
-echo "======= Setting up virtual environment ======="
-python3 -m venv .venv
-source .venv/bin/activate
+echo "Setting up virtual environment..."
+python -m venv $VENV_DIR
+source $VENV_DIR/bin/activate
 
-# Load environment variables from .env file if it exists
-if [ -f ".env" ]; then
-  echo "Loading environment variables from .env file"
-  set -a # automatically export all variables
-  source .env
-  set +a
-fi
+# Install required dependencies
+echo "Installing dependencies in virtual environment..."
+pip install --quiet --upgrade pip
+pip install --quiet pytest pytest-cov
+pip install --quiet -e .
 
-echo "======= Installing dependencies ======="
-pip install poetry
-poetry install
-pip install --upgrade pytest pytest-cov
+# Run tests with coverage
+echo "Running tests with coverage..."
+pytest tests/ --cov=code_agent --cov-report=term --cov-report=xml --cov-report=html --cov-fail-under=80
 
-echo "======= Running tests with coverage ======="
-python -m pytest tests/ --cov=code_agent --cov-report=xml --cov-report=term --cov-fail-under=80
+# Extract project version
+echo "Extracting project version..."
+VERSION=$(grep "^version" pyproject.toml | sed -E 's/version = "(.*)"/\1/g')
+echo "Project version: $VERSION"
 
-echo "======= Extracting version ======="
-# Use our robust extract_version.sh script instead of importlib.metadata
-VERSION=$(./scripts/extract_version.sh)
-echo "PROJECT_VERSION=$VERSION"
-echo "Extracted version: $VERSION"
+# Run SonarQube scan if properties file exists
+if [ -f sonar-project.properties ]; then
+    echo "Running SonarQube scan..."
 
-echo "======= Running SonarQube scan ======="
-# Install sonar-scanner if needed
-# apt-get install sonar-scanner or equivalent for your OS
+    if [ -z "$SONAR_TOKEN" ]; then
+        echo "Error: SONAR_TOKEN not set. Cannot run SonarQube scan."
+        exit 1
+    fi
 
-# Set default to SonarCloud
-SONAR_HOST_URL=${SONAR_HOST_URL:-"https://sonarcloud.io"}
-SONAR_PROPERTIES=${SONAR_PROPERTIES:-"sonar-project.properties"}
-
-# Check if properties file exists
-if [ ! -f "$SONAR_PROPERTIES" ]; then
-  echo "Error: Properties file $SONAR_PROPERTIES not found!"
-  exit 1
-fi
-
-# Run the scanner with the properties file and additional parameters
-if [ -z "$SONAR_TOKEN" ]; then
-  echo "Warning: SONAR_TOKEN not set. SonarQube scan will not be performed."
-  echo "Set the SONAR_TOKEN environment variable to run the scan."
-  echo "Example: export SONAR_TOKEN=your_token_here"
+    sonar-scanner \
+      -Dsonar.projectVersion=$VERSION \
+      -Dsonar.login=$SONAR_TOKEN
 else
-  echo "Running sonar-scanner with properties file: $SONAR_PROPERTIES"
-  sonar-scanner \
-    -Dproject.settings=$SONAR_PROPERTIES \
-    -Dsonar.projectVersion=$VERSION \
-    -Dsonar.host.url=$SONAR_HOST_URL \
-    -Dsonar.login=$SONAR_TOKEN
+    echo "No sonar-project.properties file found. Skipping SonarQube scan."
 fi
-
-echo "======= Pipeline complete ======="
 
 # Deactivate virtual environment
 deactivate
+
+echo "Coverage pipeline completed successfully!"
