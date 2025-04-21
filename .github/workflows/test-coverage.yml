@@ -35,14 +35,26 @@ jobs:
       run: |
         python -m pytest tests/ --cov=code_agent --cov-report=xml --cov-report=term --cov-fail-under=80
 
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage-report
+        path: coverage.xml
+        
   coverage-report:
     name: SonarQube
+    needs: coverage-analysis
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
 
+      - name: Download coverage report
+        uses: actions/download-artifact@v3
+        with:
+          name: coverage-report
+          
       - name: Make extract_version.sh executable
         run: |
           chmod +x scripts/extract_version.sh
