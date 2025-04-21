@@ -42,7 +42,16 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
+
+      - name: Extract version
+        id: get_version
+        run: |
+          VERSION=$(grep -m 1 '__version__' code_agent/__init__.py | cut -d '"' -f 2)
+          echo "PROJECT_VERSION=$VERSION" >> $GITHUB_ENV
+          echo "Extracted version: $VERSION"
+
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v5
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          PROJECT_VERSION: ${{ env.PROJECT_VERSION }}

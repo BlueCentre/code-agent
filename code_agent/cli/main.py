@@ -19,7 +19,8 @@ from code_agent.config.config import DEFAULT_CONFIG_DIR, get_config, initialize_
 app = typer.Typer(
     name="code-agent",  # Updated app name
     help="CLI agent for interacting with LLMs and local environment.",
-    add_completion=False,
+    add_completion=True,
+    no_args_is_help=True,  # Show help when no arguments are provided
 )
 
 

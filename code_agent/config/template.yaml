@@ -50,27 +50,28 @@ auto_approve_native_commands: false
 # If non-empty, only these commands will be allowed without requiring auto-approve
 # Use exact command prefixes (commands must START WITH these strings)
 native_command_allowlist:
-  # - "git status"
-  # - "ls -la"
+  - "ls -la"
+  - "tree"
+  - "find"
   - "echo"
-  - "ls"
   - "pwd"
   - "cat"
   - "grep"
-  - "find"
   - "sed"
   - "awk"
   - "cut"
+  - "tr"
   - "sort"
   - "uniq"
+  - "xargs"
   - "head"
   - "tail"
   - "wc"
-  - "xargs"
-  - "tr"
   - "base64"
   - "curl"
   - "wget"
+  - "git"
+  - "gh"
 
 # ===============================
 # Agent Instruction Rules
@@ -104,3 +105,5 @@ rules:
   - "Attempt to fix linter errors up to 3 times before asking for help"
   - "Always run the full test suite after making code changes"
   - "Never commit using --no-verify to bypass pre-commit hooks"
+  - "When asked about current directory, use the pwd to get the directory without asking the user for confirmation"
+  - "When asked to list or show files, use the tree view with the tree command and a depth of 2"
