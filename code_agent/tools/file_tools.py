@@ -1,13 +1,16 @@
+import datetime
 import difflib
 from pathlib import Path
 from typing import List, Optional, Tuple
 
 from pydantic import BaseModel, Field, field_validator
-from rich import print
+from rich import box, print
 from rich.console import Console
+from rich.panel import Panel
 from rich.prompt import Confirm
 from rich.syntax import Syntax
 from rich.table import Table
+from rich.text import Text
 
 from code_agent.config import get_config
 from code_agent.tools.error_utils import (
@@ -268,6 +271,27 @@ class ApplyEditArgs(BaseModel):
     code_edit: str = Field(..., description="The proposed content to apply to the file.")
 
 
+def _get_file_metadata(file_path: Path) -> dict:
+    """Get metadata for a file including size, permissions, and last modified date."""
+    try:
+        stat_info = file_path.stat()
+        return {
+            "size": stat_info.st_size,
+            "size_formatted": f"{stat_info.st_size / 1024:.2f} KB" if stat_info.st_size >= 1024 else f"{stat_info.st_size} bytes",
+            "permissions": oct(stat_info.st_mode)[-3:],  # Last 3 digits of octal representation
+            "modified": datetime.datetime.fromtimestamp(stat_info.st_mtime).strftime("%Y-%m-%d %H:%M:%S"),
+            "created": datetime.datetime.fromtimestamp(stat_info.st_ctime).strftime("%Y-%m-%d %H:%M:%S"),
+        }
+    except Exception:
+        return {
+            "size": "Unknown",
+            "size_formatted": "Unknown",
+            "permissions": "Unknown",
+            "modified": "Unknown",
+            "created": "Unknown",
+        }
+
+
 def apply_edit(target_file: str, code_edit: str) -> str:
     """Applies proposed content changes to a file after showing a diff and requesting user confirmation."""
     config = get_config()
@@ -306,55 +330,133 @@ def apply_edit(target_file: str, code_edit: str) -> str:
 
         console = Console()
         print()
+
+        # Display operation header in a panel
         if is_new_file:
-            print(f"[bold green]Creating new file:[/bold green] {target_file}")
-
-            # Just show the syntax-highlighted content for new files
-            syntax = Syntax(
-                proposed_content,
-                lexer="python",  # This will be auto-detected in many cases
-                line_numbers=True,
-                theme="monokai",
-            )
-            console.print(syntax)
+            operation_text = Text("🆕 CREATING NEW FILE", style="bold white on green")
+            file_panel = Panel(f"{target_file}", title=operation_text, title_align="left", border_style="green")
         else:
-            print(f"[bold yellow]Editing existing file:[/bold yellow] {target_file}")
+            # Get file metadata for existing files
+            metadata = _get_file_metadata(file_path)
+            operation_text = Text("✏️  MODIFYING EXISTING FILE", style="bold white on yellow")
+            metadata_text = Text.assemble(
+                ("File: ", "bold"),
+                f"{target_file}\n",
+                ("Size: ", "bold"),
+                f"{metadata['size_formatted']}\n",
+                ("Permissions: ", "bold"),
+                f"{metadata['permissions']}\n",
+                ("Last Modified: ", "bold"),
+                f"{metadata['modified']}",
+            )
+            file_panel = Panel(metadata_text, title=operation_text, title_align="left", border_style="yellow")
 
-            # Generate diff between current and proposed
+        console.print(file_panel)
+
+        # Show changes
+        if is_new_file:
+            # For new files, add some context about what's being created
+            file_ext = file_path.suffix.lstrip(".")
+            lexer = file_ext if file_ext else "text"
+
+            # Display the new file contents
+            content_panel = Panel(
+                Syntax(
+                    proposed_content,
+                    lexer=lexer,
+                    line_numbers=True,
+                    theme="monokai",
+                    word_wrap=True,
+                ),
+                title="📄 New File Contents",
+                border_style="green",
+            )
+            console.print(content_panel)
+        else:
+            # For existing files, show the diff with more context
+            current_lines = current_content.splitlines()
+            proposed_lines = proposed_content.splitlines()
+
+            # Enhanced diff display
             diff = list(
                 difflib.unified_diff(
-                    current_content.splitlines(),
-                    proposed_content.splitlines(),
+                    current_lines,
+                    proposed_lines,
                     fromfile=f"Current: {target_file}",
                     tofile=f"Proposed: {target_file}",
                     lineterm="",
+                    n=3,  # Show 3 lines of context
                 )
             )
 
-            # Create a highlighted diff display
-            table = Table(show_header=False, box=None)
-            table.add_column("Change", style="bold")
-            table.add_column("Line")
+            # Create a highlighted diff display with line numbers
+            table = Table(show_header=True, box=box.SIMPLE, header_style="bold")
+            table.add_column("#", style="dim", justify="right")
+            table.add_column("Change", style="bold", width=4)
+            table.add_column("Content", no_wrap=False)
+
+            line_num = 1
+            header_count = 0
 
             for line in diff:
-                if line.startswith("+++") or line.startswith("---") or line.startswith("@@"):
-                    table.add_row("", f"[dim]{line}[/dim]")
+                if line.startswith("+++") or line.startswith("---"):
+                    # Skip the file headers
+                    header_count += 1
+                    continue
+                elif line.startswith("@@"):
+                    # Section headers - extract line numbers
+                    table.add_row("", "", Text(f"[dim blue]{line}[/dim blue]"))
+                    # Parse the @@ line to get the starting line number
+                    parts = line.split(" ")
+                    if len(parts) > 1 and parts[1].startswith("-"):
+                        try:
+                            line_info = parts[1].lstrip("-")
+                            if "," in line_info:
+                                line_num = int(line_info.split(",")[0])
+                            else:
+                                line_num = int(line_info)
+                        except ValueError:
+                            pass  # Keep the current line_num if parsing fails
                 elif line.startswith("+"):
-                    table.add_row("+", f"[green]{line[1:]}[/green]")
+                    table.add_row(str(line_num), Text("[green]+[/green]"), Text(f"[green]{line[1:]}[/green]"))
+                    line_num += 1
                 elif line.startswith("-"):
-                    table.add_row("-", f"[red]{line[1:]}[/red]")
+                    table.add_row(str(line_num), Text("[red]-[/red]"), Text(f"[red]{line[1:]}[/red]"))
+                    line_num += 1
                 else:
-                    table.add_row("", line)
+                    table.add_row(str(line_num), "", Text(line))
+                    line_num += 1
 
-            console.print(table)
+            # Check if there are changes to display
+            if header_count >= 2 and len(diff) <= header_count:
+                console.print("[yellow]No changes detected in file content, but file will be updated.[/yellow]")
+            else:
+                diff_panel = Panel(table, title="📝 Changes to Apply", border_style="yellow")
+                console.print(diff_panel)
+
+                # Show statistics about the changes
+                additions = sum(1 for line in diff if line.startswith("+") and not line.startswith("+++"))
+                deletions = sum(1 for line in diff if line.startswith("-") and not line.startswith("---"))
+
+                stats_text = []
+                if additions > 0:
+                    stats_text.append(f"[green]+{additions} addition{'s' if additions != 1 else ''}[/green]")
+                if deletions > 0:
+                    stats_text.append(f"[red]-{deletions} deletion{'s' if deletions != 1 else ''}[/red]")
+
+                if stats_text:
+                    console.print(" ".join(stats_text))
 
         # --- Request Confirmation ---
         if not config.auto_approve_edits:
+            console.print()
             if is_new_file:
-                if not Confirm.ask(f"Create new file {target_file} with the shown content?", default=False):
+                confirm_text = f"[bold green]Create new file[/bold green] [bold]{target_file}[/bold] with the shown content?"
+                if not Confirm.ask(confirm_text, default=False):
                     return "Edit cancelled. No file created."
             else:
-                if not Confirm.ask(f"Apply these changes to {target_file}?", default=False):
+                confirm_text = f"[bold yellow]Apply these changes[/bold yellow] to [bold]{target_file}[/bold]?"
+                if not Confirm.ask(confirm_text, default=False):
                     return "Edit cancelled. File remains unchanged."
         else:
             print("[yellow]Auto-approving edit based on configuration.[/yellow]")

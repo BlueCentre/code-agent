@@ -19,7 +19,7 @@ This document consolidates all tasks, improvements, and future enhancements for 
 - **Tool Enhancement**
   - ✅ Add support for tools/function calling in LLM integration [from planning_priorities]
   - ✅ Enhance security checks for `apply_edit` and `run_native_command` (e.g., stricter path validation) [from getting_started_implementation.md]
-  - 🔄 Add size limits and pagination to `read_file` [from getting_started_implementation.md]
+  - ✅ Add size limits and pagination to `read_file` [from getting_started_implementation.md]
   - ✅ Add timeout and working directory options to native tools [from planning_priorities]
 
 - **Configuration Improvements**

@@ -12,6 +12,7 @@ import pytest
 from code_agent.tools.file_tools import (
     MAX_FILE_SIZE_BYTES,
     ReadFileArgs,
+    _get_file_metadata,
     apply_edit,
     is_path_within_cwd,
     read_file,
@@ -289,3 +290,43 @@ def test_path_validation_fails():
         with patch("builtins.print"), patch("builtins.input", return_value="y"):
             result = read_file("some_file.txt")
             assert "Invalid path" in result
+
+
+def test_get_file_metadata_success(temp_file: Path):
+    """Test getting file metadata successfully."""
+    metadata = _get_file_metadata(temp_file)
+
+    # Verify we have all expected keys
+    assert "size" in metadata
+    assert "size_formatted" in metadata
+    assert "permissions" in metadata
+    assert "modified" in metadata
+    assert "created" in metadata
+
+    # Check that the size is reasonable (file has content)
+    assert metadata["size"] > 0
+    assert "bytes" in metadata["size_formatted"] or "KB" in metadata["size_formatted"]
+
+    # Check that permissions are in octal format (like '644')
+    assert len(metadata["permissions"]) == 3
+    assert all(c in "01234567" for c in metadata["permissions"])
+
+    # Check date formats
+    assert "-" in metadata["modified"]
+    assert ":" in metadata["modified"]
+
+
+def test_get_file_metadata_error():
+    """Test handling errors when getting file metadata."""
+    # Create a path that will cause an exception on stat
+    non_existent_path = Path("non_existent_file_for_test.txt")
+
+    # Get metadata - should return default values instead of raising an exception
+    metadata = _get_file_metadata(non_existent_path)
+
+    # Check all values are set to "Unknown"
+    assert metadata["size"] == "Unknown"
+    assert metadata["size_formatted"] == "Unknown"
+    assert metadata["permissions"] == "Unknown"
+    assert metadata["modified"] == "Unknown"
+    assert metadata["created"] == "Unknown"
