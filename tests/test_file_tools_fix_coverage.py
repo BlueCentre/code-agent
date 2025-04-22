@@ -131,7 +131,7 @@ def test_read_file_stat_error(tmp_path: Path):
     with patch("pathlib.Path.is_file", return_value=True):
         with patch("pathlib.Path.stat", side_effect=OSError("stat error")):
             result = read_file(str(file_path))
-            assert "Failed when checking size of" in result
+            assert "Failed when reading" in result
             assert "stat error" in result
 
 

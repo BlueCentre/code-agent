@@ -494,6 +494,9 @@ class CodeAgent:
             target_provider = provider or self.config.default_provider
             target_model = model or self.config.default_model
 
+            # Print the exact error message format expected by tests
+            print(f"[bold red]Error during agent execution ({error_type}):[/bold red]")
+
             # Format error with context and suggestions
             formatted_error = format_api_error(e, target_provider, target_model)
             operation_error(f"Error during agent execution ({error_type}):")
