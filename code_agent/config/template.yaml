@@ -4,13 +4,14 @@
 # ===============================
 # Default LLM Provider and Model
 # ===============================
-# Options include: "ai_studio", "openai", "groq", "anthropic", etc.
+# Options include: "ai_studio", "openai", "groq", "anthropic", "ollama", etc.
 default_provider: "ai_studio"
 
 # Available models depend on the provider:
 # - AI Studio: "gemini-1.5-flash", "gemini-1.5-pro"
 # - OpenAI: "gpt-4o", "gpt-3.5-turbo", etc.
 # - Groq: "llama3-70b-8192", "mixtral-8x7b-32768", etc.
+# - Ollama: "llama3:latest", "codellama:13b", "mistral:latest", etc.
 default_model: "gemini-2.0-flash" # https://ai.google.dev/gemini-api/docs/rate-limits#free-tier
 
 # ===============================
@@ -34,6 +35,20 @@ api_keys:
   # Anthropic - Get from https://console.anthropic.com/
   # Set via ANTHROPIC_API_KEY environment variable (recommended)
   # anthropic: null  # Or add your key directly: "sk-ant-..."
+
+# ===============================
+# Ollama Integration Settings
+# ===============================
+# These settings control the integration with locally running Ollama instances
+# To use Ollama for completions, ensure it's running locally or specify a remote URL
+ollama:
+  # Ollama API URL - Where your Ollama instance is running
+  # Default is localhost on the standard port
+  url: "http://localhost:11434"
+
+  # Uncomment and set to use Ollama as your default provider
+  # default_provider: "ollama"
+  # default_model: "llama3:latest"  # Replace with any model you've pulled
 
 # ===============================
 # Agent Behavior Settings
@@ -72,6 +87,7 @@ native_command_allowlist:
   - "wget"
   - "git"
   - "gh"
+  - "ollama"  # Allow ollama commands like 'ollama list' or 'ollama pull'
 
 # ===============================
 # Native Command Settings

@@ -12,6 +12,7 @@ Code Agent supports multiple AI providers through LiteLLM integration, allowing 
 | OpenAI | GPT models | gpt-4o | `sk-...` |
 | Anthropic | Claude models | claude-3-sonnet | `sk-ant-...` |
 | Groq | Fast inference for open models | llama3-70b-8192 | `gsk_...` |
+| Ollama | Local open models | varies | None (local) |
 
 ## Provider-Specific Models
 
@@ -103,6 +104,30 @@ code-agent --provider anthropic --model claude-3-opus run "Design a complex data
 code-agent --provider groq --model llama3-70b-8192 run "Generate a complex SQL query"
 ```
 
+### Ollama (Local Models)
+
+**Available Models:**
+- Varies based on your local installation
+- Common models include `llama3:latest`, `codellama:13b`, `gemma3:latest`
+
+**Setup:**
+1. [Install Ollama](https://ollama.ai/download) on your local machine
+2. Start the Ollama service: `ollama serve`
+3. Pull models you want to use: `ollama pull llama3` or `ollama pull codellama:13b`
+4. No API key needed - connects to the local service
+
+**Usage Example:**
+```bash
+# List available local models
+code-agent ollama list
+
+# Chat with a specific model
+code-agent ollama chat llama3:latest "Explain concurrency in Python"
+
+# Use with system prompt
+code-agent ollama chat codellama:13b "Write a sort function" --system "You are a helpful coding assistant"
+```
+
 ## Selecting Models and Providers
 
 ### Command Line Options
@@ -180,56 +205,72 @@ sequenceDiagram
     participant Config as Configuration System
     participant LiteLLM as LiteLLM Client
     participant Provider as LLM Provider (OpenAI/Anthropic/etc.)
+    participant OllamaCmd as Ollama Commands
+    participant OllamaProvider as Ollama Provider
+    participant OllamaService as Ollama Local Service
 
-    User->>CLI: Submit query with optional provider/model
-    CLI->>Agent: run_turn(prompt, provider, model)
+    alt Standard LLM Flow
+        User->>CLI: Submit query with optional provider/model
+        CLI->>Agent: run_turn(prompt, provider, model)
 
-    Agent->>Config: Get API keys and provider settings
-    Config->>Agent: Return configuration
+        Agent->>Config: Get API keys and provider settings
+        Config->>Agent: Return configuration
 
-    Agent->>Agent: _get_model_string(provider, model)
+        Agent->>Agent: _get_model_string(provider, model)
 
-    alt Provider specified
-        Agent->>Agent: Use specified provider
-    else Provider not specified
-        Agent->>Agent: Use default_provider from config
-    end
-
-    alt Model specified
-        Agent->>Agent: Use specified model
-    else Model not specified
-        Agent->>Agent: Use default_model from config
-    end
-
-    Agent->>Agent: Format model string for LiteLLM (e.g., "openai/gpt-4")
-
-    Agent->>LiteLLM: litellm.completion(model, messages, api_key)
-
-    LiteLLM->>LiteLLM: Format request for specific provider
-    LiteLLM->>Provider: Send API request with appropriate format
-
-    alt API call succeeds
-        Provider->>LiteLLM: Return response
-        LiteLLM->>Agent: Return formatted completion
-    else API call fails
-        Provider->>LiteLLM: Return error
-        LiteLLM->>Agent: Raise exception
-        Agent->>Agent: Format error message (format_api_error)
-
-        alt Model not found error
-            Agent->>Agent: _handle_model_not_found_error()
-            Agent->>CLI: Suggest available models
-            CLI->>User: Display model suggestions
-        else Other API error
-            Agent->>CLI: Return formatted error message
-            CLI->>User: Display error message
+        alt Provider specified
+            Agent->>Agent: Use specified provider
+        else Provider not specified
+            Agent->>Agent: Use default_provider from config
         end
+
+        alt Model specified
+            Agent->>Agent: Use specified model
+        else Model not specified
+            Agent->>Agent: Use default_model from config
+        end
+
+        Agent->>Agent: Format model string for LiteLLM (e.g., "openai/gpt-4")
+
+        Agent->>LiteLLM: litellm.completion(model, messages, api_key)
+
+        LiteLLM->>LiteLLM: Format request for specific provider
+        LiteLLM->>Provider: Send API request with appropriate format
+
+        alt API call succeeds
+            Provider->>LiteLLM: Return response
+            LiteLLM->>Agent: Return formatted completion
+        else API call fails
+            Provider->>LiteLLM: Return error
+            LiteLLM->>Agent: Raise exception
+            Agent->>Agent: Format error message (format_api_error)
+
+            alt Model not found error
+                Agent->>Agent: _handle_model_not_found_error()
+                Agent->>CLI: Suggest available models
+                CLI->>User: Display model suggestions
+            else Other API error
+                Agent->>CLI: Return formatted error message
+                CLI->>User: Display error message
+            end
+        end
+
+    else Direct Ollama Flow
+        User->>CLI: code-agent ollama [list|chat] ...
+        CLI->>OllamaCmd: Invoke Ollama command
+        OllamaCmd->>OllamaProvider: Call provider methods
+        OllamaProvider->>OllamaService: Make direct API calls
+        OllamaService->>OllamaProvider: Return response
+        OllamaProvider->>OllamaCmd: Return formatted data
+        OllamaCmd->>CLI: Return formatted output
+        CLI->>User: Display results
     end
 ```
 
 This diagram illustrates:
-1. How the system selects which provider and model to use
+1. How the system selects which provider and model to use for standard API-based providers
 2. The process of formatting model strings for LiteLLM
 3. The API communication flow with LLM providers
 4. How different error conditions are handled, particularly model not found errors
 5. The role of LiteLLM in abstracting provider-specific API details
+6. The alternative direct flow for Ollama local model interactions

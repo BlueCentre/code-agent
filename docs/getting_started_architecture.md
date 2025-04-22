@@ -34,6 +34,7 @@ flowchart TD
 
     user["Developer<br>Uses the CLI via terminal."]
     llm_providers["LLM Providers<br>Handles language model requests."]
+    ollama["Ollama<br>Local LLM service."]
     file_system["Local File System<br>Stores files and configuration."]
     terminal["Terminal Shell<br>Runs native commands."]
 
@@ -43,6 +44,7 @@ flowchart TD
         config_system["Configuration System<br>Python (Pydantic, PyYAML)<br>Loads, validates, and manages user configuration."]
         tool_modules["Tool Modules<br>Python<br>Implementations for file operations, command execution, and security checks."]
         history_store[(History Store<br>JSON Files<br>Stores chat session history on the local file system.)]
+        ollama_provider["Ollama Provider<br>Python<br>Direct integration with local Ollama models."]
     end
 
     user --> |"Interacts with<br>CLI (stdin/stdout)"| cli_app
@@ -50,10 +52,13 @@ flowchart TD
     cli_app --> |"Invokes agent turn with prompt/history"| agent_core
     cli_app --> |"Gets configuration settings"| config_system
     cli_app --> |"Saves/Loads History"| history_store
+    cli_app --> |"Direct Ollama commands"| ollama_provider
 
     agent_core --> |"Gets config for agent behavior, tools, rules"| config_system
     agent_core --> |"Sends requests via LiteLLM<br>HTTPS/API"| llm_providers
     agent_core --> |"Delegates tool execution"| tool_modules
+
+    ollama_provider --> |"HTTP API requests"| ollama
 
     tool_modules --> |"Gets config for tool behavior (e.g., allowlist)"| config_system
     tool_modules --> |"Reads/Writes files"| file_system
@@ -70,7 +75,9 @@ flowchart TD
     title["Component diagram for Agent Core and Tools"]
 
     cli_app["CLI Application<br>cli/main.py"]
+    ollama_cli["Ollama CLI<br>cli_agent/main.py<br>Handles direct Ollama interactions"]
     llm_providers["LLM Providers"]
+    ollama["Ollama Local Service"]
     file_system["Local File System"]
     terminal["Terminal Shell"]
     config_system["Configuration System"]
@@ -78,6 +85,11 @@ flowchart TD
     subgraph agent_boundary["Agent Core"]
         code_agent["CodeAgent<br>agent/agent.py<br>Manages interaction cycle, message history, and tool dispatch."]
         llm_client["LLM Client<br>llm.py<br>Handles communication with LLM providers via LiteLLM."]
+    end
+
+    subgraph ollama_boundary["Ollama Integration"]
+        ollama_provider["OllamaProvider<br>cli_agent/providers/ollama.py<br>Direct communication with Ollama API."]
+        ollama_commands["Ollama Commands<br>cli_agent/commands/ollama.py<br>CLI commands for Ollama."]
     end
 
     subgraph tools_boundary["Tool Modules"]
@@ -88,6 +100,10 @@ flowchart TD
     end
 
     cli_app --> |"Invokes run_turn"| code_agent
+    ollama_cli --> |"Invokes"| ollama_commands
+    ollama_commands --> |"Uses"| ollama_provider
+    ollama_provider --> |"API Requests"| ollama
+
     code_agent --> |"Makes API requests"| llm_client
     llm_client --> |"Sends API requests"| llm_providers
 
