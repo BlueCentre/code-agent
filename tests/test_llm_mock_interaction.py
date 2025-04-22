@@ -455,15 +455,15 @@ def test_max_tool_calls_limit(agent, mocker):
     mock_run_command = mocker.patch("code_agent.agent.agent.run_native_command")
     mock_run_command.return_value = "hello"
 
-    # Mock the print function to check warning logging
-    mock_print = mocker.patch("code_agent.agent.agent.print")
+    # Mock the console.print function in progress_indicators which is used by operation_warning
+    mock_console_print = mocker.patch("code_agent.tools.progress_indicators.console.print")
 
     # Run the agent - it should eventually stop due to max_tool_calls
     agent.run_turn("Run a command repeatedly")
 
     # Verify warning about max tool calls was logged
     max_calls_warning = False
-    for call_args in mock_print.call_args_list:
+    for call_args in mock_console_print.call_args_list:
         if "Maximum tool call limit reached" in str(call_args):
             max_calls_warning = True
             break

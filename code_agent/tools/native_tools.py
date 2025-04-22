@@ -12,6 +12,7 @@ from rich.table import Table
 from rich.text import Text
 
 from code_agent.config import get_config
+from code_agent.tools.progress_indicators import command_execution_indicator, operation_complete, operation_error, step_progress
 from code_agent.tools.security import is_command_safe
 
 # --- Native Terminal Command Execution ---
@@ -129,15 +130,18 @@ def run_native_command(command: str, working_directory: Optional[str] = None, ti
     if timeout is None and hasattr(config, "native_commands"):
         timeout = getattr(config.native_commands, "default_timeout", None)
 
+    step_progress("Validating command", "blue")
     # Security check for command
     is_safe, reason, is_warning = is_command_safe(command)
 
     # For dangerous commands, always require confirmation
     if not is_safe:
         # Don't even offer dangerous commands for execution
+        operation_error("Security violation detected!")
         print(Panel(f"[red]{reason}[/red]", title="⚠️ [bold red]SECURITY VIOLATION[/bold red]", border_style="red"))
         return f"Command execution not permitted: {reason}"
 
+    step_progress("Analyzing command impact", "blue")
     # Get more context about the command
     command_categories = _categorize_command(command)
     impact_level, impact_warnings = _analyze_command_impact(command)
@@ -204,12 +208,13 @@ def run_native_command(command: str, working_directory: Optional[str] = None, ti
 
     # If we got here, the command passed all security checks or was manually approved
     try:
-        print("[grey50]Running command...[/grey50]")
+        step_progress("Preparing command execution", "green")
         # Split the command for safer execution with shell=False
         cmd_parts = command.split()
 
         # Use shell=False for better security
-        process = subprocess.run(cmd_parts, shell=False, text=True, capture_output=True, cwd=working_directory, timeout=timeout)
+        with command_execution_indicator(command):
+            process = subprocess.run(cmd_parts, shell=False, text=True, capture_output=True, cwd=working_directory, timeout=timeout)
 
         # Prepare result with both stdout and stderr
         result = process.stdout
@@ -217,20 +222,20 @@ def run_native_command(command: str, working_directory: Optional[str] = None, ti
         # Add error info if there was an error
         if process.returncode != 0:
             result += f"\n\n[red]Error (exit code: {process.returncode}):[/red]\n{process.stderr}"
-            print(f"[red]Command failed with exit code {process.returncode}[/red]")
+            operation_error(f"Command failed with exit code {process.returncode}")
         else:
-            print("[green]Command completed successfully[/green]")
+            operation_complete("Command executed successfully")
 
         return result
 
     except subprocess.TimeoutExpired:
         timeout_value = timeout or "default"
         error_message = f"Command timed out after {timeout_value} seconds"
-        print(f"[bold red]{error_message}[/bold red]")
+        operation_error(error_message)
         return error_message
     except Exception as e:
         error_message = f"Error executing command: {e}"
-        print(f"[bold red]{error_message}[/bold red]")
+        operation_error(error_message)
         return error_message
 
 

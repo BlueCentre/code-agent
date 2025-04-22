@@ -139,7 +139,7 @@ class TestReadFile:
         with (
             patch("code_agent.tools.file_tools.is_path_within_cwd") as mock_is_within,
             patch("pathlib.Path.is_file") as mock_is_file,
-            patch("pathlib.Path.read_text", side_effect=PermissionError("Permission denied")),
+            patch("code_agent.tools.file_tools._count_file_lines", side_effect=PermissionError("Permission denied")),
         ):
             mock_is_within.return_value = True
             mock_is_file.return_value = True
@@ -158,7 +158,7 @@ class TestReadFile:
         with (
             patch("code_agent.tools.file_tools.is_path_within_cwd") as mock_is_within,
             patch("pathlib.Path.is_file") as mock_is_file,
-            patch("pathlib.Path.read_text", side_effect=Exception("Generic error")),
+            patch("code_agent.tools.file_tools._count_file_lines", side_effect=Exception("Generic error")),
         ):
             mock_is_within.return_value = True
             mock_is_file.return_value = True

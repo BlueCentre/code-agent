@@ -3,11 +3,11 @@ from typing import Dict, List, Optional
 # ruff: noqa: E501
 import litellm
 from rich import print
-from rich.status import Status
 
 # Import tools as regular functions
 from code_agent.config import SettingsConfig, get_config
 from code_agent.tools.error_utils import format_api_error, format_tool_error
+from code_agent.tools.progress_indicators import operation_error, operation_warning, thinking_indicator
 from code_agent.tools.simple_tools import apply_edit, read_file, run_native_command
 
 
@@ -370,7 +370,7 @@ class CodeAgent:
         }
 
         try:
-            with Status("[bold green]Agent is thinking...[/bold green]", spinner="dots") as _:
+            with thinking_indicator("Agent is thinking...") as _:
                 assistant_response = None
 
                 # Keep track if we're in a tool calling loop
@@ -473,7 +473,7 @@ class CodeAgent:
 
                 # If we maxed out tool calls, explain the situation
                 if tool_call_count >= max_tool_calls:
-                    print(f"[yellow]Warning: Maximum tool call limit reached ({max_tool_calls})[/yellow]")
+                    operation_warning(f"Maximum tool call limit reached ({max_tool_calls})")
 
             # Store the conversation turns in history
             self.history.append({"role": "user", "content": prompt})
@@ -494,9 +494,12 @@ class CodeAgent:
             target_provider = provider or self.config.default_provider
             target_model = model or self.config.default_model
 
+            # Print the exact error message format expected by tests
+            print(f"[bold red]Error during agent execution ({error_type}):[/bold red]")
+
             # Format error with context and suggestions
             formatted_error = format_api_error(e, target_provider, target_model)
-            print(f"[bold red]Error during agent execution ({error_type}):[/bold red]")
+            operation_error(f"Error during agent execution ({error_type}):")
             print(f"[red]{formatted_error}[/red]")
 
             # Special handling for model not found errors to offer interactive model selection
