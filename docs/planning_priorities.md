@@ -28,7 +28,7 @@ This document consolidates all tasks, improvements, and future enhancements for 
   - ✅ Implement dynamic configuration validation with clear error messages [from planning_improvements.md]
 
 - **User Experience Improvements**
-  - 🔜 Enhance confirmation prompts with more context and better diff highlighting [from planning_improvements.md]
+  - ✅ Enhance confirmation prompts with more context and better diff highlighting [from planning_improvements.md]
   - 🔄 Implement "thinking indicator" and step-by-step output for complex operations [from planning_improvements.md]
 
 ## Medium Priority
