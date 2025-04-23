@@ -1,0 +1,37 @@
+#!/bin/bash
+
+# Simple post-commit hook 
+# This shows helpful info after commit without dependencies
+
+# Get the latest commit info
+COMMIT_HASH=$(git rev-parse HEAD)
+COMMIT_MSG=$(git log -1 --pretty=%B)
+AUTHOR=$(git log -1 --pretty=%an)
+FILES_CHANGED=$(git show --name-only --format='' $COMMIT_HASH | wc -l)
+
+# Show a commit summary
+echo "✅ Commit successful!"
+echo "🧑‍💻 Author: $AUTHOR"
+echo "📝 Message: $COMMIT_MSG"
+echo "📂 Files changed: $FILES_CHANGED"
+
+# Check if this is a PR branch
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+if [[ "$CURRENT_BRANCH" != "main" && "$CURRENT_BRANCH" != "master" ]]; then
+    # Check if there's a PR
+    if command -v gh &> /dev/null && gh auth status &> /dev/null; then
+        PR_EXISTS=$(gh pr list --head "$CURRENT_BRANCH" 2>/dev/null)
+        if [ -z "$PR_EXISTS" ]; then
+            echo "ℹ️ You can create a pull request for your changes:"
+            echo "   gh pr create"
+        else
+            echo "ℹ️ Your changes are part of an open pull request"
+        fi
+    fi
+fi
+
+# Remind about pushing and monitoring
+echo "🚀 Push your changes with: git push"
+echo "🔍 After pushing, monitor CI checks with: ./scripts/monitor-pr.sh"
+
+exit 0 
