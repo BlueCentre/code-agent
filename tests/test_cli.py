@@ -126,7 +126,7 @@ def test_cli_run_basic(mock_run_agent_turn: MagicMock):
     assert prompt_text in result.stdout
     assert "Response:" in result.stdout
     assert mock_run_agent_turn.return_value in result.stdout
-    mock_run_agent_turn.assert_called_once_with(prompt=prompt_text)
+    mock_run_agent_turn.assert_called_once_with(prompt=prompt_text, quiet=None)
 
 
 def test_cli_run_with_overrides(mock_run_agent_turn: MagicMock):
@@ -138,7 +138,7 @@ def test_cli_run_with_overrides(mock_run_agent_turn: MagicMock):
     result = runner.invoke(app, ["--provider", provider, "--model", model, "run", prompt_text])
 
     assert result.exit_code == 0
-    mock_run_agent_turn.assert_called_once_with(prompt=prompt_text)
+    mock_run_agent_turn.assert_called_once_with(prompt=prompt_text, quiet=None)
     assert mock_run_agent_turn.return_value in result.stdout
 
 

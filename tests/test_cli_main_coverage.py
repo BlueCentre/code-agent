@@ -46,7 +46,7 @@ def test_main_callback_with_provider_model_override(runner):
     with patch("code_agent.cli.main.initialize_config") as mock_init:
         # Call the CLI with provider and model overrides
         runner.invoke(app, ["--provider", "anthropic", "--model", "claude-3", "run", "test prompt"])
-        
+
         # Check that initialize_config was called with the right parameters
         mock_init.assert_called_once()
         args, kwargs = mock_init.call_args
@@ -61,7 +61,7 @@ def test_main_callback_with_auto_approve_flags(runner):
     with patch("code_agent.cli.main.initialize_config") as mock_init:
         # Call the CLI with auto-approve flags
         runner.invoke(app, ["--auto-approve-edits", "--auto-approve-native-commands", "run", "test prompt"])
-        
+
         # Check that initialize_config was called with the right parameters
         mock_init.assert_called_once()
         args, kwargs = mock_init.call_args
@@ -228,7 +228,7 @@ def test_run_command_with_failing_agent(runner, mock_config):
         assert "Failed to get response" in result.stdout
 
         # Verify agent was called
-        mock_agent.run_turn.assert_called_once_with(prompt="test prompt")
+        mock_agent.run_turn.assert_called_once_with(prompt="test prompt", quiet=None)
 
 
 # Test history saving with errors

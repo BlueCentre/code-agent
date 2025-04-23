@@ -84,6 +84,39 @@ By default, the CLI connects to Ollama at `http://localhost:11434`. You can spec
 code-agent ollama list --url http://192.168.1.100:11434
 ```
 
+## Test Mode
+
+All commands support a test mode which allows you to run the commands without making actual API calls to Ollama. This is particularly useful for:
+
+- Testing or demonstrating the CLI when Ollama isn't available
+- CI/CD environments where Ollama might not be installed
+- Unit testing without mocking dependencies
+- Quickly verifying command syntax
+
+To use test mode, add the `--test` flag to any command:
+
+```bash
+# List models in test mode
+code-agent ollama list --test
+
+# Run a prompt in test mode
+code-agent ollama run llama3 "Write a hello world program" --test
+
+# Chat with a model in test mode
+code-agent ollama chat llama3 "Hello, how are you?" --test
+```
+
+Test mode will display all the parameters that would be sent to Ollama and return a sample response so you can see what the output format would look like.
+
+### Extending Test Mode
+
+For developers, test mode provides a reliable way to test command functionality without external dependencies. If you're extending the Ollama commands:
+
+1. Add the `test_mode` parameter to your new commands
+2. Implement a test mode branch that provides appropriate sample data
+3. Include tests that verify both the test mode and normal operation
+4. Document the test mode behavior in the command's docstring
+
 ## Using in Code
 
 You can also use the Ollama provider directly in your Python code:
