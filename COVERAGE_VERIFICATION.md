@@ -128,6 +128,12 @@ You can pass additional pytest arguments to the script:
 ./scripts/run_tests_with_coverage.sh -k test_agent  # To run only specific tests
 ```
 
+**Note:** When running with specific test patterns (using -k), coverage might be below the 80% threshold because you're only testing a subset of the code. To bypass the coverage failure in this case, add `--no-cov-on-fail` to your command:
+
+```bash
+./scripts/run_tests_with_coverage.sh -k test_agent_ollama --no-cov-on-fail
+```
+
 ### Coverage Requirements
 
 The project requires at least 80% test coverage. The coverage check will fail if coverage falls below this threshold.
