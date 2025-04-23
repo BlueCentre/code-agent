@@ -285,7 +285,7 @@ def format_config_error(error: Exception, config_item: Optional[str] = None) -> 
         )
 
     # Handle invalid path configurations
-    elif "Invalid path" in error_msg or "path" in error_msg.lower() and ("invalid" in error_msg.lower() or "not found" in error_msg.lower()):
+    elif "Invalid path" in error_msg or ("path" in error_msg.lower() and (("invalid" in error_msg.lower()) or ("not found" in error_msg.lower()))):
         return (
             f"{context}"
             f"Invalid path configuration detected.\n"
