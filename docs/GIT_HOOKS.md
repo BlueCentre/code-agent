@@ -32,8 +32,9 @@ The post-push hook validates GitHub PR status after pushing changes:
 
 - Checks if PR validation is enabled in `.env` via `PULL_REQUEST_VALIDATE=true`
 - Identifies open PRs for the current branch
-- Polls GitHub API to check CI/CD status
-- Notifies you when checks pass or fail
+- Checks the current status of CI/CD checks
+- Can optionally poll and wait for checks to complete (configurable timeout)
+- Shows you the status of all checks (passed, failed, or pending)
 
 ## Setup
 
@@ -47,7 +48,7 @@ chmod +x .git/hooks/pre-commit .git/hooks/post-commit .git/hooks/pre-push .git/h
 
 To enable automatic PR validation after pushing changes:
 
-1. Create a `.env` file in the repository root (if it doesn't exist)
+1. Create a `.env` file in the repository root (copy from `.env.example`)
 2. Add the following line to enable validation:
    ```
    PULL_REQUEST_VALIDATE=true
@@ -58,6 +59,23 @@ To enable automatic PR validation after pushing changes:
    ```
    gh auth login
    ```
+
+### Waiting for CI/CD Checks
+
+To enable polling for CI/CD check completion:
+
+1. Add the following to your `.env` file:
+   ```
+   PULL_REQUEST_WAIT=true
+   ```
+   
+2. Optionally configure wait time and polling interval:
+   ```
+   PULL_REQUEST_WAIT_MINUTES=10    # Maximum wait time in minutes (default: 10)
+   PULL_REQUEST_POLL_SECONDS=15    # Polling interval in seconds (default: 15)
+   ```
+
+See the `.env.example` file in the root directory for a complete example.
 
 ## Disabling Hooks
 
