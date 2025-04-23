@@ -1,5 +1,5 @@
 import os
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 # ruff: noqa: E501
 import litellm
@@ -17,13 +17,28 @@ class CodeAgent:
 
     def __init__(self):
         self.config: SettingsConfig = get_config()
-        self.history: List[Dict[str, str]] = []
+        self.history: List[Dict[str, Any]] = []
         self.verbosity: int = 1  # Default verbosity level
 
         # Prepare base instruction parts (can be refined later)
-        self.base_instruction_parts = ["You are a helpful AI assistant specialized in coding tasks."]
+        self.base_instruction_parts = ["You are an autonomous AI software engineer assistant."]
+        self.base_instruction_parts.append("Your primary goal is to complete user requests by proactively using your available tools.")
+        self.base_instruction_parts.append("Think step-by-step to break down complex requests into smaller, manageable tasks.")
+        self.base_instruction_parts.append("Before attempting code modifications or answering questions about the codebase, **always** gather context first:")
+        self.base_instruction_parts.append("  - Use `read_file` to examine relevant files carefully.")
+        self.base_instruction_parts.append(
+            "  - Use `run_native_command` (like `pwd`, `ls -la`, `find . -name '...' | cat`, `git status | cat`) to understand the project structure and state."
+        )
+        self.base_instruction_parts.append("When planning to use `apply_edit`, ensure you have read the relevant file or section first using `read_file`.")
+        self.base_instruction_parts.append(
+            "If a tool execution fails or doesn't provide the needed information, try alternative commands or approaches before giving up."
+        )
+        self.base_instruction_parts.append(
+            "**Only ask the user for clarification if you are completely stuck after exhausting all possibilities with your tools.**"
+        )
+
         if self.config.rules:
-            self.base_instruction_parts.append("Follow these instructions:")
+            self.base_instruction_parts.append("Follow these additional user-defined instructions:")
             self.base_instruction_parts.extend([f"- {rule}" for rule in self.config.rules])
 
         self.base_instruction_parts.append("You have access to the following functions:")

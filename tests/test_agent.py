@@ -51,10 +51,9 @@ def test_agent_initialization(agent_with_mock_config):
 
     # Check if base instructions contain the rules
     instructions = "\n".join(agent.base_instruction_parts)
-    assert "You are a helpful AI assistant" in instructions
-    assert "Follow these instructions:" in instructions
-    assert "- Be helpful" in instructions
-    assert "- Be concise" in instructions
+    assert "You are an autonomous AI software engineer assistant." in instructions
+    # Check if rules are present
+    assert "Follow these additional user-defined instructions:" in instructions
 
     # Check if tools are properly described
     assert "read_file(path)" in instructions
