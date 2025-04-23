@@ -26,10 +26,12 @@ The pre-push hook runs more thorough checks before pushing to the remote:
 - Performs linting checks on changed Python files
 - Checks for large files in the commit
 - Scans for potentially sensitive information (API keys, tokens, passwords)
+- Automatically triggers the post-push hook after a successful push
 
 ### post-push
 The post-push hook validates GitHub PR status after pushing changes:
 
+- Triggered automatically by the pre-push hook after a successful push
 - Checks if PR validation is enabled in `.env` via `PULL_REQUEST_VALIDATE=true`
 - Identifies open PRs for the current branch
 - Checks the current status of CI/CD checks
