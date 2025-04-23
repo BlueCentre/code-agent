@@ -486,3 +486,7 @@ When submitting a PR:
 3. All checks must pass and coverage cannot drop below 80%
 4. At least one reviewer must approve the PR
 5. Use "Squash and merge" to maintain a clean history
+
+## PR Validation
+
+This repository includes an optional PR validation feature that provides immediate feedback on CI/CD checks after pushing changes. See [PR Validation Documentation](docs/PR_VALIDATION.md) for setup instructions.
