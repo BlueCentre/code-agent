@@ -330,7 +330,7 @@ def test_auto_approve_edits_option(runner, mock_config):
     # Check the command executed successfully
     assert result.exit_code == 0
     # Verify agent was called with the right prompt
-    mock_agent.run_turn.assert_called_once_with(prompt="test prompt")
+    mock_agent.run_turn.assert_called_once_with(prompt="test prompt", quiet=None)
 
 
 def test_auto_approve_native_commands_option(runner, mock_config):
@@ -351,7 +351,7 @@ def test_auto_approve_native_commands_option(runner, mock_config):
     # Check the command executed successfully
     assert result.exit_code == 0
     # Verify agent was called with the right prompt
-    mock_agent.run_turn.assert_called_once_with(prompt="test prompt")
+    mock_agent.run_turn.assert_called_once_with(prompt="test prompt", quiet=None)
 
 
 def test_provider_and_model_override(runner, mock_config):
@@ -371,7 +371,7 @@ def test_provider_and_model_override(runner, mock_config):
     # Check the command executed successfully
     assert result.exit_code == 0
     # Verify agent was called with the right prompt
-    mock_agent.run_turn.assert_called_once_with(prompt="test prompt")
+    mock_agent.run_turn.assert_called_once_with(prompt="test prompt", quiet=None)
 
 
 # --- No API Key Tests ---
@@ -401,4 +401,4 @@ def test_run_command_with_no_api_key(runner):
     # Check that the command handled the missing API key gracefully
     assert result.exit_code == 0
     # Check that the agent was called but no response was processed
-    mock_agent.run_turn.assert_called_once_with(prompt="test prompt")
+    mock_agent.run_turn.assert_called_once_with(prompt="test prompt", quiet=None)
