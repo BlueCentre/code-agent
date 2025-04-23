@@ -108,22 +108,47 @@ def _version_callback(value: bool):
 
 # --- Placeholder Commands ---
 @app.command()
-def run(prompt: Annotated[str, typer.Argument(help="The prompt to send to the LLM.")]):
+def run(
+    prompt: Annotated[str, typer.Argument(help="The prompt to send to the LLM.")],
+    format: Annotated[
+        Optional[str],
+        typer.Option(
+            "--format",
+            help="Output format (text, json). Default is text.",
+            case_sensitive=False,
+        ),
+    ] = None,
+):
     """
     Run a single prompt and get a response using the ADK agent.
     """
-    print(f"[bold blue]Prompt:[/bold blue] {prompt}")
+    # Check if json format is requested
+    is_json_format = format and format.lower() == "json"
+
+    if not is_json_format:
+        print(f"[bold blue]Prompt:[/bold blue] {prompt}")
 
     # Instantiate CodeAgent (gets config internally)
     code_agent = CodeAgent()
     response = code_agent.run_turn(prompt=prompt)
 
     if response:
-        # Render response as Markdown
-        print("\n[bold green]Response:[/bold green]")
-        print(Markdown(response))
+        if is_json_format:
+            # Return JSON format
+            output = {"prompt": prompt, "response": response, "timestamp": datetime.datetime.now().isoformat()}
+            print(json.dumps(output, indent=2))
+        else:
+            # Default text format with Markdown rendering
+            print("\n[bold green]Response:[/bold green]")
+            print(Markdown(response))
     else:
-        print("[bold red]Failed to get response.[/bold red]")
+        if is_json_format:
+            # Return error in JSON format
+            error_output = {"prompt": prompt, "error": "Failed to get response", "timestamp": datetime.datetime.now().isoformat()}
+            print(json.dumps(error_output, indent=2))
+        else:
+            # Default text format for error
+            print("[bold red]Failed to get response.[/bold red]")
 
 
 # --- History Saving/Loading Logic ---
