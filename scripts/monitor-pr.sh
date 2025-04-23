@@ -133,13 +133,25 @@ echo "Checking PR status..."
 check_pr_status "$PR_NUMBER"
 INITIAL_STATUS=$?
 
-# If all checks passed or failed, exit
-if [ "${INITIAL_STATUS:-0}" -eq 0 ] || [ "${INITIAL_STATUS:-0}" -eq 2 ]; then
-    if [ "${INITIAL_STATUS:-0}" -eq 2 ]; then
-        exit 1
-    else
-        exit 0
+# If all checks passed, exit with success
+if [ "${INITIAL_STATUS:-0}" -eq 0 ]; then
+    exit 0
+fi
+
+# If checks failed, offer to open in browser
+if [ "${INITIAL_STATUS:-0}" -eq 2 ]; then
+    read -p "Would you like to open the PR in your browser to view failed checks? (y/n): " -n 1 -r OPEN_BROWSER
+    echo ""
+    if [[ $OPEN_BROWSER =~ ^[Yy]$ ]]; then
+        if command_exists open; then
+            open "$PR_URL/checks"
+        elif command_exists xdg-open; then
+            xdg-open "$PR_URL/checks"
+        else
+            echo "Cannot open browser automatically. Visit: $PR_URL/checks"
+        fi
     fi
+    exit 1
 fi
 
 # Ask user if they want to wait
