@@ -253,7 +253,7 @@ def load_config_from_file(config_path: Path = DEFAULT_CONFIG_PATH) -> Dict[str, 
     if not config_path.exists():
         create_default_config_file(config_path)
         print(f"Created default configuration file at {config_path}")
-        print("Edit this file to add your API keys or set appropriate " "environment variables.")
+        print("Edit this file to add your API keys or set appropriate environment variables.")
 
     try:
         with open(config_path, "r") as f:
@@ -288,7 +288,7 @@ def create_default_config_file(config_path: Path) -> None:
             with open(config_path, "w") as f:
                 yaml.dump(default_config, f, default_flow_style=False, sort_keys=False)
     except Exception as e:
-        print(f"Warning: Could not create default config file at {config_path}. " f"Error: {e}")
+        print(f"Warning: Could not create default config file at {config_path}. Error: {e}")
 
 
 def build_effective_config(
@@ -372,7 +372,7 @@ def get_config() -> SettingsConfig:
     """Returns the loaded configuration, raising error if not initialized."""
     if _config is None:
         # This should ideally not happen if initialize_config is called in main
-        print("[bold red]Error:[/bold red] Configuration accessed before " "initialization.")
+        print("[bold red]Error:[/bold red] Configuration accessed before initialization.")
         # Initialize with defaults as a fallback, though this indicates a logic error
         initialize_config()
     return _config

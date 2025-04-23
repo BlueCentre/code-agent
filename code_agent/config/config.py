@@ -86,7 +86,7 @@ def create_default_config_file(config_path: Path) -> None:
             with open(config_path, "w") as f:
                 yaml.dump(default_config, f, default_flow_style=False, sort_keys=False)
     except Exception as e:
-        print(f"Warning: Could not create default config file at {config_path}. " f"Error: {e}")
+        print(f"Warning: Could not create default config file at {config_path}. Error: {e}")
 
 
 def build_effective_config(

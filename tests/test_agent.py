@@ -302,7 +302,7 @@ def test_agent_max_tool_calls_limit(agent_with_mock_config, mock_litellm):
         for i in range(DEFAULT_MAX_TOOL_CALLS):
             # Make tool call IDs unique if needed by agent logic
             tool_call = MagicMock()
-            tool_call.id = f"call_{i+1}"
+            tool_call.id = f"call_{i + 1}"
             tool_call.function = tool_call_template.function
             message = MagicMock()
             message.content = None
