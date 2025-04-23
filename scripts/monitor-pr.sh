@@ -2,9 +2,21 @@
 
 # PR Monitor Script
 # Run this after pushing to monitor CI/CD check status
-# Usage: ./scripts/monitor-pr.sh [branch-name]
+# Usage: ./scripts/monitor-pr.sh [branch-name] [--no-poll]
 
 set -e
+
+# Process arguments
+BRANCH_NAME=""
+AUTO_POLL=true
+
+for arg in "$@"; do
+  if [[ "$arg" == "--no-poll" ]]; then
+    AUTO_POLL=false
+  elif [[ -z "$BRANCH_NAME" && "$arg" != --* ]]; then
+    BRANCH_NAME="$arg"
+  fi
+done
 
 # Function to check if command exists
 command_exists() {
@@ -25,9 +37,7 @@ if ! gh auth status &>/dev/null; then
 fi
 
 # Get branch name from argument or current branch
-if [ -n "$1" ]; then
-    BRANCH_NAME="$1"
-else
+if [ -z "$BRANCH_NAME" ]; then
     BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
 fi
 
@@ -141,30 +151,24 @@ fi
 
 # If checks failed, offer to open in browser
 if [ "${INITIAL_STATUS:-0}" -eq 2 ]; then
-    read -p "Would you like to open the PR in your browser to view failed checks? (y/n): " -n 1 -r OPEN_BROWSER
-    echo ""
-    if [[ $OPEN_BROWSER =~ ^[Yy]$ ]]; then
-        if command_exists open; then
-            open "$PR_URL/checks"
-        elif command_exists xdg-open; then
-            xdg-open "$PR_URL/checks"
-        else
-            echo "Cannot open browser automatically. Visit: $PR_URL/checks"
-        fi
+    echo "Would you like to open the PR in your browser to view failed checks? (Add --no-browser to disable this prompt)"
+    if command_exists open; then
+        open "$PR_URL/checks"
+    elif command_exists xdg-open; then
+        xdg-open "$PR_URL/checks"
+    else
+        echo "Cannot open browser automatically. Visit: $PR_URL/checks"
     fi
     exit 1
 fi
 
-# Ask user if they want to wait
-read -p "Do you want to wait for checks to complete? (y/n): " -n 1 -r WAIT_RESPONSE
-echo ""
-
-if [[ ! $WAIT_RESPONSE =~ ^[Yy]$ ]]; then
-    echo "Not waiting. Check status manually at: $PR_URL/checks"
+# If not set to auto-poll, exit
+if [ "$AUTO_POLL" != "true" ]; then
+    echo "Use ./scripts/monitor-pr.sh without --no-poll to wait for checks to complete"
     exit 0
 fi
 
-# Set up polling
+# Set up polling - automatic mode
 echo "🔄 Waiting for checks to complete (max $MAX_WAIT_MINUTES minutes)..."
 echo "   Press Ctrl+C to exit polling"
 

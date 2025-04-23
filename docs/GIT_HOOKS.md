@@ -36,13 +36,20 @@ Since Git doesn't provide a reliable post-push hook mechanism, we use a standalo
 The PR monitoring script can be run after pushing to check CI/CD status:
 
 ```bash
-./scripts/monitor-pr.sh [branch-name]
+# Basic usage - automatically polls for check completion
+./scripts/monitor-pr.sh
+
+# Specify a branch explicitly
+./scripts/monitor-pr.sh feature/my-branch
+
+# Check status without polling (just show current status)
+./scripts/monitor-pr.sh --no-poll
 ```
 
 This script:
 - Finds the open PR for your branch
 - Checks the current status of CI/CD checks
-- Optionally polls and waits for checks to complete
+- Automatically polls and waits for checks to complete
 - Shows detailed status of all checks (passed, failed, or pending)
 - Provides direct links to GitHub for more information
 
