@@ -1,4 +1,4 @@
-# Git Hooks
+# Git Hooks Documentation
 
 This repository uses a set of custom Git hooks to ensure code quality and provide a streamlined workflow. All hooks are implemented as simple bash scripts without external dependencies to ensure they work in any environment.
 
@@ -53,19 +53,27 @@ This script:
 - Shows detailed status of all checks (passed, failed, or pending)
 - Provides direct links to GitHub for more information
 
-## Setup
+## Installation
 
-The Git hooks are automatically installed in the `.git/hooks` directory. Make sure they are executable:
-
-```bash
-chmod +x .git/hooks/pre-commit .git/hooks/post-commit .git/hooks/pre-push
-```
-
-Ensure the monitoring script is also executable:
+The Git hooks are stored in the `.githooks` directory in the repository. After cloning the repository, you need to install them using the provided script:
 
 ```bash
-chmod +x scripts/monitor-pr.sh
+# Run the installation script
+./scripts/install-hooks.sh
 ```
+
+This script will copy the hooks to your local `.git/hooks` directory and make them executable.
+
+### Alternative Installation Methods
+
+You can also configure Git to use the hooks directly from the repository:
+
+```bash
+# Tell Git to use hooks from the .githooks directory
+git config core.hooksPath .githooks
+```
+
+This approach doesn't copy the hooks but uses them directly from the source location.
 
 ## Configuration
 
@@ -104,6 +112,7 @@ If you encounter issues with any of the hooks:
 2. Check if you have the required tools installed (ruff, gh CLI)
 3. Look for error messages in the hook output
 4. If needed, temporarily disable a specific hook by renaming it (e.g., `mv .git/hooks/pre-commit .git/hooks/pre-commit.disabled`)
+5. Try reinstalling the hooks using `./scripts/install-hooks.sh`
 
 ## Performance
 
