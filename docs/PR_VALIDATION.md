@@ -1,6 +1,6 @@
 # PR Validation Hook
 
-This repository includes an optional Git hook that validates GitHub pull request checks after creating or updating a PR. This provides immediate feedback on whether your CI/CD checks are passing, without needing to manually check GitHub.
+This repository includes an optional Git hook that validates GitHub pull request checks after pushing changes. This provides immediate feedback on whether your CI/CD checks are passing, without needing to manually check GitHub.
 
 ## Requirements
 
@@ -9,7 +9,7 @@ This repository includes an optional Git hook that validates GitHub pull request
 
 ## How It Works
 
-After committing changes to a branch with an open PR, the hook:
+After pushing changes to a branch with an open PR, the hook:
 
 1. Checks if the feature is enabled via the `.env` file
 2. Verifies GitHub CLI is installed and authenticated
@@ -18,6 +18,14 @@ After committing changes to a branch with an open PR, the hook:
 5. Notifies you when all checks pass or when any fail
 
 The validation runs in the background to avoid blocking your workflow.
+
+## Git Hook Flow
+
+This repository uses a series of Git hooks to ensure code quality:
+
+1. **Pre-commit hook**: Runs linting, formatting checks, and basic validation
+2. **Pre-push hook**: Runs tests and ensures code quality before pushing
+3. **Post-push hook**: Validates PR checks after pushing (when enabled)
 
 ## Setup
 
