@@ -64,7 +64,7 @@ def run_prompt(
             messages.insert(0, {"role": "system", "content": system})
 
         with thinking_indicator(f"Running {model} on your prompt..."):
-            response = provider.chat_completion(model, messages, temperature)
+            response = provider.chat_completion(model, messages, temperature=temperature)
 
         console.print("[bold green]Response:[/bold green]")
         content = response.get("message", {}).get("content", "No response content")
@@ -90,7 +90,7 @@ def chat_with_model(
             messages.insert(0, {"role": "system", "content": system})
 
         with thinking_indicator(f"Chatting with {model}..."):
-            response = provider.chat_completion(model, messages, temperature)
+            response = provider.chat_completion(model, messages, temperature=temperature)
 
         console.print("[bold green]Response:[/bold green]")
         console.print(response.get("message", {}).get("content", "No response content"))

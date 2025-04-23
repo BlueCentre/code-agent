@@ -63,6 +63,33 @@ class TestOllamaProvider:
         assert models[0]["details"]["parameter_size"] == "8B"
         mock_get.assert_called_once_with("http://localhost:11434/api/tags")
 
+    @patch("requests.get")
+    def test_list_models_custom_url(self, mock_get):
+        # Setup the mock response
+        mock_response = MagicMock()
+        mock_response.json.return_value = SAMPLE_MODELS
+        mock_get.return_value = mock_response
+
+        # Create provider with custom URL and call the method
+        provider = OllamaProvider("http://custom-host:11434")
+        models = provider.list_models()
+
+        # Check results
+        assert len(models) == 2
+        mock_get.assert_called_once_with("http://custom-host:11434/api/tags")
+
+    @patch("requests.get")
+    def test_list_models_error_handling(self, mock_get):
+        # Setup the mock to raise an exception
+        mock_get.side_effect = Exception("Connection refused")
+
+        # Create provider and call the method, should raise the exception
+        provider = OllamaProvider()
+        with pytest.raises(Exception) as excinfo:
+            provider.list_models()
+
+        assert "Connection refused" in str(excinfo.value)
+
     @patch("requests.post")
     def test_chat_completion(self, mock_post):
         # Setup the mock response
@@ -86,6 +113,56 @@ class TestOllamaProvider:
         assert kwargs["json"]["stream"] is False
 
     @patch("requests.post")
+    def test_chat_completion_with_tools(self, mock_post):
+        # Setup the mock response
+        mock_response = MagicMock()
+        mock_response.json.return_value = SAMPLE_CHAT_RESPONSE
+        mock_post.return_value = mock_response
+
+        # Create provider and call the method with tools
+        provider = OllamaProvider()
+        messages = [{"role": "user", "content": "Hello"}]
+        tools = [{"type": "function", "function": {"name": "test_function", "description": "A test function"}}]
+
+        provider.chat_completion("llama3:latest", messages, tools=tools)
+
+        # Check results
+        # Check that the URL and payload are correct including tools
+        args, kwargs = mock_post.call_args
+        assert args[0] == "http://localhost:11434/api/chat"
+        assert kwargs["json"]["tools"] == tools
+
+    @patch("requests.post")
+    def test_chat_completion_custom_url(self, mock_post):
+        # Setup the mock response
+        mock_response = MagicMock()
+        mock_response.json.return_value = SAMPLE_CHAT_RESPONSE
+        mock_post.return_value = mock_response
+
+        # Create provider with custom URL and call the method
+        provider = OllamaProvider("http://custom-host:11434")
+        messages = [{"role": "user", "content": "Hello"}]
+        provider.chat_completion("llama3:latest", messages)
+
+        # Check that the URL is correct
+        args, kwargs = mock_post.call_args
+        assert args[0] == "http://custom-host:11434/api/chat"
+
+    @patch("requests.post")
+    def test_chat_completion_error_handling(self, mock_post):
+        # Setup the mock to raise an exception
+        mock_post.side_effect = Exception("Connection refused")
+
+        # Create provider and call the method, should raise the exception
+        provider = OllamaProvider()
+        messages = [{"role": "user", "content": "Hello"}]
+
+        with pytest.raises(Exception) as excinfo:
+            provider.chat_completion("llama3:latest", messages)
+
+        assert "Connection refused" in str(excinfo.value)
+
+    @patch("requests.post")
     def test_get_completion(self, mock_post):
         # Setup the mock response
         mock_response = MagicMock()
@@ -107,6 +184,51 @@ class TestOllamaProvider:
         assert kwargs["json"]["system"] == "You are a helpful assistant"
         assert kwargs["json"]["temperature"] == 0.5
         assert kwargs["json"]["stream"] is False
+
+    @patch("requests.post")
+    def test_get_completion_with_tools(self, mock_post):
+        # Setup the mock response
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"response": "Test completion response"}
+        mock_post.return_value = mock_response
+
+        # Create provider and call the method with tools
+        provider = OllamaProvider()
+        tools = [{"type": "function", "function": {"name": "test_function", "description": "A test function"}}]
+
+        provider.get_completion(model="llama3:latest", prompt="Hello", system="You are a helpful assistant", tools=tools)
+
+        # Check that tools were included in the payload
+        args, kwargs = mock_post.call_args
+        assert kwargs["json"]["tools"] == tools
+
+    @patch("requests.post")
+    def test_get_completion_custom_url(self, mock_post):
+        # Setup the mock response
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"response": "Test completion response"}
+        mock_post.return_value = mock_response
+
+        # Create provider with custom URL and call the method
+        provider = OllamaProvider("http://custom-host:11434")
+        provider.get_completion(model="llama3:latest", prompt="Hello")
+
+        # Check that the URL is correct
+        args, kwargs = mock_post.call_args
+        assert args[0] == "http://custom-host:11434/api/generate"
+
+    @patch("requests.post")
+    def test_get_completion_error_handling(self, mock_post):
+        # Setup the mock to raise an exception
+        mock_post.side_effect = Exception("Connection refused")
+
+        # Create provider and call the method, should raise the exception
+        provider = OllamaProvider()
+
+        with pytest.raises(Exception) as excinfo:
+            provider.get_completion(model="llama3:latest", prompt="Hello")
+
+        assert "Connection refused" in str(excinfo.value)
 
 
 class TestOllamaCommands:
@@ -145,6 +267,33 @@ class TestOllamaCommands:
         assert len(output_json) == 2
         assert output_json[0]["name"] == "llama3:latest"
         assert output_json[1]["name"] == "codellama:13b"
+
+    @patch("cli_agent.providers.ollama.OllamaProvider.list_models")
+    def test_list_command_custom_url(self, mock_list_models, runner):
+        # Setup the mock response
+        mock_list_models.return_value = SAMPLE_MODELS["models"]
+
+        # Run the command with custom URL
+        result = runner.invoke(app, ["ollama", "list", "--url", "http://custom-host:11434"])
+
+        # Check that the command ran successfully
+        assert result.exit_code == 0
+
+        # Check that OllamaProvider was created with the custom URL
+        mock_list_models.assert_called_once()
+
+    @patch("cli_agent.providers.ollama.OllamaProvider.list_models")
+    def test_list_command_error_handling(self, mock_list_models, runner):
+        # Setup the mock to raise an exception
+        mock_list_models.side_effect = Exception("Connection refused")
+
+        # Run the command
+        result = runner.invoke(app, ["ollama", "list"])
+
+        # Check that the command ran and handled the error
+        assert result.exit_code == 0  # Typer commands catch exceptions
+        assert "Error" in result.stdout
+        assert "Connection refused" in result.stdout
 
     @patch("cli_agent.commands.ollama.thinking_indicator")
     @patch("cli_agent.providers.ollama.OllamaProvider.chat_completion")
@@ -202,6 +351,55 @@ class TestOllamaCommands:
 
     @patch("cli_agent.commands.ollama.thinking_indicator")
     @patch("cli_agent.providers.ollama.OllamaProvider.chat_completion")
+    def test_run_command_custom_url(self, mock_chat_completion, mock_thinking, runner):
+        # Setup the mock responses
+        mock_chat_completion.return_value = SAMPLE_CHAT_RESPONSE
+        mock_thinking.return_value.__enter__.return_value = MagicMock()
+        mock_thinking.return_value.__exit__.return_value = None
+
+        # Run the command with custom URL
+        result = runner.invoke(app, ["ollama", "run", "llama3:latest", "Write a hello world program in Python", "--url", "http://custom-host:11434"])
+
+        # Check that the command ran successfully
+        assert result.exit_code == 0
+
+    @patch("cli_agent.commands.ollama.thinking_indicator")
+    @patch("cli_agent.providers.ollama.OllamaProvider.chat_completion")
+    def test_run_command_custom_temperature(self, mock_chat_completion, mock_thinking, runner):
+        # Setup the mock responses
+        mock_chat_completion.return_value = SAMPLE_CHAT_RESPONSE
+        mock_thinking.return_value.__enter__.return_value = MagicMock()
+        mock_thinking.return_value.__exit__.return_value = None
+
+        # Run the command with custom temperature
+        result = runner.invoke(app, ["ollama", "run", "llama3:latest", "Write a hello world program in Python", "--temperature", "0.1"])
+
+        # Check that the command ran successfully
+        assert result.exit_code == 0
+
+        # Verify that temperature was passed correctly
+        mock_chat_completion.assert_called_once()
+        args, kwargs = mock_chat_completion.call_args
+        assert kwargs["temperature"] == 0.1
+
+    @patch("cli_agent.commands.ollama.thinking_indicator")
+    @patch("cli_agent.providers.ollama.OllamaProvider.chat_completion")
+    def test_run_command_error_handling(self, mock_chat_completion, mock_thinking, runner):
+        # Setup the mock to raise an exception
+        mock_chat_completion.side_effect = Exception("Connection refused")
+        mock_thinking.return_value.__enter__.return_value = MagicMock()
+        mock_thinking.return_value.__exit__.return_value = None
+
+        # Run the command
+        result = runner.invoke(app, ["ollama", "run", "llama3:latest", "Test prompt"])
+
+        # Check that the command ran and handled the error
+        assert result.exit_code == 0  # Typer commands catch exceptions
+        assert "Error" in result.stdout
+        assert "Connection refused" in result.stdout
+
+    @patch("cli_agent.commands.ollama.thinking_indicator")
+    @patch("cli_agent.providers.ollama.OllamaProvider.chat_completion")
     def test_chat_command(self, mock_chat_completion, mock_thinking, runner):
         # Setup the mock responses
         mock_chat_completion.return_value = SAMPLE_CHAT_RESPONSE
@@ -251,3 +449,52 @@ class TestOllamaCommands:
         assert args[1][0]["content"] == "You are a helpful assistant"
         assert args[1][1]["role"] == "user"
         assert args[1][1]["content"] == "Hello, how are you?"
+
+    @patch("cli_agent.commands.ollama.thinking_indicator")
+    @patch("cli_agent.providers.ollama.OllamaProvider.chat_completion")
+    def test_chat_command_custom_url(self, mock_chat_completion, mock_thinking, runner):
+        # Setup the mock responses
+        mock_chat_completion.return_value = SAMPLE_CHAT_RESPONSE
+        mock_thinking.return_value.__enter__.return_value = MagicMock()
+        mock_thinking.return_value.__exit__.return_value = None
+
+        # Run the command with custom URL
+        result = runner.invoke(app, ["ollama", "chat", "llama3:latest", "Hello, how are you?", "--url", "http://custom-host:11434"])
+
+        # Check that the command ran successfully
+        assert result.exit_code == 0
+
+    @patch("cli_agent.commands.ollama.thinking_indicator")
+    @patch("cli_agent.providers.ollama.OllamaProvider.chat_completion")
+    def test_chat_command_custom_temperature(self, mock_chat_completion, mock_thinking, runner):
+        # Setup the mock responses
+        mock_chat_completion.return_value = SAMPLE_CHAT_RESPONSE
+        mock_thinking.return_value.__enter__.return_value = MagicMock()
+        mock_thinking.return_value.__exit__.return_value = None
+
+        # Run the command with custom temperature
+        result = runner.invoke(app, ["ollama", "chat", "llama3:latest", "Hello, how are you?", "--temperature", "0.1"])
+
+        # Check that the command ran successfully
+        assert result.exit_code == 0
+
+        # Verify that temperature was passed correctly
+        mock_chat_completion.assert_called_once()
+        args, kwargs = mock_chat_completion.call_args
+        assert kwargs["temperature"] == 0.1
+
+    @patch("cli_agent.commands.ollama.thinking_indicator")
+    @patch("cli_agent.providers.ollama.OllamaProvider.chat_completion")
+    def test_chat_command_error_handling(self, mock_chat_completion, mock_thinking, runner):
+        # Setup the mock to raise an exception
+        mock_chat_completion.side_effect = Exception("Connection refused")
+        mock_thinking.return_value.__enter__.return_value = MagicMock()
+        mock_thinking.return_value.__exit__.return_value = None
+
+        # Run the command
+        result = runner.invoke(app, ["ollama", "chat", "llama3:latest", "Hello, how are you?"])
+
+        # Check that the command ran and handled the error
+        assert result.exit_code == 0  # Typer commands catch exceptions
+        assert "Error" in result.stdout
+        assert "Connection refused" in result.stdout

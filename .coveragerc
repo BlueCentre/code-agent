@@ -1,5 +1,5 @@
 [run]
-source = code_agent
+source = code_agent, cli_agent
 omit =
     tests/*
     */__pycache__/*
