@@ -73,3 +73,72 @@ If the SonarQube scan fails:
 - Verify that your `SONAR_TOKEN` is correctly set
 - Check that the `sonar-project.properties` file exists and is properly configured
 - Ensure the coverage XML report was generated successfully
+
+## Test Coverage Verification
+
+This document provides guidance on how to run tests with proper coverage reporting.
+
+### Common Issues
+
+#### Comma in Coverage Module Parameter
+
+A common issue when running coverage tests is putting a comma after module names, like:
+
+```bash
+python -m pytest tests/ --cov=code_agent, --cov-report=term
+```
+
+This will cause the coverage tool to generate a warning like:
+```
+CoverageWarning: Module code_agent was never imported. (module-not-imported)
+CoverageWarning: No data was collected. (no-data-collected)
+WARNING: Failed to generate report: No data to report.
+```
+
+And will result in 0% code coverage.
+
+### Correct Way to Run Coverage Tests
+
+To run tests with proper coverage, use the following formats:
+
+For a single module:
+```bash
+python -m pytest tests/ --cov=code_agent --cov-report=term
+```
+
+For multiple modules:
+```bash
+python -m pytest tests/ --cov=code_agent --cov=cli_agent --cov-report=term
+```
+
+### Using the Coverage Script
+
+For convenience, a script is provided to run tests with coverage:
+
+```bash
+./scripts/run_tests_with_coverage.sh
+```
+
+This script correctly sets up coverage for both `code_agent` and `cli_agent` modules and generates HTML, XML, and terminal reports.
+
+You can pass additional pytest arguments to the script:
+
+```bash
+./scripts/run_tests_with_coverage.sh -v  # For verbose output
+./scripts/run_tests_with_coverage.sh -k test_agent  # To run only specific tests
+```
+
+### Coverage Requirements
+
+The project requires at least 80% test coverage. The coverage check will fail if coverage falls below this threshold.
+
+Current coverage for `code_agent/agent/agent.py` is 86.25% and the overall project coverage is 91.05% (as of the last verification).
+
+### Troubleshooting
+
+If you're seeing unexpectedly low coverage:
+
+1. Make sure your command doesn't have commas between module names
+2. Verify that you're using the correct module names (`code_agent` and `cli_agent`)
+3. Try using the provided script: `./scripts/run_tests_with_coverage.sh`
+4. Check `.coveragerc` for any exclusion patterns that might be affecting your modules
