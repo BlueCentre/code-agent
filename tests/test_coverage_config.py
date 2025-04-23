@@ -81,6 +81,11 @@ def test_all_modules_have_tests():
         if not pkg_dir.is_dir() or pkg_dir.name.startswith(".") or pkg_dir.name in ["tests", "scripts", "venv", ".venv"]:
             continue
 
+        # Skip directories without Python files
+        if not any(f.endswith(".py") for f in os.listdir(pkg_dir)):
+            continue
+
+        # Check if it's a Python package
         if not (pkg_dir / "__init__.py").exists():
             continue
 
@@ -112,14 +117,34 @@ def test_all_modules_have_tests():
     # We use a warning rather than a hard failure, as there might be legitimate cases
     # of modules without direct test files (helpers, utilities, etc.)
     if modules_without_tests:
-        print("WARNING: The following modules don't have corresponding test files:")
+        print(
+            "WARNING: The following modules don't have corresponding test files."
+            " Consider creating a test file or marking them as intentionally uncovered if appropriate:"
+        )
         for module in modules_without_tests:
             print(f"  - {module}")
 
-        # Check if any excluded modules should actually be tested
-        critical_patterns = ["api", "provider", "command", "tool", "model", "client", "service"]
-        critical_modules = [m for m in modules_without_tests if any(pattern in m for pattern in critical_patterns)]
+        # Define patterns for modules that should be considered critical for testing
+        # Use more precise matching with path components to reduce false positives
+        critical_patterns = [
+            os.path.join("api", ""),
+            os.path.join("providers", ""),
+            os.path.join("commands", ""),
+            os.path.join("tools", ""),
+            os.path.join("models", ""),
+            os.path.join("client", ""),
+            os.path.join("service", ""),
+        ]
+
+        # Check if the module path contains any of the critical patterns
+        critical_modules = []
+        for module_path in modules_without_tests:
+            normalized_path = os.path.normpath(module_path)
+            if any(pattern in normalized_path for pattern in critical_patterns):
+                critical_modules.append(module_path)
 
         if critical_modules:
             # For critical modules, we do want to fail the test
-            assert not critical_modules, f"Critical modules missing tests: {critical_modules}"
+            total_count = len(critical_modules)
+            fail_msg = f"Critical modules missing tests: {critical_modules} (Total: {total_count})"
+            assert not critical_modules, fail_msg
