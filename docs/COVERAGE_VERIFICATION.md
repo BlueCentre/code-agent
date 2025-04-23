@@ -2,6 +2,18 @@
 
 This document outlines how code coverage is measured, verified, and reported in this project.
 
+## Setup
+
+### Environment Variables (for SonarCloud)
+
+If you intend to upload results to SonarCloud, create a `.env` file in the project root with your SonarQube token:
+
+```plaintext
+SONAR_TOKEN=your_sonar_token_here
+```
+
+This token is required by the `sonar-scanner` during the pipeline execution.
+
 ## Coverage Configuration
 
 Coverage is configured using the `.coveragerc` file in the project root, which specifies:
@@ -77,3 +89,19 @@ Coverage verification is integrated into CI/CD workflows to ensure:
 - New code meets minimum coverage requirements
 - Overall project coverage does not decrease
 - Coverage results are tracked over time
+
+## Troubleshooting
+
+### Missing Coverage Data
+
+If coverage data seems incomplete:
+- Ensure all test files are properly named with the `test_` prefix (e.g., `test_my_module.py`).
+- Check that tests are importing the correct modules they intend to test.
+- Verify that the `--cov=code_agent` parameter (or similar) in the test execution command accurately targets your source code directories.
+
+### SonarQube Scan Failures
+
+If the SonarQube scan (part of the pipeline) fails:
+- **Verify Token:** Ensure your `SONAR_TOKEN` is correctly set in the `.env` file (if running locally) or as a CI/CD secret.
+- **Check Properties File:** Confirm that the `sonar-project.properties` file exists in the root directory and is properly configured with the correct project key and organization.
+- **Check XML Report:** Ensure the `coverage.xml` report was generated successfully by the `pytest --cov` command before the scanner runs. Check the pipeline logs for errors during test execution or report generation.

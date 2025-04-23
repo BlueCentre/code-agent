@@ -22,10 +22,12 @@ cli-agent/
 ├── tests/            # Unit and integration tests
 ├── docs/             # Documentation files
 │   ├── architecture.md
-│   ├── COVERAGE_VERIFICATION.md
-│   ├── implementation.md
-│   ├── GIT_WORKFLOW.md
-│   └── ...
+│   ├── CONTRIBUTING.md
+│   ├── development_testing.md
+│   ├── feature_*.md          # Feature-specific documentation
+│   ├── getting_started_*.md  # Getting started guides
+│   ├── planning_*.md         # Planning documents
+│   └── ...                   # Other documentation
 ├── scripts/          # Utility scripts
 │   ├── run_coverage_pipeline.sh
 │   ├── run_coverage_pipeline_venv.sh
