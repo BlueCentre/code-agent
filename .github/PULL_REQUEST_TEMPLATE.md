@@ -46,6 +46,9 @@ _Please describe the tests that you ran to verify your changes. Provide instruct
 - [ ] I have added tests that prove my fix is effective or that my feature works
 - [ ] New and existing unit tests pass locally with my changes
 - [ ] Any dependent changes have been merged and published in downstream modules
+- [ ] I have run `make format` to autoformat code
+- [ ] I have verified code passes linting with `make lint`
+- [ ] I have confirmed test coverage is maintained above 80% with `make test-coverage`
 
 ## Screenshots (if applicable)
 

@@ -98,4 +98,3 @@ jobs:
         # Ensure ruff is installed (should be via .[dev]) and run it into the system environment
         uv pip install --system ruff
         python -m ruff check . --output-format=github
-      continue-on-error: true  # Don't fail the workflow, just report issues
