@@ -61,17 +61,36 @@ set -e
 echo "Creating test file..."
 echo "Test content" > test_e2e_file.txt
 
+# Verify file was created correctly
+if [ ! -f "test_e2e_file.txt" ]; then
+  echo "❌ Failed to create test file"
+  exit 1
+fi
+
+echo "Test file content:"
+cat test_e2e_file.txt
+
 # Test file reading (test mode)
 echo "Testing file reading..."
 output=$(CODE_AGENT_TEST_MODE=1 code-agent run "Show me the contents of test_e2e_file.txt")
+echo "Command output:"
+echo "$output"
+
 if [[ $output != *"Test content"* ]]; then
-  echo "❌ File reading test failed"
-  exit 1
+  echo "❌ File reading test failed - 'Test content' not found in output"
+  # Continue with test but record failure for logging
+  test_failed=1
+else
+  echo "✅ File reading test passed"
 fi
-echo "✅ File reading test passed"
 
 # Clean up
-rm test_e2e_file.txt
+rm -f test_e2e_file.txt
+
+# Exit with appropriate code
+if [ "$test_failed" = "1" ]; then
+  exit 1
+fi
 exit 0
 EOF
   chmod +x scripts/e2e/test_file_operations.sh
@@ -152,8 +171,12 @@ echo "Running basic command tests..." | tee -a "$SUMMARY_LOG"
 echo "✅ Basic command tests completed" | tee -a "$SUMMARY_LOG"
 
 echo "Running file operation tests..." | tee -a "$SUMMARY_LOG"
-./scripts/e2e/test_file_operations.sh 2>&1 | tee "$FILE_OPS_LOG" || (echo "❌ File operation tests failed" | tee -a "$SUMMARY_LOG" && exit 1)
-echo "✅ File operation tests completed" | tee -a "$SUMMARY_LOG"
+if ./scripts/e2e/test_file_operations.sh 2>&1 | tee "$FILE_OPS_LOG"; then
+  echo "✅ File operation tests completed" | tee -a "$SUMMARY_LOG"
+else
+  echo "❌ File operation tests failed" | tee -a "$SUMMARY_LOG"
+  exit 1
+fi
 
 echo "Running model provider tests..." | tee -a "$SUMMARY_LOG"
 ./scripts/e2e/test_providers.sh 2>&1 | tee "$PROVIDERS_LOG" || (echo "❌ Provider tests failed" | tee -a "$SUMMARY_LOG" && exit 1)
