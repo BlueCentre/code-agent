@@ -18,6 +18,7 @@ The post-commit hook provides helpful information after each commit:
 - Shows a summary of the commit (author, message, files changed)
 - Provides hints about PR status
 - Reminds you to push your changes
+- Suggests using the PR monitoring script after pushing
 
 ### pre-push
 The pre-push hook runs more thorough checks before pushing to the remote:
@@ -26,58 +27,58 @@ The pre-push hook runs more thorough checks before pushing to the remote:
 - Performs linting checks on changed Python files
 - Checks for large files in the commit
 - Scans for potentially sensitive information (API keys, tokens, passwords)
-- Automatically triggers the post-push hook after a successful push
 
-### post-push
-The post-push hook validates GitHub PR status after pushing changes:
+## PR Monitoring
 
-- Triggered automatically by the pre-push hook after a successful push
-- Checks if PR validation is enabled in `.env` via `PULL_REQUEST_VALIDATE=true`
-- Identifies open PRs for the current branch
+Since Git doesn't provide a reliable post-push hook mechanism, we use a standalone script to monitor pull request status:
+
+### monitor-pr.sh
+The PR monitoring script can be run after pushing to check CI/CD status:
+
+```bash
+./scripts/monitor-pr.sh [branch-name]
+```
+
+This script:
+- Finds the open PR for your branch
 - Checks the current status of CI/CD checks
-- Can optionally poll and wait for checks to complete (configurable timeout)
-- Shows you the status of all checks (passed, failed, or pending)
+- Optionally polls and waits for checks to complete
+- Shows detailed status of all checks (passed, failed, or pending)
+- Provides direct links to GitHub for more information
 
 ## Setup
 
-These hooks are automatically installed in the `.git/hooks` directory. Make sure they are executable:
+The Git hooks are automatically installed in the `.git/hooks` directory. Make sure they are executable:
 
 ```bash
-chmod +x .git/hooks/pre-commit .git/hooks/post-commit .git/hooks/pre-push .git/hooks/post-push
+chmod +x .git/hooks/pre-commit .git/hooks/post-commit .git/hooks/pre-push
 ```
 
-## Enabling PR Validation
+Ensure the monitoring script is also executable:
 
-To enable automatic PR validation after pushing changes:
+```bash
+chmod +x scripts/monitor-pr.sh
+```
 
-1. Create a `.env` file in the repository root (copy from `.env.example`)
-2. Add the following line to enable validation:
-   ```
-   PULL_REQUEST_VALIDATE=true
-   ```
-3. Install GitHub CLI if not already installed:
+## Configuration
+
+You can customize the PR monitoring script behavior by adding the following to your `.env` file:
+
+```
+PR_MONITOR_WAIT_MINUTES=10    # Maximum wait time in minutes (default: 10)
+PR_MONITOR_POLL_SECONDS=15    # Polling interval in seconds (default: 15)
+```
+
+## Requirements
+
+For PR monitoring functionality:
+
+1. Install GitHub CLI if not already installed:
    - [GitHub CLI Installation](https://cli.github.com/manual/installation)
-4. Authenticate GitHub CLI:
+2. Authenticate GitHub CLI:
    ```
    gh auth login
    ```
-
-### Waiting for CI/CD Checks
-
-To enable polling for CI/CD check completion:
-
-1. Add the following to your `.env` file:
-   ```
-   PULL_REQUEST_WAIT=true
-   ```
-   
-2. Optionally configure wait time and polling interval:
-   ```
-   PULL_REQUEST_WAIT_MINUTES=10    # Maximum wait time in minutes (default: 10)
-   PULL_REQUEST_POLL_SECONDS=15    # Polling interval in seconds (default: 15)
-   ```
-
-See the `.env.example` file in the root directory for a complete example.
 
 ## Disabling Hooks
 
