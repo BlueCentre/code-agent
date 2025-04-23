@@ -40,6 +40,21 @@ jobs:
         poetry config virtualenvs.create false
         poetry install --no-interaction
         python -m pip install --upgrade pip pytest pytest-cov
+        python -m pip install -e .
+
+    - name: Diagnostics
+      run: |
+        echo "Current directory: $(pwd)"
+        echo "Directory contents:"
+        ls -la
+        echo "Python packages:"
+        find . -maxdepth 2 -name "__init__.py" | sort
+        echo "Python version and path:"
+        python --version
+        echo $PYTHONPATH
+        python -c "import sys; print(sys.path)"
+        echo "Attempting to import packages:"
+        python -c "import sys; print('Python path:', sys.path); import code_agent; print('code_agent version:', code_agent.__version__ if hasattr(code_agent, '__version__') else 'unknown'); import cli_agent; print('cli_agent imported successfully')" || echo "Import failed"
 
     - name: Discover Python packages
       id: discover_packages
@@ -59,6 +74,9 @@ jobs:
         import os
         import sys
 
+        # Add the current directory to Python path
+        sys.path.insert(0, os.getcwd())
+
         def run_specific_module_coverage(module_name):
             cmd = ['python', '-m', 'pytest', 'tests/',
                   f'--cov={module_name}',
@@ -70,13 +88,28 @@ jobs:
             packages = os.environ.get('PACKAGES', '').split()
             cmd = ['python', '-m', 'pytest', 'tests/']
 
+            # Explicitly add source directories
+            source_dirs = []
             for pkg in packages:
                 cmd.append(f'--cov={pkg}')
+                # Add the package directory to ensure it can be imported
+                pkg_dir = os.path.join(os.getcwd(), pkg)
+                if os.path.exists(pkg_dir):
+                    source_dirs.append(pkg_dir)
 
-            cmd.extend(['--cov-report=xml', '--cov-report=term', '--cov-fail-under=80'])
+            # Add the PYTHONPATH for cmd
+            if source_dirs:
+                env = os.environ.copy()
+                env['PYTHONPATH'] = os.pathsep.join([env.get('PYTHONPATH', '')] + source_dirs)
+                cmd.extend(['--cov-report=xml', '--cov-report=term', '--cov-fail-under=80'])
 
-            print(f"Running command: {' '.join(cmd)}")
-            subprocess.run(cmd, check=True)
+                print(f"Running command: {' '.join(cmd)}")
+                print(f"With PYTHONPATH: {env.get('PYTHONPATH')}")
+                subprocess.run(cmd, env=env, check=True)
+            else:
+                cmd.extend(['--cov-report=xml', '--cov-report=term', '--cov-fail-under=80'])
+                print(f"Running command: {' '.join(cmd)}")
+                subprocess.run(cmd, check=True)
 
         def run_changed_modules_coverage(modules_file):
             with open(modules_file, 'r') as f:
@@ -116,17 +149,20 @@ jobs:
       if: github.event.inputs.modules != 'code_agent'
       run: |
         echo "Running tests for ${{ github.event.inputs.modules }} module only"
+        export PYTHONPATH=$PYTHONPATH:$(pwd)
         python run_coverage.py specific_module ${{ github.event.inputs.modules }}
 
     - name: Run tests with coverage for all packages
       if: github.event.inputs.modules == 'code_agent' && github.event_name != 'pull_request'
       run: |
         echo "Running tests for all modules"
+        export PYTHONPATH=$PYTHONPATH:$(pwd)
         python run_coverage.py all
 
     - name: Run tests with coverage for changed files
       if: github.event_name == 'pull_request'
       run: |
+        export PYTHONPATH=$PYTHONPATH:$(pwd)
         # Get list of changed Python files
         CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep "\.py$" | grep -v "test_" | tr '\n' ' ')
         if [ -n "$CHANGED_FILES" ]; then
