@@ -52,17 +52,77 @@ jobs:
         COVERAGE_INCLUDE=$(echo "$PACKAGES" | sed 's/ /,/g')
         echo "COVERAGE_INCLUDE=$COVERAGE_INCLUDE" >> $GITHUB_ENV
 
+    - name: Create coverage runner script
+      run: |
+        cat > run_coverage.py << 'EOF'
+        import subprocess
+        import os
+        import sys
+
+        def run_specific_module_coverage(module_name):
+            cmd = ['python', '-m', 'pytest', 'tests/',
+                  f'--cov={module_name}',
+                  '--cov-report=xml', '--cov-report=term', '--cov-fail-under=80']
+            print(f"Running command: {' '.join(cmd)}")
+            subprocess.run(cmd, check=True)
+
+        def run_all_packages_coverage():
+            packages = os.environ.get('PACKAGES', '').split()
+            cmd = ['python', '-m', 'pytest', 'tests/']
+
+            for pkg in packages:
+                cmd.append(f'--cov={pkg}')
+
+            cmd.extend(['--cov-report=xml', '--cov-report=term', '--cov-fail-under=80'])
+
+            print(f"Running command: {' '.join(cmd)}")
+            subprocess.run(cmd, check=True)
+
+        def run_changed_modules_coverage(modules_file):
+            with open(modules_file, 'r') as f:
+                changed_modules = [line.strip() for line in f if line.strip()]
+
+            if not changed_modules:
+                print("No modules to test")
+                return 0
+
+            cmd = ['python', '-m', 'pytest', 'tests/', '--cov-context=test']
+
+            for module in changed_modules:
+                cmd.append(f'--cov={module}')
+
+            cmd.extend(['--cov-report=xml:changed_coverage.xml', '--cov-report=term', '--cov-fail-under=80'])
+
+            print(f"Running command: {' '.join(cmd)}")
+            result = subprocess.run(cmd)
+            return result.returncode
+
+        if __name__ == "__main__":
+            if len(sys.argv) < 2:
+                print("Usage: python run_coverage.py [specific_module|all|changed] [module_name|modules_file]")
+                sys.exit(1)
+
+            mode = sys.argv[1]
+            if mode == "specific_module":
+                run_specific_module_coverage(sys.argv[2])
+            elif mode == "all":
+                run_all_packages_coverage()
+            elif mode == "changed":
+                exit_code = run_changed_modules_coverage(sys.argv[2])
+                sys.exit(exit_code)
+        EOF
+
     - name: Run tests for specific module
       if: github.event.inputs.modules != 'code_agent'
       run: |
         echo "Running tests for ${{ github.event.inputs.modules }} module only"
-        python -m pytest tests/ --cov=${{ github.event.inputs.modules }} --cov-report=xml --cov-report=term --cov-fail-under=80
+        python run_coverage.py specific_module ${{ github.event.inputs.modules }}
 
     - name: Run tests with coverage for all packages
       if: github.event.inputs.modules == 'code_agent' && github.event_name != 'pull_request'
       run: |
         echo "Running tests for all modules"
-        python -m pytest tests/ --cov=${{ env.COVERAGE_INCLUDE }} --cov-report=xml --cov-report=term --cov-fail-under=80
+        python run_coverage.py all
 
     - name: Run tests with coverage for changed files
       if: github.event_name == 'pull_request'
@@ -73,18 +133,21 @@ jobs:
           echo "Changed Python files: $CHANGED_FILES"
 
           # Extract module paths from changed files (convert file paths to module paths)
-          CHANGED_MODULES=$(echo "$CHANGED_FILES" | sed -E 's|/|.|g' | sed -E 's|\.py$||g' | sed -E 's|^\.|.|g' | tr ' ' ',')
-          echo "Changed modules: $CHANGED_MODULES"
+          CHANGED_MODULES=$(echo "$CHANGED_FILES" | sed -E 's|/|.|g' | sed -E 's|\.py$||g' | sed -E 's|^\.|.|g' | tr ' ' '\n')
+          echo "$CHANGED_MODULES" > changed_modules.txt
 
-          # Run coverage specifically on changed modules
-          python -m pytest tests/ --cov-context=test --cov=$CHANGED_MODULES --cov-report=xml:changed_coverage.xml --cov-report=term --cov-fail-under=80
-          echo "NEW_CODE_COV_GENERATED=true" >> $GITHUB_ENV
+          # Run tests with coverage for changed modules
+          python run_coverage.py changed changed_modules.txt
+
+          if [ $? -eq 0 ]; then
+            echo "NEW_CODE_COV_GENERATED=true" >> $GITHUB_ENV
+          fi
         else
           echo "No Python files changed, skipping targeted coverage"
         fi
 
-        # Continue with regular coverage for all modules
-        python -m pytest tests/ --cov=${{ env.COVERAGE_INCLUDE }} --cov-report=xml --cov-report=term --cov-fail-under=80
+        # Run coverage for all packages
+        python run_coverage.py all
 
     - name: Generate changed code coverage report
       if: github.event_name == 'pull_request' && env.NEW_CODE_COV_GENERATED == 'true'
