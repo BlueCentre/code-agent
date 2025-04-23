@@ -168,3 +168,5 @@ Thumbs.db
 
 # SonarCloud
 .scannerwork/
+
+# This is just a test line to trigger the pre-commit hook
