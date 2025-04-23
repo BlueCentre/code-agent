@@ -35,6 +35,7 @@ jobs:
         env:
           AI_STUDIO_API_KEY: ${{ secrets.AI_STUDIO_API_KEY_TEST }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY_TEST }}
+          RUN_PROVIDER_API_TESTS: true
 
       - name: Archive test artifacts
         if: always()  # Run even if tests fail
