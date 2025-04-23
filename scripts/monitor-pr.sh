@@ -135,6 +135,7 @@ INITIAL_STATUS=$?
 
 # If all checks passed, exit with success
 if [ "${INITIAL_STATUS:-0}" -eq 0 ]; then
+    echo "🎉 All CI checks have passed! Your PR is ready for review."
     exit 0
 fi
 
@@ -224,7 +225,9 @@ check_pr_status "$PR_NUMBER"
 FINAL_STATUS=$?
 
 if [ "${FINAL_STATUS:-0}" -eq 2 ]; then
+    echo "❌ Some checks failed. Please review and fix the issues."
     exit 1
 else
+    echo "🎉 All CI checks have passed! Your PR is ready for review."
     exit 0
 fi 
