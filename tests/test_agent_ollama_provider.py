@@ -315,8 +315,7 @@ def test_get_api_base():
         agent = CodeAgent()
 
         # Test with Ollama provider
-        api_base = agent._get_api_base("ollama")
-        assert api_base is None  # Should return None for all providers including Ollama
+        assert agent._get_api_base("ollama") is None  # Should return None for all providers including Ollama
 
 
 @patch("requests.get")
