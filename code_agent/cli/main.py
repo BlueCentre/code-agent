@@ -16,12 +16,22 @@ from code_agent import __version__ as agent_version  # Updated import
 from code_agent.agent.agent import CodeAgent  # Import the class
 from code_agent.config.config import DEFAULT_CONFIG_DIR, get_config, initialize_config
 
+# Import Ollama commands
+try:
+    from cli_agent.commands.ollama import app as ollama_app
+except ImportError:
+    ollama_app = None
+
 app = typer.Typer(
     name="code-agent",  # Updated app name
     help="CLI agent for interacting with LLMs and local environment.",
     add_completion=True,
     no_args_is_help=True,  # Show help when no arguments are provided
 )
+
+# Add Ollama commands if available
+if ollama_app:
+    app.add_typer(ollama_app, name="ollama", help="Interact with Ollama models")
 
 
 # --- Global Options/State ---
@@ -560,6 +570,69 @@ def config_anthropic():
 
     # Show documentation links for Anthropic
     console.print("\n[italic]For more information, see " "https://docs.anthropic.com/claude/reference/getting-started-with-the-api[/italic]")
+
+
+@config_app.command("ollama")
+def config_ollama():
+    """
+    Show information about using Ollama local models.
+    """
+    config = get_config()
+
+    console = Console()
+    console.print("[bold]Ollama Configuration[/bold]", style="cyan")
+    console.print("=" * 50)
+
+    # Status information
+    console.print("[bold]Current Status:[/bold]")
+    if config.default_provider == "ollama":
+        console.print("✅ Ollama is currently the [bold green]default provider[/bold green].")
+    else:
+        console.print(f"❌ Ollama is [yellow]NOT[/yellow] the default provider " f"(currently using: [bold]{config.default_provider}[/bold]).")
+
+    console.print("i Ollama uses local models and doesn't require an API key.")
+
+    # Setup instructions
+    console.print("\n[bold]Setup Instructions:[/bold]")
+    console.print("1. Install Ollama from [link]https://ollama.ai/download[/link]")
+    console.print("2. Start the Ollama service:")
+    console.print("   [bold]ollama serve[/bold]")
+    console.print("3. Pull models you want to use:")
+    console.print("   [bold]ollama pull llama3[/bold] or [bold]ollama pull codellama:13b[/bold]")
+
+    # Configuration options
+    console.print("\n[bold]Connection Options:[/bold]")
+    console.print("[bold yellow]Default:[/bold yellow] Local Ollama service")
+    console.print("  Default URL: http://localhost:11434")
+    console.print("  You can specify a custom URL when using Ollama commands:")
+    console.print("  [bold]code-agent ollama list --url http://custom-host:11434[/bold]")
+
+    # Available models
+    console.print("\n[bold]Available Models:[/bold]")
+    console.print("- Models vary based on your local installation")
+    console.print("- Common examples include:")
+    console.print("  - [bold]llama3:latest[/bold]: Meta's Llama 3 model")
+    console.print("  - [bold]codellama:13b[/bold]: Specialized for code tasks")
+    console.print("  - [bold]gemma3:latest[/bold]: Google's Gemma model")
+
+    # To see your available models, run:
+    console.print("\n[bold]To see your available models:[/bold]")
+    console.print("code-agent ollama list")
+
+    # Usage examples
+    console.print("\n[bold]Usage Examples:[/bold]")
+    console.print("# List available models")
+    console.print("code-agent ollama list")
+
+    console.print("\n# Chat with a model")
+    console.print('code-agent ollama chat llama3:latest "Explain quantum computing"')
+
+    console.print("\n# Use a system prompt")
+    console.print('code-agent ollama chat codellama:13b "Write a sort function" --system "You are a helpful coding assistant"')
+
+    # Show documentation links
+    console.print("\n[italic]For more information, see " "https://github.com/jmorganca/ollama/blob/main/docs/api.md[/italic]")
+    console.print("[italic]Or see our documentation: docs/ollama_integration.md[/italic]")
 
 
 @config_app.command("validate")

@@ -11,7 +11,8 @@ This directory contains comprehensive documentation for the Code Agent project. 
 
 ### Development
 - [Git Workflow](GIT_WORKFLOW.md) - Guide to our Git workflow and PR process
-- [Testing](development_testing.md) - End-to-end testing procedures
+- [Testing](development_testing.md) - Testing procedures and guidelines
+- [End-to-End Testing](testing_end_to_end.md) - End-to-end testing examples and best practices
 - [Coverage Verification](COVERAGE_VERIFICATION.md) - Test coverage requirements and verification
 - [Hermetic Builds](hermetic_builds.md) - Plan for implementing hermetic builds
 - [Release Process](release.md) - Process for creating new releases
@@ -29,6 +30,7 @@ This directory contains comprehensive documentation for the Code Agent project. 
 - [Chat](feature_chat.md) - Interactive chat functionality and history management
 - [Models and Providers](feature_models_providers.md) - Supported AI providers and model configurations
 - [Diagram Validation](feature_diagram_validation.md) - Guidelines for validating Mermaid diagrams
+- [Ollama Integration](ollama_integration.md) - Documentation for local model integration via Ollama
 
 ### Contributing
 - [Contributing Guide](CONTRIBUTING.md) - Guidelines for contributing to the project
@@ -42,6 +44,7 @@ This directory contains comprehensive documentation for the Code Agent project. 
 | Implementation | Getting Started | Complete | Points to priorities |
 | Git Workflow | Development | Complete | Initial version |
 | Testing | Development | Complete | Initial version |
+| End-to-End Testing | Development | Complete | Added in v0.1.3 |
 | Coverage Verification | Development | Complete | Initial version |
 | Hermetic Builds | Development | Complete | Initial version |
 | Release Process | Development | Complete | Initial version |
@@ -55,4 +58,5 @@ This directory contains comprehensive documentation for the Code Agent project. 
 | Chat | Feature Documentation | Complete | Current version |
 | Models and Providers | Feature Documentation | Complete | Current version |
 | Diagram Validation | Feature Documentation | Complete | Current version |
+| Ollama Integration | Feature Documentation | Complete | Added in v0.1.2 |
 | Contributing Guide | Contributing | Complete | Current version |

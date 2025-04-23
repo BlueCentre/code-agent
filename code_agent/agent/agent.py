@@ -221,7 +221,55 @@ class CodeAgent:
         target_provider = provider or self.config.default_provider
         api_key = vars(self.config.api_keys).get(target_provider)
 
-        if not api_key:
+        # Special case for Ollama which doesn't require an API key
+        if target_provider == "ollama":
+            # For Ollama, we don't need an API key as it's a local service
+            # Instead, we should check if Ollama is running on the expected URL
+            try:
+                # Check if requests package is available
+                import importlib.util
+
+                if importlib.util.find_spec("requests") is None:
+                    print("[bold red]Error: Ollama provider support requires the 'requests' package[/bold red]")
+                    print("[yellow]Install it with: pip install requests[/yellow]")
+                    return "Error: Ollama provider requires additional dependencies. Please install 'requests'."
+
+                from cli_agent.providers.ollama import OllamaProvider
+
+                # Check if Ollama is accessible at the configured URL
+                ollama_url = self.config.ollama.url if hasattr(self.config, "ollama") and hasattr(self.config.ollama, "url") else "http://localhost:11434"
+                provider = OllamaProvider(ollama_url)
+
+                # Try to list models to verify connection
+                try:
+                    provider.list_models()
+                    # If we get here, Ollama is accessible
+                    print(f"[grey50]Connected to Ollama at {ollama_url}[/grey50]")
+                except Exception as e:
+                    print(f"[bold red]Error: Could not connect to Ollama at {ollama_url}[/bold red]")
+                    print("[yellow]Make sure Ollama is running with 'ollama serve'[/yellow]")
+                    print(f"[yellow]Error: {e!s}[/yellow]")
+                    return "Error: Could not connect to Ollama. Please make sure Ollama is running and accessible."
+
+                # Process the request using the Ollama-specific provider
+                self.history.append({"role": "user", "content": prompt})
+
+                # For simplicity, let's use a basic completion for now
+                try:
+                    response = provider.chat_completion(model=model or self.config.default_model, messages=[{"role": "user", "content": prompt}])
+                    content = response.get("message", {}).get("content", "No response content")
+                    self.history.append({"role": "assistant", "content": content})
+                    return content
+                except Exception as e:
+                    print(f"[bold red]Error getting response from Ollama: {e!s}[/bold red]")
+                    return f"Error: Failed to get response from Ollama: {e!s}"
+
+            except ImportError:
+                print("[bold red]Error: Ollama provider support requires the 'requests' package[/bold red]")
+                print("[yellow]Install it with: pip install requests[/yellow]")
+                return "Error: Ollama provider requires additional dependencies. Please install 'requests'."
+
+        if not api_key and target_provider != "ollama":
             print(f"[bold red]Error: No API key found for provider {target_provider}[/bold red]")
             print("  - Please set the API key in one of the following ways:")
             print("  - Set environment variable" f" ({target_provider.upper()}_API_KEY)")

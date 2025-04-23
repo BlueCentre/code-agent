@@ -15,6 +15,10 @@ It allows interaction with various AI providers (OpenAI, Groq, etc. via LiteLLM)
 ```
 cli-agent/
 ├── code_agent/       # Main package source code
+├── cli_agent/        # Ollama integration and extensions
+│   ├── providers/    # Provider implementations (Ollama)
+│   ├── commands/     # CLI commands for providers
+│   └── main.py       # CLI entry point for extensions
 ├── tests/            # Unit and integration tests
 ├── docs/             # Documentation files
 │   ├── architecture.md
@@ -35,6 +39,7 @@ cli-agent/
 ### Key Directories
 
 - **code_agent/**: Contains the main source code for the CLI tool
+- **cli_agent/**: Contains the Ollama integration and extensions
 - **tests/**: Test suite for ensuring code quality and functionality
 - **docs/**: Project documentation and guides
 - **scripts/**: Utility scripts for development, testing, and CI/CD pipelines
@@ -67,6 +72,36 @@ pip install cli-code-agent
 
 # Or using uv (faster)
 uv pip install cli-code-agent
+
+# For using Ollama features, ensure you have requests and rich:
+pip install requests rich
+```
+
+## Upgrading
+
+To upgrade Code Agent to the latest version:
+
+```bash
+# Using pip
+pip install --upgrade cli-code-agent
+
+# Or using uv (faster)
+uv pip install --upgrade cli-code-agent
+```
+
+After upgrading, verify your installation:
+
+```bash
+code-agent --version
+```
+
+If you're using Ollama integration, ensure your local Ollama installation is also up to date:
+
+```bash
+# On macOS with Homebrew
+brew upgrade ollama
+
+# Or download the latest version from https://ollama.ai/download
 ```
 
 ### Verify Installation
@@ -98,6 +133,7 @@ code-agent run "Hello! What can you help me with today?"
 *   **Multi-Provider Support:**
     * Connect to different LLM providers using LiteLLM
     * Supports OpenAI, Google AI Studio, Groq, Anthropic, and more
+    * Local model support via Ollama integration
     * Easily switch between providers with command-line flags
 
 *   **Versatile Interaction Modes:**
@@ -227,6 +263,41 @@ rules:
      code-agent --provider openai --model gpt-4o run "Explain quantum computing"
      ```
 
+## Using Ollama for Local Models
+
+Code Agent includes integration with [Ollama](https://ollama.ai/) to run open-source models locally on your machine:
+
+1. **Install Ollama**:
+   - Download and install Ollama from [https://ollama.ai/download](https://ollama.ai/download)
+   - Start the Ollama service with `ollama serve`
+
+2. **Pull Models**:
+   - Pull the models you want to use:
+     ```bash
+     ollama pull llama3
+     ollama pull codellama:13b
+     ```
+
+3. **Use the Ollama Commands**:
+   - List available models:
+     ```bash
+     code-agent ollama list
+     ```
+   - Chat with a model:
+     ```bash
+     code-agent ollama chat llama3:latest "Explain how to use async/await in JavaScript"
+     ```
+   - Add a system prompt:
+     ```bash
+     code-agent ollama chat codellama:13b "Write a sorting algorithm" --system "You are a helpful coding assistant"
+     ```
+
+4. **Advantages of Local Models**:
+   - No API key required
+   - Complete privacy - all data stays on your machine
+   - No usage costs
+   - Customizable with fine-tuning options
+
 ## Usage
 
 Activate the virtual environment first: `source .venv/bin/activate`
@@ -263,6 +334,7 @@ Activate the virtual environment first: `source .venv/bin/activate`
     code-agent config openai    # Instructions for OpenAI
     code-agent config groq      # Instructions for Groq
     code-agent config anthropic # Instructions for Anthropic
+    code-agent config ollama    # Instructions for local Ollama models
     ```
 *   **List providers:**
     ```bash
@@ -347,6 +419,44 @@ Test coverage can also be viewed in HTML format with:
 ```bash
 ./scripts/run_tests.sh --html
 ```
+
+### Testing Development Code
+
+After checking out the repository, follow these steps to test your development version:
+
+```bash
+# Set up your virtual environment
+python3 -m venv .venv
+source .venv/bin/activate
+
+# Install dependencies
+pip install poetry
+poetry install
+
+# Install the package in development mode
+pip install -e .
+```
+
+Now you can run the development version directly:
+
+```bash
+# Test the development version with a simple command
+code-agent --version
+
+# Run a simple prompt to test functionality
+code-agent run "Hello, world"
+
+# Run unit tests to ensure your changes don't break existing functionality
+./scripts/run_tests.sh
+```
+
+When making changes to the code:
+1. Make your changes in a feature branch
+2. Run tests to ensure functionality is preserved
+3. Run the linter to ensure code quality standards are met
+4. Test the development version with relevant commands
+
+If you add new commands or features, be sure to add appropriate tests to maintain code coverage.
 
 ### Pull Request Process
 

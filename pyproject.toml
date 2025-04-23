@@ -4,7 +4,7 @@ version = "0.1.2"
 description = "CLI agent for interacting with LLMs and local environment"
 authors = ["James Nguyen <git@nocentre.net>"]
 readme = "README.md"
-packages = [{include = "code_agent"}]
+packages = [{include = "code_agent"}, {include = "cli_agent"}]
 
 [tool.poetry.dependencies]
 python = "^3.10"
@@ -14,6 +14,7 @@ pyyaml = "^6.0.1"
 rich = "^13.7.1"
 google-adk = "^0.2.0"
 pydantic = "^2.7.4"
+requests = "^2.31.0"
 
 [tool.poetry.scripts]
 code-agent = "code_agent.cli.main:app"
@@ -65,7 +66,7 @@ markers = [
 
 # Coverage settings
 [tool.coverage.run]
-source = ["code_agent"]
+source = ["code_agent", "cli_agent"]
 omit = ["tests/*", "*/__pycache__/*", "*/site-packages/*", "*/.venv/*"]
 
 [tool.coverage.report]
