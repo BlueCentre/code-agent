@@ -285,13 +285,8 @@ def format_config_error(error: Exception, config_item: Optional[str] = None) -> 
         )
 
     # Handle invalid path configurations
-    elif "Invalid path" in error_msg or "path" in error_msg.lower() and ("invalid" in error_msg.lower() or "not found" in error_msg.lower()):
-        return (
-            f"{context}"
-            f"Invalid path configuration detected.\n"
-            f"Details: {error_msg}\n\n"
-            f"Check that all paths in your configuration are valid and accessible."
-        )
+    elif "Invalid path" in error_msg or ("path" in error_msg.lower() and (("invalid" in error_msg.lower()) or ("not found" in error_msg.lower()))):
+        return f"{context}Invalid path configuration detected.\nDetails: {error_msg}\n\nCheck that all paths in your configuration are valid and accessible."
 
     # Generic error fallback
     else:
@@ -334,7 +329,7 @@ def format_tool_error(error: Exception, tool_name: str, args: Dict[str, Any] | N
             args_summary = f"\nArguments: {args}"
 
     # Default error message
-    message = f"Error executing tool '{tool_name}'.\n" f"Error type: {error_type}\n" f"Details: {error_msg}{args_summary}"
+    message = f"Error executing tool '{tool_name}'.\nError type: {error_type}\nDetails: {error_msg}{args_summary}"
 
     # Add specific suggestions based on the tool type
     if tool_name == "read_file":

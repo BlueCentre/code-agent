@@ -68,6 +68,9 @@ This document consolidates all tasks, improvements, and future enhancements for 
 
 ## Future Enhancements
 
+- **Tooling & Build System**
+  - 🔄 Evaluate using `uv build` and `uv publish` for package distribution once the commands mature, potentially replacing `poetry build/publish` for full consistency.
+
 - **Asynchronous Operations**
   - 🔄 Implement background execution for long-running operations [from planning_improvements.md]
   - 🔄 Use asyncio or threading to prevent CLI freezing during processing [from planning_improvements.md]

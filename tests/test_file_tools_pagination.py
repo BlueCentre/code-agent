@@ -9,7 +9,7 @@ def test_read_file_lines_basic(tmp_path: Path):
     """Test the basic functionality of _read_file_lines."""
     # Create a test file with multiple lines
     test_file_path = tmp_path / "test_file.txt"
-    test_content = "\n".join([f"Line {i+1}" for i in range(100)])
+    test_content = "\n".join([f"Line {i + 1}" for i in range(100)])
     test_file_path.write_text(test_content)
 
     # Test reading the entire file
@@ -23,7 +23,7 @@ def test_read_file_lines_basic(tmp_path: Path):
 def test_read_file_lines_with_offset(tmp_path: Path):
     """Test _read_file_lines with an offset."""
     test_file_path = tmp_path / "test_file.txt"
-    test_content = "\n".join([f"Line {i+1}" for i in range(100)])
+    test_content = "\n".join([f"Line {i + 1}" for i in range(100)])
     test_file_path.write_text(test_content)
 
     # Test reading with an offset
@@ -38,7 +38,7 @@ def test_read_file_lines_with_offset(tmp_path: Path):
 def test_read_file_lines_with_limit(tmp_path: Path):
     """Test _read_file_lines with a limit."""
     test_file_path = tmp_path / "test_file.txt"
-    test_content = "\n".join([f"Line {i+1}" for i in range(100)])
+    test_content = "\n".join([f"Line {i + 1}" for i in range(100)])
     test_file_path.write_text(test_content)
 
     # Test reading with a limit
@@ -54,7 +54,7 @@ def test_read_file_lines_with_limit(tmp_path: Path):
 def test_read_file_lines_with_offset_and_limit(tmp_path: Path):
     """Test _read_file_lines with both offset and limit."""
     test_file_path = tmp_path / "test_file.txt"
-    test_content = "\n".join([f"Line {i+1}" for i in range(100)])
+    test_content = "\n".join([f"Line {i + 1}" for i in range(100)])
     test_file_path.write_text(test_content)
 
     # Test reading with both offset and limit
@@ -71,7 +71,7 @@ def test_read_file_lines_with_offset_and_limit(tmp_path: Path):
 def test_read_file_lines_offset_beyond_file(tmp_path: Path):
     """Test _read_file_lines with an offset beyond the file size."""
     test_file_path = tmp_path / "test_file.txt"
-    test_content = "\n".join([f"Line {i+1}" for i in range(10)])
+    test_content = "\n".join([f"Line {i + 1}" for i in range(10)])
     test_file_path.write_text(test_content)
 
     # Test reading with an offset beyond the file size
@@ -110,7 +110,7 @@ def test_read_file_pagination_error(tmp_path: Path):
 def test_read_file_with_config_pagination_enabled(tmp_path: Path):
     """Test read_file with pagination enabled in config but not in parameters."""
     test_file_path = tmp_path / "file.txt"
-    test_content = "\n".join([f"Line {i+1}" for i in range(100)])
+    test_content = "\n".join([f"Line {i + 1}" for i in range(100)])
     test_file_path.write_text(test_content)
 
     # Create a mock config with pagination enabled

@@ -261,7 +261,7 @@ def test_validate_dynamic_method():
 
 def test_validate_native_command_allowlist_with_dangerous_patterns():
     result = ValidationResult()
-    dangerous_allowlist = ["rm", ";" "mv *"]
+    dangerous_allowlist = ["rm", ";mv *"]
     validate_native_command_allowlist(dangerous_allowlist, result)
     assert len(result.warnings) == 1
     assert "Potentially insecure command patterns" in result.warnings[0]

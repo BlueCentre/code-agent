@@ -133,7 +133,7 @@ def test_service_unavailable_error_handling(agent_with_mock_config, mocker):
 
     # Check that the error was handled correctly
     assert result is None
-    mock_print.assert_any_call("[bold red]Error during agent execution " "(ServiceUnavailableError):[/bold red]")
+    mock_print.assert_any_call("[bold red]Error during agent execution (ServiceUnavailableError):[/bold red]")
 
 
 def test_context_window_exceeded_error_handling(agent_with_mock_config, mocker):
@@ -150,7 +150,7 @@ def test_context_window_exceeded_error_handling(agent_with_mock_config, mocker):
 
     # Check that the error was handled correctly
     assert result is None
-    mock_print.assert_any_call("[bold red]Error during agent execution " "(ContextWindowExceededError):[/bold red]")
+    mock_print.assert_any_call("[bold red]Error during agent execution (ContextWindowExceededError):[/bold red]")
 
 
 # --- History Management Tests ---

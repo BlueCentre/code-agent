@@ -10,23 +10,48 @@ By participating in this project, you agree to abide by our Code of Conduct (to 
 
 ### Setup Development Environment
 
+We recommend using [`uv`](https://github.com/astral-sh/uv) for faster dependency management. If you don't have it, install it first (see [README Quick Start](../README.md#quick-start)).
+
 1. **Fork the repository** on GitHub
 2. **Clone your fork**:
    ```bash
    git clone https://github.com/YOUR-USERNAME/code-agent.git
    cd code-agent
    ```
-3. **Create a virtual environment**:
+3. **Create virtual environment and install dependencies (Recommended: using `uv`)**:
+   ```bash
+   # 1. Create the virtual environment
+   uv venv .venv
+
+   # 2. Activate the environment (Linux/macOS)
+   source .venv/bin/activate
+   #    Activate the environment (Windows - Command Prompt/PowerShell)
+   #    .venv\Scripts\activate
+
+   # 3. Install dependencies (including development extras)
+   uv pip install '.[dev]'
+   ```
+4. **Install pre-commit hooks**:
+   ```bash
+   pre-commit install
+   ```
+
+**Alternative Setup (using `poetry`):**
+
+If you prefer not to use `uv`:
+
+1. **Follow steps 1 & 2 above (Fork & Clone).**
+2. **Create virtual environment**:
    ```bash
    python3 -m venv .venv
    source .venv/bin/activate  # On Windows: .venv\Scripts\activate
    ```
-4. **Install dependencies**:
+3. **Install dependencies**:
    ```bash
-   pip install poetry
-   poetry install
+   pip install poetry # Ensure poetry is installed
+   poetry install     # Installs main and development dependencies
    ```
-5. **Install pre-commit hooks**:
+4. **Install pre-commit hooks**:
    ```bash
    pre-commit install
    ```

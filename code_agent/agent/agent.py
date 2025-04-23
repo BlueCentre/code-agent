@@ -56,9 +56,9 @@ class CodeAgent:
         # Add specific guidance for file listing
         self.base_instruction_parts.append("When asked to list files, especially Python files in directories:")
         self.base_instruction_parts.append(
-            "- For listing Python files recursively in a directory, use: " "run_native_command(command=\"find directory_path -type f -name '*.py' | sort\")"
+            "- For listing Python files recursively in a directory, use: run_native_command(command=\"find directory_path -type f -name '*.py' | sort\")"
         )
-        self.base_instruction_parts.append("- Never use simple 'ls' commands with wildcards like 'ls *.py' " "as they don't search recursively.")
+        self.base_instruction_parts.append("- Never use simple 'ls' commands with wildcards like 'ls *.py' as they don't search recursively.")
 
         self.base_instruction_parts.append("When asked to create or update documentation:")
         self.base_instruction_parts.append("- Use apply_edit to create or modify documentation files directly in the appropriate directory.")
@@ -296,7 +296,7 @@ class CodeAgent:
         system_prompt = "\n".join(self.base_instruction_parts)
 
         if not quiet:
-            print(f"[grey50]Initializing Agent (Model: {model_string}, " f"Provider: {provider or self.config.default_provider})[/grey50]")
+            print(f"[grey50]Initializing Agent (Model: {model_string}, Provider: {provider or self.config.default_provider})[/grey50]")
 
         # Retrieve API key from config
         target_provider = provider or self.config.default_provider
@@ -353,7 +353,7 @@ class CodeAgent:
         if not api_key and target_provider != "ollama":
             print(f"[bold red]Error: No API key found for provider {target_provider}[/bold red]")
             print("  - Please set the API key in one of the following ways:")
-            print("  - Set environment variable" f" ({target_provider.upper()}_API_KEY)")
+            print(f"  - Set environment variable ({target_provider.upper()}_API_KEY)")
             print("  - Add to config: ~/.config/code-agent/config.yaml")
 
             # Check for test mode with invalid key simulation

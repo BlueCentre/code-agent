@@ -136,7 +136,7 @@ def test_read_file_pagination(tmp_path: Path):
     """Test the read_file pagination functionality."""
     # Create a test file with multiple lines
     test_file_path = tmp_path / "paginated_file.txt"
-    test_content = "\n".join([f"This is line {i+1}" for i in range(100)])
+    test_content = "\n".join([f"This is line {i + 1}" for i in range(100)])
     test_file_path.write_text(test_content)
 
     # Test reading with pagination enabled, but no offset or limit
@@ -181,7 +181,7 @@ def test_read_file_pagination_disabled(tmp_path: Path):
     """Test that pagination is disabled by default."""
     # Create a test file with multiple lines
     test_file_path = tmp_path / "normal_file.txt"
-    test_content = "\n".join([f"This is line {i+1}" for i in range(100)])
+    test_content = "\n".join([f"This is line {i + 1}" for i in range(100)])
     test_file_path.write_text(test_content)
 
     # Read file without enabling pagination

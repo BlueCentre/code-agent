@@ -37,11 +37,19 @@ jobs:
         poetry install --without dev
 
     - name: Build package
+      # NOTE: Using poetry build here. While `uv build` exists, poetry build
+      # directly uses the specified build backend (poetry-core) and is the
+      # standard, stable method for building packages defined with Poetry.
+      # Revisit using `uv build` if it matures further.
       run: |
         source .venv/bin/activate
         poetry build
 
     - name: Publish to PyPI
+      # NOTE: Using poetry publish. Similar to building, this is the stable,
+      # standard way to publish packages built with Poetry. `uv publish` is
+      # newer/experimental. Sticking with Poetry here minimizes risk for releases.
+      # Revisit using `uv publish` if it matures further.
       env:
         POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
       run: |

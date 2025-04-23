@@ -1,4 +1,4 @@
-.PHONY: test test-coverage clean lint
+.PHONY: test test-coverage clean lint format
 
 test:
 	pytest
@@ -13,6 +13,10 @@ test-report:
 lint:
 	ruff check .
 	ruff format --check .
+
+format:
+	ruff check --fix .
+	ruff format .
 
 clean:
 	rm -rf .coverage htmlcov/ .pytest_cache/ *.egg-info/ dist/ build/

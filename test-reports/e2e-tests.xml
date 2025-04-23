@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+  <testsuite name="Code Agent E2E Tests" tests="5" failures="0" errors="0">
+    <testcase name="Basic Commands"/>
+    <testcase name="File Operations"/>
+    <testcase name="Provider Tests"/>
+    <testcase name="Ollama Integration"/>
+    <testcase name="Advanced Features"/>
+  </testsuite>
+</testsuites>

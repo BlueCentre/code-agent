@@ -196,7 +196,7 @@ def test_agent_apply_edit_error(agent_with_mock_config, mock_litellm):
     # Mock the apply_edit function to return an error message
     with patch("code_agent.agent.agent.apply_edit") as mock_apply_edit:
         # Break this long error message into multiple lines
-        error_msg = "Error: Path access restricted. " "Can only edit files within the current working directory."
+        error_msg = "Error: Path access restricted. Can only edit files within the current working directory."
         mock_apply_edit.return_value = error_msg
 
         # Run the agent

@@ -152,7 +152,7 @@ def read_file(path: str, offset: Optional[int] = None, limit: Optional[int] = No
 
                     # Check if file is too large
                     if file_size > MAX_FILE_SIZE_BYTES:
-                        return f"Error: File '{path}' is too large ({file_size_mb:.2f} MB). Maximum allowed size is {MAX_FILE_SIZE_BYTES/1024/1024:.2f} MB."
+                        return f"Error: File '{path}' is too large ({file_size_mb:.2f} MB). Maximum allowed size is {MAX_FILE_SIZE_BYTES / 1024 / 1024:.2f} MB."
                 except Exception as stat_error:
                     return format_file_error(stat_error, path, "checking size of")
 
@@ -230,7 +230,7 @@ def delete_file(path: str) -> str:
         print(f"[yellow]Attempting to delete file:[/yellow] {file_path}")
 
         if not file_path.exists():
-            return f"Error: File does not exist: '{path}'.\n" f"Please check if the file path is correct."
+            return f"Error: File does not exist: '{path}'.\nPlease check if the file path is correct."
 
         if not file_path.is_file():
             return (

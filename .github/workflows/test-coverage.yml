@@ -28,18 +28,19 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Install Poetry
-      run: |
-        curl -sSL https://install.python-poetry.org | python3 -
+    - name: Install uv
+      run: curl -LsSf https://astral.sh/uv/install.sh | sh
+      env:
+        UV_BOOTSTRAP_SKIP_MODIFY_PATH: 1
 
     - name: Install dependencies
       run: |
-        poetry config virtualenvs.create false
-        poetry install --no-interaction
-        python -m pip install --upgrade pip pytest pytest-cov
+        export PATH="$HOME/.cargo/bin:$PATH"
+        uv pip install --system -e '.[dev]' pytest pytest-cov pytest-mock tomli
 
     - name: Run tests with coverage
       run: |
+        export PATH="$HOME/.cargo/bin:$PATH"
         if [[ "${{ github.event.inputs.modules }}" == "code_agent.tools.native_tools" ]]; then
           echo "Running tests for native_tools module only"
           python -m pytest tests/test_native_tools.py tests/test_native_tools_additional.py --cov=code_agent.tools.native_tools --cov-report=xml --cov-report=term --cov-fail-under=80

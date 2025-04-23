@@ -1,13 +1,13 @@
 #!/bin/bash
 
-# Script to run coverage tests specifically for the native_tools module
+# Script to run coverage tests specifically for the native_tools module (using uv)
 # This script creates a virtual environment, installs dependencies,
 # and runs tests with coverage for the native_tools module
 
 set -e
 
 VENV_DIR=".venv"
-echo "Starting coverage pipeline for native_tools module..."
+echo "Starting coverage pipeline for native_tools module using uv..."
 
 # Check for .env file and load environment variables
 if [ -f .env ]; then
@@ -15,16 +15,22 @@ if [ -f .env ]; then
     export $(grep -v '^#' .env | xargs)
 fi
 
-# Create and activate virtual environment
-echo "Setting up virtual environment..."
-python -m venv $VENV_DIR
+# Ensure uv is available (user should install it: https://github.com/astral-sh/uv)
+if ! command -v uv &> /dev/null
+then
+    echo "Error: uv command not found. Please install uv: https://github.com/astral-sh/uv"
+    exit 1
+fi
+
+# Create and activate virtual environment using uv
+echo "Setting up virtual environment using uv..."
+uv venv $VENV_DIR
 source $VENV_DIR/bin/activate
 
-# Install required dependencies
-echo "Installing dependencies in virtual environment..."
-pip install --quiet --upgrade pip
-pip install --quiet pytest pytest-cov
-pip install --quiet -e .
+# Install required dependencies using uv
+echo "Installing dependencies in virtual environment using uv..."
+# Use the same command as run_coverage_pipeline_venv.sh for consistency
+uv pip install --quiet -e '.[dev]' pytest pytest-cov pytest-mock tomli
 
 # Run tests with coverage specifically for native_tools
 echo "Running tests with coverage for native_tools module..."
