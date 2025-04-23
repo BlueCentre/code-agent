@@ -1,13 +1,13 @@
 #!/bin/bash
 
-# Script to run coverage pipeline using Python virtual environment
+# Script to run coverage pipeline using Python virtual environment (using uv)
 # This script creates a virtual environment, installs dependencies,
 # runs tests with coverage, and reports to SonarCloud
 
 set -e
 
 VENV_DIR=".venv"
-echo "Starting coverage pipeline with virtual environment..."
+echo "Starting coverage pipeline with uv virtual environment..."
 
 # Check for .env file and load environment variables
 if [ -f .env ]; then
@@ -15,20 +15,25 @@ if [ -f .env ]; then
     export $(grep -v '^#' .env | xargs)
 fi
 
-# Create and activate virtual environment
-echo "Setting up virtual environment..."
-python -m venv $VENV_DIR
+# Ensure uv is available (user should install it: https://github.com/astral-sh/uv)
+if ! command -v uv &> /dev/null
+then
+    echo "Error: uv command not found. Please install uv: https://github.com/astral-sh/uv"
+    exit 1
+fi
+
+# Create and activate virtual environment using uv
+echo "Setting up virtual environment using uv..."
+uv venv $VENV_DIR
 source $VENV_DIR/bin/activate
 
-# Install required dependencies
-echo "Installing dependencies in virtual environment..."
-pip install --quiet --upgrade pip
-pip install --quiet pytest pytest-cov
-pip install --quiet -e .
+# Install required dependencies using uv
+echo "Installing dependencies in virtual environment using uv..."
+uv pip install --quiet -e '.[dev]' pytest pytest-cov pytest-mock tomli
 
 # Run tests with coverage
 echo "Running tests with coverage..."
-pytest tests/ --cov=code_agent --cov-report=term --cov-report=xml --cov-report=html --cov-fail-under=80
+pytest tests/ --cov=code_agent --cov=cli_agent --cov-report=term --cov-report=xml --cov-report=html --cov-fail-under=80
 
 # Extract project version
 echo "Extracting project version..."

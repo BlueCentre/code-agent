@@ -188,6 +188,23 @@ code-agent run "Hello! What can you help me with today?"
     ```
     *(Alternatively, if you just use `poetry install` directly, Poetry might manage the virtual environment for you.)*
 
+    **Faster Alternative using `uv`:**
+
+    If you have `uv` installed (see [Quick Start](#quick-start)), you can use it for a much faster setup:
+
+    ```bash
+    # 1. Create the virtual environment
+    uv venv .venv
+
+    # 2. Activate the environment (Linux/macOS)
+    source .venv/bin/activate
+    #    Activate the environment (Windows - Command Prompt/PowerShell)
+    #    .venv\Scripts\activate
+
+    # 3. Install dependencies
+    uv pip install '.[dev]'
+    ```
+
 ## Configuration
 
 Code Agent uses a hierarchical configuration system:

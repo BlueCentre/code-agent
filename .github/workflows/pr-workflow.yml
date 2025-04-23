@@ -22,22 +22,31 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Install Poetry
-      run: |
-        curl -sSL https://install.python-poetry.org | python3 -
+    # Install uv
+    - name: Install uv
+      run: curl -LsSf https://astral.sh/uv/install.sh | sh
+      env:
+        # Prevent the installer from modifying GitHub Actions environment files
+        UV_BOOTSTRAP_SKIP_MODIFY_PATH: 1
 
+    # Install dependencies using uv
     - name: Install dependencies
       run: |
-        poetry config virtualenvs.create false
-        poetry install --no-interaction
-        python -m pip install --upgrade pip pytest pytest-cov
+        # Add uv to the PATH
+        export PATH="$HOME/.cargo/bin:$PATH"
+        # Install project, dev dependencies, AND explicitly list test requirements into the system environment
+        uv pip install --system -e '.[dev]' pytest pytest-cov pytest-mock tomli
 
     - name: Run tests with coverage
       run: |
+        # Add uv to the PATH (optional but safe)
+        export PATH="$HOME/.cargo/bin:$PATH"
         python -m pytest tests/ --cov=code_agent --cov=cli_agent --cov-report=xml --cov-report=term --cov-fail-under=80
 
     - name: Generate Coverage Report
       run: |
+        # Add uv to the PATH (optional but safe)
+        export PATH="$HOME/.cargo/bin:$PATH"
         # Use a multi-line Python script instead of one-liners to avoid f-string backslash issues
         cat > generate_coverage.py << 'EOF'
         import xml.etree.ElementTree as ET
@@ -84,5 +93,9 @@ jobs:
 
     - name: Run linting
       run: |
+        # Add uv to the PATH (optional but safe)
+        export PATH="$HOME/.cargo/bin:$PATH"
+        # Ensure ruff is installed (should be via .[dev]) and run it into the system environment
+        uv pip install --system ruff
         python -m ruff check . --output-format=github
       continue-on-error: true  # Don't fail the workflow, just report issues

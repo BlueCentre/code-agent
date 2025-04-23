@@ -13,9 +13,19 @@ if [ -f .env ]; then
     export $(grep -v '^#' .env | xargs)
 fi
 
-# Install required dependencies
-pip install --quiet pytest pytest-cov
-pip install --quiet -e .
+# Ensure uv is available (user should install it: https://github.com/astral-sh/uv)
+if ! command -v uv &> /dev/null
+then
+    echo "Warning: uv command not found. Falling back to pip."
+    # Install required dependencies using pip
+    pip install --quiet pytest pytest-cov
+    pip install --quiet -e .
+else
+    echo "Installing dependencies using uv..."
+    # Install required dependencies using uv
+    uv pip install --quiet pytest pytest-cov
+    uv pip install --quiet -e .
+fi
 
 # Run tests with coverage
 echo "Running tests with coverage..."

@@ -19,14 +19,14 @@ from code_agent.config.settings_based_config import (
 
 __all__ = [
     "ApiKeys",
-    "SettingsConfig",
-    "SecuritySettings",
     "DEFAULT_CONFIG_DIR",
     "DEFAULT_CONFIG_PATH",
-    "get_config",
-    "initialize_config",
-    "get_api_key",
+    "SecuritySettings",
+    "SettingsConfig",
     "build_effective_config",
     "create_settings_model",
+    "get_api_key",
+    "get_config",
+    "initialize_config",
     "settings_to_dict",
 ]
