@@ -19,9 +19,10 @@ The implementation will involve:
 
 ## 3. Implementation Steps
 
-1.  **Add Dependency:**
+1.  **Add Dependency & Configuration:**
     - Add `duckduckgo-search` to the project's dependency file (e.g., `pyproject.toml` or `requirements.txt`).
     - Install the dependency into the virtual environment (`.venv/bin/pip install duckduckgo-search`).
+    - Add a configuration setting `enable_web_search: true` (defaulting to true) to `code_agent/config.py` (within `SettingsConfig`) and potentially `defaults.yaml`. This allows disabling the feature easily.
 
 2.  **Implement `web_search` Tool Function:**
     - Create the `web_search` function in `code_agent/tools/simple_tools.py`.
@@ -30,6 +31,8 @@ The implementation will involve:
     - It should limit the number of results (e.g., `max_results=3`) to avoid overwhelming the context window.
     - Format the results (title, snippet, URL) into a string suitable for the LLM.
     - Include error handling (e.g., `try...except`) and return informative messages on failure or if no results are found.
+    - **Note on Rate Limiting:** Be mindful that scraping can be rate-limited. If issues arise during testing, consider adding a small delay (e.g., `time.sleep(0.5)`).
+    - **Note on Security/Privacy:** Ensure queries passed to this tool are sanitized or that the LLM is prompted not to include sensitive local data in search queries.
 
     ```python
     # Example structure in code_agent/tools/simple_tools.py
@@ -79,17 +82,24 @@ The implementation will involve:
           "web_search": web_search,
       }
       ```
+    - **Agent Error Handling:** Ensure the loop in `run_turn` that processes tool results gracefully handles potential `None` returns or error messages from `web_search` and passes appropriate feedback back to the LLM.
 
 4.  **Add Tests:**
     - **Unit Tests:** Create tests for the `web_search` function in `tests/test_simple_tools.py` (or a new `test_web_tools.py`). Mock the `duckduckgo_search.DDGS` class to test:
         - Successful search result formatting.
         - Handling of no results.
         - Handling of exceptions during the search.
+        - Edge cases: Empty queries, queries with special characters.
     - **Integration Tests:** Add tests in `tests/test_agent.py` (or similar) to simulate an agent interaction where:
         - The user asks a question requiring web search.
         - The LLM (mocked) requests the `web_search` tool.
         - The `web_search` tool (mocked) returns results.
         - The LLM (mocked) generates a final response using the search results.
+
+5.  **Update Documentation & Tracking:**
+    - **README.md:** Add `web_search` to the list of features/available tools, explaining its purpose briefly.
+    - **Consolidated Tasks:** Add this feature implementation task to `docs/planning_priorities.md`.
+    - **(Optional) Feature Doc:** Create a new file `docs/feature_web_search.md` detailing the tool's usage, any configuration options (future), and examples.
 
 ## 4. Diagrams
 
