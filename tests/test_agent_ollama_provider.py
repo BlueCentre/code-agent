@@ -437,29 +437,25 @@ def test_agent_ollama_provider_initialization_error(mock_find_spec, mock_get):
         # Simulate requests package available
         mock_find_spec.return_value = True
 
-        # Directly patch the OllamaProvider import in agent.py
-        with patch("code_agent.agent.agent.importlib.util.find_spec", return_value=True):
-            # Mock the OllamaProvider class itself
-            with patch("cli_agent.providers.ollama.OllamaProvider") as mock_provider_class:
-                # Make the provider initialization raise an exception
-                mock_provider_class.side_effect = Exception("Provider initialization failed")
+        # Define a specific exception type
+        class ProviderInitError(Exception):
+            """Custom exception for provider initialization failures."""
 
-                # Create the agent after setting up all mocks
-                agent = CodeAgent()
+            pass
 
-                # Mock rich.print to avoid console output
-                with patch("rich.print"):
-                    # Run the agent and capture the result
-                    result = agent.run_turn("Test prompt")
+        # Mock the OllamaProvider class itself
+        with patch("cli_agent.providers.ollama.OllamaProvider") as mock_provider_class:
+            # Make the provider initialization raise a specific exception
+            mock_provider_class.side_effect = ProviderInitError("Provider initialization failed")
 
-                    # Verify the error message
-                    if result is None:
-                        # If result is None, the error was printed but not returned
-                        pass  # Our patching of rich.print prevented the output
-                    else:
-                        # If we got a string response, verify it contains the expected error
-                        assert "Error: Could not connect to Ollama" in result
-                        assert "Please make sure Ollama is running and accessible" in result
+            # Create the agent after setting up all mocks
+            agent = CodeAgent()
+
+            # Mock rich.print to avoid console output
+            with patch("rich.print"):
+                # Assert that the specific exception is raised when we run the agent
+                with pytest.raises(ProviderInitError):
+                    agent.run_turn("Test prompt")
 
 
 @patch("requests.get")
