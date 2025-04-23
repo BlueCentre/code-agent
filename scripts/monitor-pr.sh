@@ -4,7 +4,8 @@
 # Run this after pushing to monitor CI/CD check status
 # Usage: ./scripts/monitor-pr.sh [branch-name] [--no-poll]
 
-set -e
+# Enable debugging if DEBUG=1
+[ "${DEBUG:-0}" = "1" ] && set -x
 
 # Process arguments
 BRANCH_NAME=""
@@ -143,6 +144,9 @@ echo "Checking PR status..."
 check_pr_status "$PR_NUMBER"
 INITIAL_STATUS=$?
 
+echo "DEBUG: Initial status code = $INITIAL_STATUS"
+echo "DEBUG: AUTO_POLL = $AUTO_POLL"
+
 # If all checks passed, exit with success
 if [ "${INITIAL_STATUS:-0}" -eq 0 ]; then
     echo "🎉 All CI checks have passed! Your PR is ready for review."
@@ -177,17 +181,18 @@ MAX_WAIT_SECONDS=$((MAX_WAIT_MINUTES * 60))
 TIMEOUT_TIME=$((START_TIME + MAX_WAIT_SECONDS))
 
 # Poll until all checks complete or timeout
+POLL_COUNT=0
 while [ "$(date +%s)" -lt "$TIMEOUT_TIME" ]; do
-    # Show a progress spinner
-    for spin in ⣾ ⣽ ⣻ ⢿ ⡿ ⣟ ⣯ ⣷; do
-        echo -ne "\r$spin Polling..."
-        sleep 0.2
-    done
+    POLL_COUNT=$((POLL_COUNT + 1))
+    echo "DEBUG: Polling iteration $POLL_COUNT"
+    
+    # Simple polling message for non-interactive terminals
+    echo "Polling for CI status... (iteration $POLL_COUNT)"
     
     sleep $POLL_INTERVAL_SECONDS
     
-    # Check status without UI clutter
-    echo -ne "\r⏳ Checking status..."
+    # Check status
+    echo "Checking current status..."
     CHECK_STATUS=$(gh pr checks "$PR_NUMBER" 2>/dev/null)
     PENDING_CHECKS=$(echo "$CHECK_STATUS" | grep -c "pending\|queued\|in_progress" || true)
     FAILED_CHECKS=$(echo "$CHECK_STATUS" | grep -c "fail\|error\|cancelled\|timed_out\|action_required" || true)
@@ -198,8 +203,7 @@ while [ "$(date +%s)" -lt "$TIMEOUT_TIME" ]; do
     [[ "$FAILED_CHECKS" =~ ^[0-9]+$ ]] || FAILED_CHECKS=0
     [[ "$TOTAL_CHECKS" =~ ^[0-9]+$ ]] || TOTAL_CHECKS=0
     
-    # Clear the status line
-    echo -ne "\r                      \r"
+    echo "DEBUG: TOTAL_CHECKS=$TOTAL_CHECKS, PENDING_CHECKS=$PENDING_CHECKS, FAILED_CHECKS=$FAILED_CHECKS"
     
     # If no checks yet, wait for them to start
     if [ -z "$CHECK_STATUS" ]; then
@@ -213,7 +217,13 @@ while [ "$(date +%s)" -lt "$TIMEOUT_TIME" ]; do
     
     # If no pending checks, break the loop
     if [ "${PENDING_CHECKS:-0}" -eq 0 ]; then
-        echo ""
+        echo "All checks completed!"
+        break
+    fi
+    
+    # Only check 3 times for testing
+    if [ $POLL_COUNT -ge 3 ]; then
+        echo "DEBUG: Stopping after 3 polling attempts for testing purposes"
         break
     fi
 done
