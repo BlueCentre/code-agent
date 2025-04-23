@@ -4,9 +4,6 @@
 # Run this after pushing to monitor CI/CD check status
 # Usage: ./scripts/monitor-pr.sh [branch-name] [--no-poll]
 
-# Enable debugging if DEBUG=1
-[ "${DEBUG:-0}" = "1" ] && set -x
-
 # Process arguments
 BRANCH_NAME=""
 AUTO_POLL=true
@@ -144,9 +141,6 @@ echo "Checking PR status..."
 check_pr_status "$PR_NUMBER"
 INITIAL_STATUS=$?
 
-echo "DEBUG: Initial status code = $INITIAL_STATUS"
-echo "DEBUG: AUTO_POLL = $AUTO_POLL"
-
 # If all checks passed, exit with success
 if [ "${INITIAL_STATUS:-0}" -eq 0 ]; then
     echo "🎉 All CI checks have passed! Your PR is ready for review."
@@ -184,7 +178,6 @@ TIMEOUT_TIME=$((START_TIME + MAX_WAIT_SECONDS))
 POLL_COUNT=0
 while [ "$(date +%s)" -lt "$TIMEOUT_TIME" ]; do
     POLL_COUNT=$((POLL_COUNT + 1))
-    echo "DEBUG: Polling iteration $POLL_COUNT"
     
     # Simple polling message for non-interactive terminals
     echo "Polling for CI status... (iteration $POLL_COUNT)"
@@ -203,8 +196,6 @@ while [ "$(date +%s)" -lt "$TIMEOUT_TIME" ]; do
     [[ "$FAILED_CHECKS" =~ ^[0-9]+$ ]] || FAILED_CHECKS=0
     [[ "$TOTAL_CHECKS" =~ ^[0-9]+$ ]] || TOTAL_CHECKS=0
     
-    echo "DEBUG: TOTAL_CHECKS=$TOTAL_CHECKS, PENDING_CHECKS=$PENDING_CHECKS, FAILED_CHECKS=$FAILED_CHECKS"
-    
     # If no checks yet, wait for them to start
     if [ -z "$CHECK_STATUS" ]; then
         echo "⏳ Waiting for checks to start running..."
@@ -218,12 +209,6 @@ while [ "$(date +%s)" -lt "$TIMEOUT_TIME" ]; do
     # If no pending checks, break the loop
     if [ "${PENDING_CHECKS:-0}" -eq 0 ]; then
         echo "All checks completed!"
-        break
-    fi
-    
-    # Only check 3 times for testing
-    if [ $POLL_COUNT -ge 3 ]; then
-        echo "DEBUG: Stopping after 3 polling attempts for testing purposes"
         break
     fi
 done
