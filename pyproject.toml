@@ -7,7 +7,7 @@ readme = "README.md"
 packages = [{include = "code_agent"}, {include = "cli_agent"}]
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.10"
 typer = {extras = ["all"], version = "^0.12.3"}
 litellm = "^1.39.2"
 pyyaml = "^6.0.1"
