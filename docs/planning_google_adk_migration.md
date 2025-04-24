@@ -535,7 +535,7 @@ Your tasks:
 
 IMPORTANT: Wait for user confirmation after creating the tool inventory document before starting implementation. After implementing each tool category, wait for user feedback on your approach before continuing.
 
-DO NOT commit or push any changes until the user confirms that all tools function properly and the User Acceptance Tests have been successfully completed.
+DO NOT commit or push any changes until the user confirms that all tools function properly and the User Acceptance Tests have been successfully completed AND the tasks in the planning are updated to in review.
 ```
 
 ### 7.2b. Model Integration
@@ -629,7 +629,7 @@ Your tasks:
 
 IMPORTANT: After implementing each model provider, pause for user testing of that specific provider. Request explicit feedback on response quality and behavior before proceeding to the next provider.
 
-DO NOT commit or push any changes until all models have been tested thoroughly and the user has confirmed successful completion of all User Acceptance Tests.
+DO NOT commit or push any changes until the user has confirmed that all models work correctly and the User Acceptance Tests have been successfully completed AND the tasks in the planning are updated to in review.
 ```
 
 ### 7.3. Early Integration Testing
@@ -872,7 +872,7 @@ Your tasks:
 
 IMPORTANT: After implementing basic session functionality, pause for user testing before adding advanced features. Have the user verify that context is maintained correctly between interactions.
 
-DO NOT commit or push changes until the user has confirmed that all session management features work properly and the User Acceptance Tests have been successfully completed.
+DO NOT commit or push changes until the user has confirmed that all session management features work properly and the User Acceptance Tests have been successfully completed AND the tasks in the planning are updated to in review.
 ```
 
 ### 7.4b. Agent Refactoring
@@ -1000,11 +1000,11 @@ Your tasks:
 
 IMPORTANT: After implementing the basic agent structure, pause for user testing before adding advanced features. Request specific feedback on the agent's behavior compared to the previous implementation.
 
-DO NOT commit or push changes until the user has verified that the agent maintains all previous capabilities and the User Acceptance Tests have been successfully completed.
+DO NOT commit or push changes until the user has verified that the agent maintains all previous capabilities and the User Acceptance Tests have been successfully completed AND the tasks in the planning are updated to in review.
 ```
 
 ### 7.5. Runner Implementation
-**Status**: �� Not Started | ⏳ In Progress | 🔍 In Review | ✅ Completed
+**Status**: 🔲 Not Started | ⏳ In Progress | 🔍 In Review | ✅ Completed
 
 - [ ] Implement CLI interface preservation:
   - [ ] Maintain core "chat" and "run" commands from current implementation
@@ -1136,7 +1136,7 @@ Your tasks:
 
 IMPORTANT: After implementing the basic runner structure, pause for user testing of the CLI interface. Request specific feedback on compatibility with previous command patterns.
 
-DO NOT commit or push changes until the user has confirmed that the CLI interface maintains all previous functionality and the User Acceptance Tests have been successfully completed.
+DO NOT commit or push changes until the user has confirmed that the CLI interface maintains all previous functionality and the User Acceptance Tests have been successfully completed AND the tasks in the planning are updated to in review.
 ```
 
 ### 7.6. Progressive Code Decommissioning
@@ -1249,7 +1249,7 @@ Your tasks:
 
 IMPORTANT: After removing each component, pause for user testing to verify that all functionality is maintained. Be extremely cautious about removing code that might still be needed.
 
-DO NOT commit or push changes until the user has confirmed that all functionality is maintained after code removal and the User Acceptance Tests have been successfully completed.
+DO NOT commit or push changes until the user has confirmed that all functionality is maintained after code removal and the User Acceptance Tests have been successfully completed AND the tasks in the planning are updated to in review.
 ```
 
 ### 7.7. Final Testing & Validation
@@ -1436,7 +1436,7 @@ Your tasks:
 
 IMPORTANT: After implementing each testing component, pause for user validation. Request specific feedback on test coverage, evaluation metrics, and documentation quality.
 
-DO NOT commit or push changes until the user has confirmed that all testing components work correctly and the User Acceptance Tests have been successfully completed.
+DO NOT commit or push changes until the user has confirmed that all testing components work correctly and the User Acceptance Tests have been successfully completed AND the tasks in the planning are updated to in review.
 
 Once all testing is complete, prepare a final PR summary for the user to review before final approval.
 ```
