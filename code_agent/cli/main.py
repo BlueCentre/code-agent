@@ -12,6 +12,14 @@ from typing_extensions import Annotated
 
 from code_agent import __version__ as agent_version  # Updated import
 
+# Add ADK version import
+try:
+    import google.adk as adk
+
+    adk_version = adk.__version__
+except ImportError:
+    adk_version = "not installed"
+
 # Updated imports
 # from code_agent.llm import get_llm_response # No longer needed here
 from code_agent.agent.agent import CodeAgent  # Import the class
@@ -106,6 +114,7 @@ def main(
 def _version_callback(value: bool):
     if value:
         print(f"Code Agent version: {agent_version}")  # Updated output message
+        print(f"Google ADK version: {adk_version}")  # Show ADK version
         raise typer.Exit()
 
 
