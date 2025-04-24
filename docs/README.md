@@ -30,7 +30,7 @@ This directory contains comprehensive documentation for the Code Agent project. 
 - [Chat](feature_chat.md) - Interactive chat functionality and history management
 - [Models and Providers](feature_models_providers.md) - Supported AI providers and model configurations
 - [Diagram Validation](feature_diagram_validation.md) - Guidelines for validating Mermaid diagrams
-- [Ollama Integration](ollama_integration.md) - Documentation for local model integration via Ollama
+- [Ollama Integration](feature_ollama_integration.md) - Documentation for local model integration via Ollama
 
 ### Contributing
 - [Contributing Guide](CONTRIBUTING.md) - Guidelines for contributing to the project

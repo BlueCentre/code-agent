@@ -681,7 +681,7 @@ def config_ollama():
 
     # Show documentation links
     console.print("\n[italic]For more information, see https://github.com/jmorganca/ollama/blob/main/docs/api.md[/italic]")
-    console.print("[italic]Or see our documentation: docs/ollama_integration.md[/italic]")
+    console.print("[italic]Or see our documentation: docs/feature_ollama_integration.md[/italic]")
 
 
 @config_app.command("validate")
