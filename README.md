@@ -15,14 +15,18 @@ It allows interaction with various AI providers (OpenAI, Groq, etc. via LiteLLM)
 ```
 cli-agent/
 ├── code_agent/       # Main package source code
+│   ├── adk/          # Google ADK integration
 ├── cli_agent/        # Ollama integration and extensions
 │   ├── providers/    # Provider implementations (Ollama)
 │   ├── commands/     # CLI commands for providers
 │   └── main.py       # CLI entry point for extensions
+├── sandbox/          # Experimentation environment
+│   └── adk_sandbox.py # ADK testing sandbox
 ├── tests/            # Unit and integration tests
 ├── docs/             # Documentation files
 │   ├── architecture.md
 │   ├── CONTRIBUTING.md
+│   ├── migration_notes/ # ADK migration documentation
 │   ├── testing.md
 │   ├── feature_*.md          # Feature-specific documentation
 │   ├── getting_started_*.md  # Getting started guides
@@ -525,3 +529,41 @@ Since Git doesn't offer a reliable post-push hook, we use a standalone script to
 ```
 
 For details on usage and configuration, see the [PR Monitoring Script Documentation](./docs/git_development.md#pr-monitoring-and-validation).
+
+## Current Development
+
+### Google ADK Migration
+
+We are currently migrating the codebase to use the Google Agent Development Kit (ADK). This migration will provide several benefits:
+
+- Reduced custom framework code to maintain
+- Standardized agent framework with better extensibility
+- Improved session management and context handling
+- Better support for evaluation and testing
+- Enhanced safety and security features
+- Potential future support for multi-agent systems
+
+The migration is following a phased approach outlined in our [planning document](docs/planning_google_adk_migration.md). Development is happening on the `feat/google-adk` branch.
+
+### Development Environment Setup
+
+If you're contributing to the ADK migration, set up your environment:
+
+```bash
+# Clone the repository
+git clone https://github.com/BlueCentre/code-agent.git
+cd code-agent
+
+# Switch to the feature branch
+git checkout feat/google-adk
+
+# Set up virtual environment
+python -m venv .venv
+source .venv/bin/activate
+
+# Install dependencies
+poetry install
+
+# Try the sandbox environment
+python sandbox/adk_sandbox.py
+```
