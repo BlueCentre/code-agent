@@ -46,7 +46,8 @@ jobs:
         export PATH="$HOME/.cargo/bin:$PATH"
         # Activate venv
         source .venv/bin/activate
-        python -m pytest tests/ --cov=code_agent --cov=cli_agent --cov-report=xml --cov-report=term --cov-fail-under=80
+        # Use explicit path to python in venv
+        .venv/bin/python -m pytest tests/ --cov=code_agent --cov=cli_agent --cov-report=xml --cov-report=term --cov-fail-under=80
 
     - name: Generate Coverage Report
       run: |
@@ -104,4 +105,5 @@ jobs:
         export PATH="$HOME/.cargo/bin:$PATH"
         # Activate venv (ruff should be installed via .[dev])
         source .venv/bin/activate
-        python -m ruff check . --output-format=github
+        # Use explicit path to python in venv
+        .venv/bin/python -m ruff check . --output-format=github
