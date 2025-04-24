@@ -27,9 +27,12 @@ jobs:
 
       - name: Install Poetry and Dependencies
         run: |
+          curl -sSL https://install.python-poetry.org | python3 -
+          # Add poetry to the path
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          # Ensure venv is created before poetry install
           python -m venv .venv
           source .venv/bin/activate
-          pip install --upgrade pip poetry
           poetry install --with dev
 
       - name: Run E2E tests
