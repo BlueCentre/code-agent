@@ -44,47 +44,39 @@ flowchart TD
         User --> CLI
     end
 
-    subgraph ADK Framework Application
+    subgraph "ADK Framework Application"
         direction TB
-        CLI["CLI Interface (Typer/Argparse)"] --> Runner[ADK Runner
-(google.adk.runners.Runner)]
-        Runner --> Agent[ADK Agent
-(google.adk.agents.LlmAgent)]
-        Agent --> Model[ADK Model
-(google.adk.models.Gemini)]
-        Agent --> Tools[ADK Tools
-(google.adk.tools.FunctionTool wraps our funcs)]
-        Agent --> Session[ADK Session Service
-(google.adk.sessions.InMemorySessionService)]
-        Model --> ExternalLLM[External LLM API
-(e.g., Google AI Studio)]
-        Tools --> ToolImpl[Our Tool Implementations
-(code_agent.tools.*)]
-        Session --> SessionStore[In-Memory Store]
+        CLI["CLI Interface (Typer/Argparse)"] --> Runner["ADK Runner\n(google.adk.runners.Runner)"]
+        Runner --> Agent["ADK Agent\n(google.adk.agents.LlmAgent)"]
+        Agent --> Model["ADK Model\n(google.adk.models.Gemini)"]
+        Agent --> Tools["ADK Tools\n(google.adk.tools.FunctionTool wraps our funcs)"]
+        Agent --> Session["ADK Session Service\n(google.adk.sessions.InMemorySessionService)"]
+        Model --> ExternalLLM["External LLM API\n(e.g., Google AI Studio)"]
+        Tools --> ToolImpl["Our Tool Implementations\n(code_agent.tools.*)"]
+        Session --> SessionStore["In-Memory Store"]
 
         %% Interactions
         User -- Request --> CLI
-        CLI -- Run Agent --> Runner
-        Runner -- Start/Manage --> Agent
-        Agent -- Generate Content --> Model
-        Model -- LLM Call --> ExternalLLM
+        CLI -- "Run Agent" --> Runner
+        Runner -- "Start/Manage" --> Agent
+        Agent -- "Generate Content" --> Model
+        Model -- "LLM Call" --> ExternalLLM
         ExternalLLM -- Response --> Model
-        Model -- Content/Tool Call --> Agent
-        Agent -- Execute Tool --> Tools
-        Tools -- Call Function --> ToolImpl
+        Model -- "Content/Tool Call" --> Agent
+        Agent -- "Execute Tool" --> Tools
+        Tools -- "Call Function" --> ToolImpl
         ToolImpl -- Result --> Tools
-        Tools -- Tool Response --> Agent
-        Agent -- Add Event --> Session
-        Session -- Store Event --> SessionStore
-        Agent -- Final Response --> Runner
+        Tools -- "Tool Response" --> Agent
+        Agent -- "Add Event" --> Session
+        Session -- "Store Event" --> SessionStore
+        Agent -- "Final Response" --> Runner
         Runner -- Output --> CLI
         CLI -- Display --> User
     end
 
     subgraph Configuration
         direction TB
-        ConfigLoader[Our Config Loader
-(code_agent.config)] --> Runner
+        ConfigLoader["Our Config Loader\n(code_agent.config)"] --> Runner
         ConfigLoader --> Agent
         ConfigLoader --> Model
         ConfigLoader --> Tools
