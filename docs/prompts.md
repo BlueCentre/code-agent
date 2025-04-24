@@ -7,3 +7,4 @@
   - Don't use NixOS if a command fails
   - Ok can you show me how I can test this new feature? I want to test this new feature end to end with code-agent.
   - @testing.md as an agent, you need to use these approaches to validate chat feature.
+- Stick to the plan and don't deviate from it.
