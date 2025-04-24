@@ -20,38 +20,40 @@ jobs:
       with:
         python-version: '3.10'
 
-    - name: Set up virtual environment
-      run: |
-        python -m venv .venv
-        source .venv/bin/activate
-        python -m pip install --upgrade pip
-
-    - name: Install Poetry
-      run: |
-        source .venv/bin/activate
-        pip install poetry
-
-    - name: Install dependencies
-      run: |
-        source .venv/bin/activate
-        poetry install --without dev
-
-    - name: Build package
-      # NOTE: Using poetry build here. While `uv build` exists, poetry build
-      # directly uses the specified build backend (poetry-core) and is the
-      # standard, stable method for building packages defined with Poetry.
-      # Revisit using `uv build` if it matures further.
-      run: |
-        source .venv/bin/activate
-        poetry build
-
-    - name: Publish to PyPI
-      # NOTE: Using poetry publish. Similar to building, this is the stable,
-      # standard way to publish packages built with Poetry. `uv publish` is
-      # newer/experimental. Sticking with Poetry here minimizes risk for releases.
-      # Revisit using `uv publish` if it matures further.
+    - name: Install uv
+      run: curl -LsSf https://astral.sh/uv/install.sh | sh
       env:
-        POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
+        UV_BOOTSTRAP_SKIP_MODIFY_PATH: 1
+
+    - name: Set up virtual environment and Build Tools
       run: |
+        # Add uv to the PATH
+        export PATH="$HOME/.cargo/bin:$PATH"
+        # Create venv
+        uv venv .venv
+        # Activate venv
         source .venv/bin/activate
-        poetry publish
+        # Install build dependencies
+        uv pip install build poetry-core
+
+    - name: Build package with uv
+      run: |
+        # Add uv to the PATH
+        export PATH="$HOME/.cargo/bin:$PATH"
+        # Activate venv
+        source .venv/bin/activate
+        # Build the package
+        uv build
+
+    - name: Publish to PyPI with uv
+      env:
+        # Use Twine standard environment variables for uv publish
+        TWINE_USERNAME: "__token__"
+        TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+      run: |
+        # Add uv to the PATH
+        export PATH="$HOME/.cargo/bin:$PATH"
+        # Activate venv
+        source .venv/bin/activate
+        # Publish the built distributions
+        uv publish dist/*

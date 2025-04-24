@@ -34,19 +34,26 @@ jobs:
       run: |
         # Add uv to the PATH
         export PATH="$HOME/.cargo/bin:$PATH"
-        # Install project, dev dependencies, AND explicitly list test requirements into the system environment
-        uv pip install --system -e '.[dev]' pytest pytest-cov pytest-mock tomli
+        # Create and activate venv
+        uv venv .venv
+        source .venv/bin/activate
+        # Install project and dev dependencies
+        uv pip install '.[dev]'
 
     - name: Run tests with coverage
       run: |
         # Add uv to the PATH (optional but safe)
         export PATH="$HOME/.cargo/bin:$PATH"
+        # Activate venv
+        source .venv/bin/activate
         python -m pytest tests/ --cov=code_agent --cov=cli_agent --cov-report=xml --cov-report=term --cov-fail-under=80
 
     - name: Generate Coverage Report
       run: |
         # Add uv to the PATH (optional but safe)
         export PATH="$HOME/.cargo/bin:$PATH"
+        # Activate venv
+        source .venv/bin/activate
         # Use a multi-line Python script instead of one-liners to avoid f-string backslash issues
         cat > generate_coverage.py << 'EOF'
         import xml.etree.ElementTree as ET
@@ -95,6 +102,6 @@ jobs:
       run: |
         # Add uv to the PATH (optional but safe)
         export PATH="$HOME/.cargo/bin:$PATH"
-        # Ensure ruff is installed (should be via .[dev]) and run it into the system environment
-        uv pip install --system ruff
+        # Activate venv (ruff should be installed via .[dev])
+        source .venv/bin/activate
         python -m ruff check . --output-format=github

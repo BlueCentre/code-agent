@@ -36,18 +36,20 @@ jobs:
     - name: Install dependencies
       run: |
         export PATH="$HOME/.cargo/bin:$PATH"
-        uv pip install --system -e '.[dev]' pytest pytest-cov pytest-mock tomli
+        uv venv .venv
+        source .venv/bin/activate
+        uv pip install '.[dev]'
 
     - name: Run tests with coverage
       run: |
         export PATH="$HOME/.cargo/bin:$PATH"
+        source .venv/bin/activate
         if [[ "${{ github.event.inputs.modules }}" == "code_agent.tools.native_tools" ]]; then
           echo "Running tests for native_tools module only"
           python -m pytest tests/test_native_tools.py tests/test_native_tools_additional.py --cov=code_agent.tools.native_tools --cov-report=xml --cov-report=term --cov-fail-under=80
         else
           echo "Running tests for all modules"
           python -m pytest tests/ --cov=code_agent --cov=cli_agent --cov-report=xml --cov-report=term --cov-fail-under=80
-        fi
 
     - name: Upload coverage report
       uses: actions/upload-artifact@v4
