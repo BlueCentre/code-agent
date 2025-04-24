@@ -324,33 +324,38 @@ The migration will proceed in the following phases. Each milestone contains spec
 ### 7.1. Setup & Dependency Management
 **Status**: 🔲 Not Started | ⏳ In Progress | 🔍 In Review | ✅ Completed
 
-- [ ] Set up Git branch for ADK migration:
-  - [ ] Create and switch to `feat/google-adk` branch: `git checkout -b feat/google-adk`
-  - [ ] Push branch to remote: `git push -u origin feat/google-adk`
-- [ ] Add `google-cloud-aiplatform[adk]` package to `pyproject.toml`
-  - [ ] Use the latest version available
-  - [ ] Note: We'll be using just the core ADK framework, not Vertex AI integration
-- [ ] Update version constraints for existing dependencies if needed
-- [ ] Run `poetry lock` to resolve dependency conflicts
-- [ ] Set up virtual environment using uv:
-  - [ ] Create or update `.venv` virtual environment with `uv venv`
-  - [ ] Install dependencies with `uv pip install -e .`
-  - [ ] Verify installation with `uv pip list`
-  - [ ] If the steps above fail, try to run `poetry install` to install updated dependencies
-- [ ] Verify successful installation of ADK packages
-- [ ] Create ADK development sandbox:
-  - [ ] Create a simple script in `sandbox/adk_sandbox.py` for testing ADK components
-  - [ ] Implement basic examples of agent, models, and tools for experimentation
-  - [ ] Document common patterns and insights gained from sandbox experiments
-- [ ] Update CI/CD pipelines to use uv for environment setup 
-- [ ] Review ADK documentation for initial setup requirements
-- [ ] Set up any required authentication for Google Cloud services (for API access only, not Vertex AI)
-- [ ] Create initial scaffolding for the new directory structure
-- [ ] Document environment setup procedure in README.md for new contributors
-- [ ] Document milestone completion:
-  - [ ] Summarize dependency decisions and reasoning
-  - [ ] Document any issues encountered and their solutions
-  - [ ] Create checklist for future dependency updates
+- [x] Git branch setup:
+  - [x] Create and switch to the `feat/google-adk` branch: `git checkout -b feat/google-adk`
+  - [x] Push branch to remote: `git push -u origin feat/google-adk`
+  - [x] Verification: `git branch` shows we're on `feat/google-adk`
+- [x] Add core ADK dependencies:
+  - [x] Add `google-cloud-aiplatform[adk]` to pyproject.toml
+  - [x] Add other Google Cloud dependencies as needed
+  - [x] Run `poetry lock && poetry install` to update dependencies
+  - [x] Update `.env.example` with required Google Cloud settings
+  - [x] Verification: `python -c "import google.adk; print(f'ADK version: {google.adk.__version__}')"` shows v0.2.0
+- [x] Development sandbox for ADK:
+  - [x] Create `sandbox/adk_sandbox.py` for experimental code
+  - [x] Document sandbox patterns and insights 
+  - [x] Run basic ADK experiments to verify functionality
+  - [x] [Implementation: [sandbox/adk_sandbox.py](../../sandbox/adk_sandbox.py)]
+- [x] Directory structure preparation:
+  - [x] Create `code_agent/adk/` directory
+  - [x] Create module files: `__init__.py`, `models.py`, `config.py`
+  - [x] Create `docs/migration_notes/` directory for migration documentation
+  - [x] Create `docs/migration_notes/milestone1_notes.md` for setup notes
+  - [x] [Implementation: [docs/migration_notes/milestone1_notes.md](../migration_notes/milestone1_notes.md)]
+- [x] Environment preparation:
+  - [x] Update CI/CD pipelines with new environment needs
+  - [x] Document environment requirements
+  - [x] Ensure consistent local and CI environments
+  - [x] Try compatibility with existing code
+
+#### Milestone 1 Completion Verification
+- [x] All dependencies installed and working correctly
+- [x] Directory structure created according to plan
+- [x] Sandbox experiments run successfully
+- [x] Documentation updated with setup procedures and learnings
 
 **Directory Structure Changes**:
 ```
@@ -368,13 +373,12 @@ The migration will proceed in the following phases. Each milestone contains spec
 │   ├── planning_google_adk_migration.md
 │   └── migration_notes/
 │       └── milestone1_notes.md # Document setup insights and learnings
-└── README.md                 # Update with new setup instructions
 ```
 
 **Milestone 1 Completion Checkpoint**:
 - [ ] All dependencies successfully installed and verified
-- [ ] Development sandbox functioning with basic ADK components
-- [ ] Directory structure created and pushed to feat/google-adk branch
+- [ ] Directory structure created according to plan
+- [ ] Sandbox experiments run successfully
 - [ ] Documentation updated with setup procedure and insights
 - [ ] No conflicts with existing packages identified
 - [ ] CI/CD pipeline updated and tested
@@ -425,45 +429,37 @@ Your tasks:
 
 IMPORTANT: After completing each step, wait for the user to verify functionality and provide feedback before moving on. DO NOT push any changes without explicit user confirmation after User Acceptance Testing.
 
-After completing all tasks, commit your changes but DO NOT push until the user confirms all UAT has passed successfully.
+After completing all tasks, commit your changes but DO NOT push until the user confirms all UAT has passed successfully. Make sure to update the planning document with links to all implementation artifacts created (documentation, code files, tests, etc.) within the appropriate task sections.
 ```
 
-### 7.2a. Tool Refactoring
+### 7.2. Tool Refactoring (Phase 1)
 **Status**: 🔲 Not Started | ⏳ In Progress | 🔍 In Review | ✅ Completed
 
-- [ ] Comprehensive tool inventory:
-  - [ ] Create `docs/migration_notes/tool_inventory.md` with a detailed inventory table
-  - [ ] For each tool, document:
-    - [ ] Function name and signature
-    - [ ] Return type and format
-    - [ ] Current error handling approach
-    - [ ] Dependencies and side effects
-    - [ ] Special behaviors or edge cases
-    - [ ] Migration approach and considerations
-  - [ ] Tool dependencies identified in pyproject.toml (typer, pyyaml, rich, pydantic, requests, duckduckgo-search)
-  - [ ] Categorize tools by complexity and migration difficulty
-- [ ] Create empty `code_agent/adk/tools.py` module
-- [ ] For each core tool function:
-  - [ ] Analyze function signature, docstring, and return values
-  - [ ] Create appropriate `FunctionTool` wrapper in `code_agent/adk/tools.py`
-  - [ ] Update function signatures to include `ToolContext` parameter
-  - [ ] Ensure return values conform to ADK dictionary format with status
-  - [ ] Add appropriate error handling and context usage
-- [ ] Review and adapt `code_agent/tools/error_utils.py` for ADK compatibility
-  - [ ] Adopt Google ADK's error handling patterns and best practices
-  - [ ] Prioritize user experience in error handling (minimize technical errors)
-  - [ ] Design error reporting to be relevant and actionable for users
-- [ ] Evaluate need for progress reporting and implement `LongRunningFunctionTool` if needed
-- [ ] Test each wrapped tool function in isolation
-  - [ ] Maintain compatibility with SonarCloud quality gates
-  - [ ] Create mocks and fixtures for tool dependencies
-  - [ ] Ensure test coverage remains above 80%
-- [ ] Create utility functions for common tool operations if needed
-- [ ] Update migration documentation with clear information on when users can begin testing the implementation via code-agent CLI and chat functions
-- [ ] Document milestone completion:
-  - [ ] Document patterns and approaches used for tool migration
-  - [ ] Create reference guide for adding future tools
-  - [ ] Note any challenging tools and how their issues were resolved
+- [x] Comprehensive tool inventory and documentation:
+  - [x] Document all existing tool functions by category
+  - [x] For each tool, document: function name, signature, return type, error handling, dependencies
+  - [x] Classify tools by migration complexity (simple/medium/complex)
+  - [x] Identify tools that need significant refactoring
+  - [x] [Implementation: [docs/migration_notes/tool_inventory.md](../migration_notes/tool_inventory.md)]
+- [x] Empty module setup:
+  - [x] Create initial module structure in `code_agent/adk/tools.py`
+  - [x] Define interface patterns between current tools and ADK
+  - [x] [Implementation: [code_agent/adk/tools.py](../../code_agent/adk/tools.py)]
+- [ ] Transform simple tools to ADK format:
+  - [ ] Select 3-5 tools from the "simple" category
+  - [ ] Create ADK-compatible versions in `code_agent/adk/tools.py`
+  - [ ] Test tools independently using the sandbox
+  - [ ] Document transformation patterns for future migrations
+- [ ] Execute tests with simple tool implementations:
+  - [ ] Run unit tests for ADK-transformed tools
+  - [ ] Verify functionality matches original implementations
+  - [ ] Document test results and issues
+
+#### Milestone 2a Completion Verification
+- [x] Tool inventory document reviewed and approved
+- [ ] Initial ADK tools successfully implemented
+- [ ] Unit tests passing for transformed tools
+- [ ] Transformation patterns documented for future use
 
 **Directory Structure Changes**:
 ```
@@ -533,12 +529,14 @@ Your tasks:
 4. Ensure proper error handling and return value formats
 5. Write tests for the wrapped tools
 
-IMPORTANT: Wait for user confirmation after creating the tool inventory document before starting implementation. After implementing each tool category, wait for user feedback on your approach before continuing.
+IMPORTANT: Run agentic or CLI commands in non-interactive mode where supported. Run full test suite after code changes. Before fixing errors, explain the logic you're trying to fix. If new errors appear after fixing a specific error, pause and confirm with user if there is a possible bug in the core logic. Never let code coverage drop below 80%. Never disable tests to silence errors. Never commit using --no-verify to bypass pre-commit hooks. Use the .venv virtual environment for Python projects.
 
-DO NOT commit or push any changes until the user confirms that all tools function properly and the User Acceptance Tests have been successfully completed AND the tasks in the planning are updated to in review.
+Wait for user confirmation after creating the tool inventory document before starting implementation. After implementing each tool category, wait for user feedback on your approach before continuing.
+
+DO NOT commit or push any changes until the user confirms that all tools function properly and the User Acceptance Tests have been successfully completed AND the tasks in the planning are updated to in review. Make sure to update the planning document with links to all implementation artifacts created (documentation, code files, inventory documents, tests, etc.) within the appropriate task sections.
 ```
 
-### 7.2b. Model Integration
+### 7.3. Model Integration
 **Status**: 🔲 Not Started | ⏳ In Progress | 🔍 In Review | ✅ Completed
 
 - [ ] Create `code_agent/adk/models.py` module
@@ -627,155 +625,41 @@ Your tasks:
 4. Update model interaction patterns to use ADK interfaces
 5. Write tests for model wrappers and selection
 
-IMPORTANT: After implementing each model provider, pause for user testing of that specific provider. Request explicit feedback on response quality and behavior before proceeding to the next provider.
+IMPORTANT: Run agentic or CLI commands in non-interactive mode where supported. Run full test suite after code changes. Before fixing errors, explain the logic you're trying to fix. If new errors appear after fixing a specific error, pause and confirm with user if there is a possible bug in the core logic. Never let code coverage drop below 80%. Never disable tests to silence errors. Never commit using --no-verify to bypass pre-commit hooks. Use the .venv virtual environment for Python projects.
 
-DO NOT commit or push any changes until the user has confirmed that all models work correctly and the User Acceptance Tests have been successfully completed AND the tasks in the planning are updated to in review.
+After implementing each model provider, pause for user testing of that specific provider. Request explicit feedback on response quality and behavior before proceeding to the next provider.
+
+DO NOT commit or push any changes until the user has confirmed that all models work correctly and the User Acceptance Tests have been successfully completed AND the tasks in the planning are updated to in review. Make sure to update the planning document with links to all implementation artifacts created (documentation, code files, tests, etc.) within the appropriate task sections.
 ```
 
-### 7.3. Early Integration Testing
+### 7.4. Session Integration (Phase 1)
 **Status**: 🔲 Not Started | ⏳ In Progress | 🔍 In Review | ✅ Completed
 
-- [ ] Research Google ADK's recommended testing approaches and best practices
-- [ ] Design testing strategy with clear separation between:
-  - [ ] Minimal integration tests (focused on specific component interactions)
-  - [ ] Comprehensive end-to-end scenarios (testing full workflows)
-- [ ] Create integration test plan prioritizing:
-  - [ ] Model response handling testing (first priority)
-  - [ ] Tool execution testing (second priority)
-- [ ] Set up test environment:
-  - [ ] Research and implement ADK-recommended mocking approaches
-  - [ ] Create mock implementations for external services/APIs
-  - [ ] Develop reusable test fixtures for common components
-- [ ] Implement authentication handling:
-  - [ ] Support API keys via .env file for local testing
-  - [ ] Allow GitHub secrets integration for pipeline testing
-  - [ ] Implement conditional test skipping when keys aren't available
-  - [ ] Create mock authentication for tests that don't require real APIs
-- [ ] Create minimal integration tests:
-  - [ ] Build test harness for calling models with tools
-  - [ ] Test basic tool calling flows
-  - [ ] Verify tool execution and response handling
-- [ ] Document test coverage and success criteria:
-  - [ ] Define expected functionality for each feature
-  - [ ] Create pass/fail validation for each test case
-  - [ ] Focus on validating end-user experience
-- [ ] Implement adjustments based on integration findings:
-  - [ ] Document any issues or incompatibilities discovered
-  - [ ] Adjust tool and model implementations as needed
-- [ ] Create integration test fixtures for future component testing
+- [x] Session service configuration:
+  - [x] Define session service interface in `code_agent/adk/session_config.py`
+  - [x] Implement base session management using ADK patterns
+  - [x] Document session lifecycle and configuration options
+  - [x] [Implementation: [code_agent/adk/session_config.py](../../code_agent/adk/session_config.py)]
+- [ ] Session state management:
+  - [ ] Define state schema for agent sessions
+  - [ ] Implement state initialization for new sessions
+  - [ ] Create state update methods based on agent actions
+  - [ ] Ensure state persistence between calls
+- [ ] Memory integration:
+  - [ ] Research ADK memory components and requirements
+  - [ ] Design memory interface for our specific needs
+  - [ ] Implement memory service integration with session state
+  - [ ] Document memory patterns and limitations
+- [ ] Session isolation and security:
+  - [ ] Implement security boundaries between sessions
+  - [ ] Ensure proper cleanup of session resources
+  - [ ] Add authentication verification for session access
 
-**Directory Structure Changes**:
-```
-/
-├── tests/
-│   ├── integration/
-│   │   ├── test_adk_minimal_integration.py  # Minimal component tests
-│   │   └── test_adk_e2e_scenarios.py        # End-to-end workflow tests
-│   ├── conftest.py                          # Test fixtures and utilities
-│   ├── test_harness.py                      # Optional test harness for development
-│   └── test_config.py                       # Test configuration management
-├── .env.test.example                        # Template for test environment variables
-```
-
-**Dependencies**: 
-- **Previous Milestones**: Tool Refactoring (7.2a) and Model Integration (7.2b) at least partially completed
-- **Software**: Pytest, pytest-asyncio for async testing, pytest-mock for mocking
-- **Documentation**: 
-  - [ADK Tool Execution Flow](https://google.github.io/adk-docs/tools/creating-tools/)
-  - [ADK Events Documentation](https://google.github.io/adk-docs/events/)
-  - [ADK Testing Recommendations](https://google.github.io/adk-docs/getting-started/testing/)
-- **Knowledge**: Understanding of LLM tool calling patterns, test fixture design, mock object usage
-- **API Keys**: API keys for at least one model provider for live testing (in .env for local, GitHub secrets for CI)
-- **Code**: Implemented tool wrappers and model interfaces from previous milestones
-
-**Completion Criteria**: 
-- Successful integration of tools and models demonstrated through passing tests
-- Clear distinction between minimal integration tests and comprehensive end-to-end scenarios
-- Test fixtures created and reusable
-- Authentication handling works correctly (both real and mocked)
-- Features validated through appropriate test coverage
-- All integration tests pass and validate user experience requirements
-
-**Validation Method**:
-1. Execute minimal integration tests that verify:
-   - Models can generate valid tool calls
-   - Tools can be executed with proper context
-   - Results are correctly formatted and returned
-2. Execute end-to-end scenario tests that validate:
-   - Complete user workflows function as expected
-   - Feature requirements are met from user perspective
-3. Verify authentication handling works correctly:
-   - Tests run with real API keys when available
-   - Tests use mocked authentication when appropriate
-   - Tests skip gracefully when required keys aren't available
-4. Document test coverage relative to feature requirements
-5. Verify error propagation between components
-6. Create a simple CLI test command that demonstrates integrated functionality
-7. Review and address any issues discovered during integration
-
-**Milestone 3 Completion Checkpoint**:
-- [ ] Models and tools successfully integrated
-- [ ] Both minimal and end-to-end tests passing
-- [ ] Test fixtures created and documented
-- [ ] Authentication handling verified
-- [ ] Documentation updated with integration insights and patterns
-
-**User Acceptance Testing Instructions**:
-1. **Run Basic Integration Tests via code-agent**:
-   ```
-   # Test a tool-heavy workflow
-   code-agent run "Search for the latest Python version, then create a small Python script that demonstrates a new feature from that version"
-   
-   # Test a conversation-heavy workflow
-   code-agent chat "Let's discuss the best practices for error handling in Python. First, what are the main approaches?"
-   # Follow up with 2-3 more messages in the conversation
-   ```
-
-2. **Test Error Recovery**:
-   ```
-   # Test handling of a failed tool call
-   code-agent run "Try to execute an invalid shell command, then tell me what went wrong and suggest a fix"
-   ```
-
-3. **Test Authentication Handling**:
-   ```
-   # If implemented, test a tool requiring authentication
-   code-agent run "Show me my Google Cloud projects"
-   # Should either work with configured auth or guide you through auth setup
-   ```
-
-4. **Feedback Points**:
-   - Do complex workflows complete successfully?
-   - Is the conversation context maintained properly?
-   - Does the agent recover gracefully from errors?
-   - Is the authentication flow user-friendly?
-
-### 7.4a. Session Integration
-**Status**: 🔲 Not Started | ⏳ In Progress | 🔍 In Review | ✅ Completed
-
-- [ ] Implement session state persistence:
-  - [ ] Start with InMemorySessionService for initial implementation
-  - [ ] Add filesystem-based persistence as an alternative option
-  - [ ] Ensure critical state is preserved (history, context, rules)
-  - [ ] Design for future extension to other persistence mechanisms
-- [ ] Configure and optimize session service:
-  - [ ] Create `code_agent/adk/services.py` module 
-  - [ ] Instantiate and configure the session service
-  - [ ] Add performance configuration options with sensible defaults
-  - [ ] Optimize for best end user experience
-- [ ] Analyze current history management in `CodeAgent`:
-  - [ ] Identify all existing state persisted in current implementation
-  - [ ] Map existing history operations to ADK session events and state
-  - [ ] Confirm if any unique session handling needs exist (consult during implementation)
-- [ ] Implement event handling:
-  - [ ] Utilize ADK's standard event types
-  - [ ] Ensure proper event types are used for different message types
-  - [ ] Review need for custom event types during implementation
-- [ ] Create utility functions for common session operations if needed
-- [ ] Test session persistence and retrieval:
-  - [ ] Test in-memory persistence
-  - [ ] Test filesystem persistence
-  - [ ] Verify proper state recovery
+#### Milestone 4a Completion Verification
+- [x] Session configuration module implemented and documented
+- [ ] Session state management working correctly
+- [ ] Memory integration tested with various scenarios
+- [ ] Security boundaries verified with penetration testing
 
 **Directory Structure Changes**:
 ```
@@ -870,137 +754,11 @@ Your tasks:
 4. Create session management CLI interface
 5. Write tests for session functionality
 
-IMPORTANT: After implementing basic session functionality, pause for user testing before adding advanced features. Have the user verify that context is maintained correctly between interactions.
+IMPORTANT: Run agentic or CLI commands in non-interactive mode where supported. Run full test suite after code changes. Before fixing errors, explain the logic you're trying to fix. If new errors appear after fixing a specific error, pause and confirm with user if there is a possible bug in the core logic. Never let code coverage drop below 80%. Never disable tests to silence errors. Never commit using --no-verify to bypass pre-commit hooks. Use the .venv virtual environment for Python projects.
 
-DO NOT commit or push changes until the user has confirmed that all session management features work properly and the User Acceptance Tests have been successfully completed AND the tasks in the planning are updated to in review.
-```
+After implementing basic session functionality, pause for user testing before adding advanced features. Have the user verify that context is maintained correctly between interactions.
 
-### 7.4b. Agent Refactoring
-**Status**: 🔲 Not Started | ⏳ In Progress | 🔍 In Review | ✅ Completed
-
-- [ ] Create `code_agent/adk/agent.py` module
-- [ ] Create `AdkCodeAgent` class inheriting from `google.adk.agents.LlmAgent`
-- [ ] Configure agent with flexible, sensible defaults:
-  - [ ] Design default instructions geared towards software and platform engineers
-  - [ ] Make instruction parameters configurable
-  - [ ] Follow Google ADK's approach for agent configuration
-- [ ] Implement standard ADK agent capabilities:
-  - [ ] Configure agent with tools from step 7.2a
-  - [ ] Configure agent with model instance(s) from step 7.2b
-  - [ ] Set up appropriate `generate_content_config` parameters
-  - [ ] Enable response streaming by default
-- [ ] Research and implement callback system:
-  - [ ] Follow Google ADK's recommendations for monitoring and logging
-  - [ ] Design callbacks that enhance user experience
-  - [ ] Document potential callback use cases for future implementation
-  - [ ] Create placeholder for user-delighting callback features (to be defined)
-- [ ] Implement response formatting:
-  - [ ] Use markdown for visually appealing responses
-  - [ ] Ensure clear dialog formatting between users and agent(s)
-  - [ ] Research and implement ADK's recommendations for response truncation
-  - [ ] Design format that works well in both chat and run modes
-- [ ] Create any necessary utility methods for agent configuration
-- [ ] Unit test the agent implementation
-
-**Directory Structure Changes**:
-```
-/
-├── code_agent/
-│   ├── adk/
-│   │   ├── __init__.py       # Update to expose agent implementation
-│   │   ├── tools.py          # From previous milestone
-│   │   ├── models.py         # From previous milestone
-│   │   ├── services.py       # From previous milestone
-│   │   ├── agent.py          # Create new file with agent implementation
-│   │   └── callbacks.py      # Implementation for callbacks system
-├── tests/
-│   ├── unit/
-│   │   └── test_adk_agent.py # New test file for agent implementation
-```
-
-**Dependencies**: 
-- **Previous Milestones**: Early Integration Testing (7.3) completed
-- **Software**: No additional software beyond ADK core
-- **Documentation**: 
-  - [ADK Agents Documentation](https://google.github.io/adk-docs/agents/)
-  - [LLM Agent Guide](https://google.github.io/adk-docs/agents/llm-agents/)
-  - [Agent Callbacks](https://google.github.io/adk-docs/callbacks/)
-  - [Agent Context](https://google.github.io/adk-docs/context/invocation-context/)
-  - [Streaming Responses](https://google.github.io/adk-docs/api-reference/agents/llm-agent/#streaming-responses)
-- **Knowledge**: Agent design patterns, prompt engineering, instruction formatting
-- **Code**: 
-  - Existing `CodeAgent` implementation (for reference only)
-  - Tool and model implementations from previous milestones
-
-**Completion Criteria**: 
-- Agent successfully instantiated and functioning
-- Configuration flexible with sensible defaults
-- Response formatting visually appealing with markdown
-- Streaming responses enabled
-- Callback framework established
-- Tests passing
-
-**Validation Method**:
-1. Create unit tests for the agent class that verify:
-   - Proper initialization with various configuration parameters
-   - Correct handling of instructions and formatting
-   - Appropriate tool registration
-   - Model configuration
-   - Streaming response capability
-2. Create integration tests with simulated prompts that:
-   - Test the agent's response generation
-   - Verify response formatting and markdown rendering
-   - Validate streaming functionality
-   - Test callback system
-3. Confirm callback extensibility for future enhancements
-4. Test response clarity and visual appeal with actual users if possible
-5. Verify streaming works correctly in different environments
-
-**Milestone 4b Completion Checkpoint**:
-- [ ] Agent implementation completed and tested
-- [ ] Streaming and markdown formatting working correctly
-- [ ] Callback system verified and documented
-- [ ] Documentation updated with agent implementation insights
-
-**User Acceptance Testing Instructions**:
-1. **Test Basic Agent Functionality**:
-   ```
-   # Test agent with simple prompts
-   code-agent chat "Hello, who are you?"
-   
-   # Test agent with tool usage
-   code-agent run "List the files in this directory"
-   ```
-
-2. **Test Agent Behavior with Different Inputs**:
-   ```
-   # Test with complex reasoning
-   code-agent run "Explain how asynchronous programming works in Python"
-   
-   # Test with ambiguous requests
-   code-agent run "Improve this code"
-   ```
-
-3. **Feedback Points**:
-   - Does the agent maintain its previous capabilities?
-   - Is there any change in prompt handling or response quality?
-   - Does the agent handle tool selection appropriately?
-   - Are there any regressions in functionality?
-
-**Agent Implementation Prompt**:
-```
-Implement Milestone 3: Agent Refactoring for Google ADK Migration.
-
-Your tasks:
-1. Create ADK LlmAgent subclass for the Code Agent
-2. Implement prompt templates and response handlers
-3. Configure the agent with appropriate tools and callbacks
-4. Handle agent state management through ADK sessions
-5. Write tests for agent functionality
-
-IMPORTANT: After implementing the basic agent structure, pause for user testing before adding advanced features. Request specific feedback on the agent's behavior compared to the previous implementation.
-
-DO NOT commit or push changes until the user has verified that the agent maintains all previous capabilities and the User Acceptance Tests have been successfully completed AND the tasks in the planning are updated to in review.
+DO NOT commit or push changes until the user has confirmed that all session management features work properly and the User Acceptance Tests have been successfully completed AND the tasks in the planning are updated to in review. Make sure to update the planning document with links to all implementation artifacts created (documentation, service implementation files, configuration files, tests, etc.) within the appropriate task sections.
 ```
 
 ### 7.5. Runner Implementation
@@ -1134,9 +892,11 @@ Your tasks:
 4. Configure output formatting and display
 5. Write tests for runner functionality
 
-IMPORTANT: After implementing the basic runner structure, pause for user testing of the CLI interface. Request specific feedback on compatibility with previous command patterns.
+IMPORTANT: Run agentic or CLI commands in non-interactive mode where supported. Run full test suite after code changes. Before fixing errors, explain the logic you're trying to fix. If new errors appear after fixing a specific error, pause and confirm with user if there is a possible bug in the core logic. Never let code coverage drop below 80%. Never disable tests to silence errors. Never commit using --no-verify to bypass pre-commit hooks. Use the .venv virtual environment for Python projects.
 
-DO NOT commit or push changes until the user has confirmed that the CLI interface maintains all previous functionality and the User Acceptance Tests have been successfully completed AND the tasks in the planning are updated to in review.
+After implementing the basic runner structure, pause for user testing of the CLI interface. Request specific feedback on compatibility with previous command patterns.
+
+DO NOT commit or push changes until the user has confirmed that the CLI interface maintains all previous functionality and the User Acceptance Tests have been successfully completed AND the tasks in the planning are updated to in review. Make sure to update the planning document with links to all implementation artifacts created (documentation, runner implementation files, tests, etc.) within the appropriate task sections.
 ```
 
 ### 7.6. Progressive Code Decommissioning
@@ -1197,7 +957,7 @@ DO NOT commit or push changes until the user has confirmed that the CLI interfac
 2. Use static analysis tools to identify any remaining references to removed components
 3. Verify imports throughout the codebase to ensure no dependencies on removed modules
 4. Run the application with various prompts to ensure full functionality
-5. Confirm no import errors or module not found errors
+5. Verify no import errors or module not found errors
 6. Verify documentation and comments are updated to reflect new architecture
 
 **Milestone 6 Completion Checkpoint**:
@@ -1247,9 +1007,11 @@ Your tasks:
 4. Ensure all functionality is preserved with the new implementation
 5. Run comprehensive tests after each removal
 
-IMPORTANT: After removing each component, pause for user testing to verify that all functionality is maintained. Be extremely cautious about removing code that might still be needed.
+IMPORTANT: Run agentic or CLI commands in non-interactive mode where supported. Run full test suite after code changes. Before fixing errors, explain the logic you're trying to fix. If new errors appear after fixing a specific error, pause and confirm with user if there is a possible bug in the core logic. Never let code coverage drop below 80%. Never disable tests to silence errors. Never commit using --no-verify to bypass pre-commit hooks. Use the .venv virtual environment for Python projects.
 
-DO NOT commit or push changes until the user has confirmed that all functionality is maintained after code removal and the User Acceptance Tests have been successfully completed AND the tasks in the planning are updated to in review.
+After removing each component, pause for user testing to verify that all functionality is maintained. Be extremely cautious about removing code that might still be needed.
+
+DO NOT commit or push changes until the user has confirmed that all functionality is maintained after code removal and the User Acceptance Tests have been successfully completed AND the tasks in the planning are updated to in review. Make sure to update the planning document with documentation about what was removed, and any migration notes or insights gained during the decommissioning process.
 ```
 
 ### 7.7. Final Testing & Validation
@@ -1434,9 +1196,11 @@ Your tasks:
 4. Implement response time tracking
 5. Perform final validation of all functionality
 
-IMPORTANT: After implementing each testing component, pause for user validation. Request specific feedback on test coverage, evaluation metrics, and documentation quality.
+IMPORTANT: Run agentic or CLI commands in non-interactive mode where supported. Run full test suite after code changes. Before fixing errors, explain the logic you're trying to fix. If new errors appear after fixing a specific error, pause and confirm with user if there is a possible bug in the core logic. Never let code coverage drop below 80%. Never disable tests to silence errors. Never commit using --no-verify to bypass pre-commit hooks. Use the .venv virtual environment for Python projects.
 
-DO NOT commit or push changes until the user has confirmed that all testing components work correctly and the User Acceptance Tests have been successfully completed AND the tasks in the planning are updated to in review.
+After implementing each testing component, pause for user validation. Request specific feedback on test coverage, evaluation metrics, and documentation quality.
+
+DO NOT commit or push changes until the user has confirmed that all testing components work correctly and the User Acceptance Tests have been successfully completed AND the tasks in the planning are updated to in review. Make sure to update the planning document with links to all implementation artifacts created (evaluation sets, test files, documentation guides, metrics reports, etc.) within the appropriate task sections.
 
 Once all testing is complete, prepare a final PR summary for the user to review before final approval.
 ```
