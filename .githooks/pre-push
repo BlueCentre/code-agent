@@ -1,0 +1,77 @@
+#!/bin/bash
+
+# Simple pre-push hook without dependencies
+# Checks code quality before pushing
+
+echo "Running pre-push checks..."
+
+# Store the current directory
+REPO_ROOT=$(git rev-parse --show-toplevel)
+cd "$REPO_ROOT" || exit 1
+
+# Function to check if command exists and is executable
+command_exists() {
+  command -v "$1" >/dev/null 2>&1
+}
+
+# Format code with ruff if available
+echo "Running code formatting..."
+if command_exists ruff; then
+  # Get Python files in the repo
+  PYTHON_FILES=$(find . -name "*.py" -not -path "*/\.*" -not -path "*/venv/*" -not -path "*/.venv/*" -not -path "*/build/*" -not -path "*/dist/*")
+  if [ -n "$PYTHON_FILES" ]; then
+    echo "Formatting Python files with ruff..."
+    ruff format $PYTHON_FILES
+    ruff check --fix $PYTHON_FILES
+  fi
+else
+  echo "⚠️ Ruff not found. Skipping automatic formatting."
+  echo "  To install: nix-shell -p python311Packages.ruff --run 'ruff --version'"
+fi
+
+# Run linting check
+echo "Running linting checks..."
+if command_exists ruff; then
+  CHANGED_PYTHON_FILES=$(git diff --name-only --cached | grep "\.py$" || true)
+  if [ -n "$CHANGED_PYTHON_FILES" ]; then
+    if ! ruff check $CHANGED_PYTHON_FILES; then
+      echo "❌ Linting checks failed. Please fix the issues before pushing."
+      exit 1
+    fi
+  fi
+else
+  echo "⚠️ Skipping linting checks (ruff not found)."
+fi
+
+# Simple check for common issues in committed files 
+COMMITTED_FILES=$(git diff --name-only --cached)
+for FILE in $COMMITTED_FILES; do
+  # Check for large files
+  if [ -f "$FILE" ]; then
+    SIZE=$(stat -f%z "$FILE" 2>/dev/null || stat -c%s "$FILE" 2>/dev/null)
+    if [ "$SIZE" -gt 1000000 ]; then
+      echo "❌ Error: $FILE is very large ($SIZE bytes)."
+      echo "   Consider using Git LFS for large files."
+      exit 1
+    fi
+
+    # Check for sensitive information in common file types
+    if [[ "$FILE" =~ \.(py|js|json|yml|yaml|md|txt)$ ]]; then
+      if grep -i "api[_-]key\|secret\|password\|token" "$FILE" | grep -i "=\|:\|'[A-Za-z0-9]\{10,\}'\|\"[A-Za-z0-9]\{10,\}\"" > /dev/null; then
+        echo "⚠️ Warning: $FILE may contain sensitive information (API keys, tokens, etc.)"
+        echo "   Please verify this file doesn't contain secrets before pushing."
+        read -p "   Continue anyway? [y/N] " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+          exit 1
+        fi
+      fi
+    fi
+  fi
+done
+
+echo "✅ All pre-push checks passed!"
+
+echo "ℹ️ After pushing completes, run ./scripts/monitor-pr.sh to monitor CI checks"
+
+exit 0 

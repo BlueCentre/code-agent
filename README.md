@@ -32,6 +32,7 @@ cli-agent/
 │   ├── run_coverage_pipeline.sh
 │   ├── run_coverage_pipeline_venv.sh
 │   └── run_tests.sh
+├── .githooks/        # Optional but good to keep AI agents from straying
 ├── .github/          # GitHub Actions workflows
 ├── .venv/            # Virtual environment directory (if using venv)
 ├── pyproject.toml    # Project dependencies and configuration
@@ -51,6 +52,42 @@ cli-agent/
 - **README.md**: Project overview, installation, and usage instructions
 - **docs/**: Detailed documentation about architecture, implementation, and specific features
 - **docs/COVERAGE_VERIFICATION.md**: Guide for verifying test coverage
+
+## Features
+
+*   **Multi-Provider Support:**
+    * Connect to different LLM providers using LiteLLM
+    * Supports OpenAI, Google AI Studio, Groq, Anthropic, and more
+    * Local model support via Ollama integration
+    * Easily switch between providers with command-line flags
+
+*   **Versatile Interaction Modes:**
+    * **Single-Shot Mode:** Run individual prompts (`code-agent run "..."`)
+    * **Interactive Chat:** Engage in conversational sessions (`code-agent chat`)
+    * Special chat commands: `/help`, `/clear`, `/exit`, `/quit`
+
+*   **Local Environment Integration:**
+    * **Read files:** Agent can access and analyze local files
+    * **Apply Edits:** Propose file changes with diff preview and confirmation
+    * **Execute Commands:** Run native terminal commands with safety checks
+    * **Search Capabilities:** Find files, locate code patterns, and analyze codebases
+
+*   **Advanced Security Controls:**
+    * Path validation to prevent path traversal attacks
+    * Workspace restrictions to limit file operations
+    * Command validation and allowlisting to prevent dangerous operations
+    * Optional auto-approval settings with clear security warnings
+
+*   **Rich Configuration System:**
+    * Hierarchical configuration (CLI > Environment > Config file)
+    * Dynamic validation of settings
+    * Provider-specific configuration options
+
+*   **User Experience Features:**
+    * Rich text output with Markdown rendering
+    * Syntax highlighting for code
+    * Clear error messages and troubleshooting information
+    * Interactive confirmation prompts for system modifications
 
 ## Quick Start
 
@@ -129,81 +166,6 @@ After installation, set up your API key (for OpenAI in this example):
 export OPENAI_API_KEY=sk-your-key-here
 code-agent run "Hello! What can you help me with today?"
 ```
-
-## Features
-
-*   **Multi-Provider Support:**
-    * Connect to different LLM providers using LiteLLM
-    * Supports OpenAI, Google AI Studio, Groq, Anthropic, and more
-    * Local model support via Ollama integration
-    * Easily switch between providers with command-line flags
-
-*   **Versatile Interaction Modes:**
-    * **Single-Shot Mode:** Run individual prompts (`code-agent run "..."`)
-    * **Interactive Chat:** Engage in conversational sessions (`code-agent chat`)
-    * Special chat commands: `/help`, `/clear`, `/exit`, `/quit`
-
-*   **Local Environment Integration:**
-    * **Read files:** Agent can access and analyze local files
-    * **Apply Edits:** Propose file changes with diff preview and confirmation
-    * **Execute Commands:** Run native terminal commands with safety checks
-    * **Search Capabilities:** Find files, locate code patterns, and analyze codebases
-
-*   **Advanced Security Controls:**
-    * Path validation to prevent path traversal attacks
-    * Workspace restrictions to limit file operations
-    * Command validation and allowlisting to prevent dangerous operations
-    * Optional auto-approval settings with clear security warnings
-
-*   **Rich Configuration System:**
-    * Hierarchical configuration (CLI > Environment > Config file)
-    * Dynamic validation of settings
-    * Provider-specific configuration options
-
-*   **User Experience Features:**
-    * Rich text output with Markdown rendering
-    * Syntax highlighting for code
-    * Clear error messages and troubleshooting information
-    * Interactive confirmation prompts for system modifications
-
-## Installation
-
-1.  **Prerequisites:**
-    *   Python 3.10+
-    *   [Poetry](https://python-poetry.org/docs/#installation)
-
-2.  **Clone the repository:**
-    ```bash
-    git clone <repository_url> # Replace with your repo URL
-    cd code-agent # Or your project directory name
-    ```
-
-3.  **Create virtual environment and install dependencies:**
-    ```bash
-    # Recommended: Use a Python version management tool like pyenv if needed
-    python3 -m venv .venv
-    source .venv/bin/activate
-    pip install poetry
-    poetry install
-    ```
-    *(Alternatively, if you just use `poetry install` directly, Poetry might manage the virtual environment for you.)*
-
-    **Faster Alternative using `uv`:**
-
-    If you have `uv` installed (see [Quick Start](#quick-start)), you can use it for a much faster setup:
-
-    ```bash
-    # 1. Create the virtual environment
-    uv venv .venv
-
-    # 2. Activate the environment (Linux/macOS)
-    source .venv/bin/activate
-    #    Activate the environment (Windows - Command Prompt/PowerShell)
-    #    .venv\Scripts\activate
-
-    # 3. Install dependencies
-    uv pip install '.[dev]'
-    ```
 
 ## Configuration
 
@@ -377,6 +339,45 @@ Activate the virtual environment first: `source .venv/bin/activate`
     code-agent config --help
     ```
 
+## Development Installation
+
+1.  **Prerequisites:**
+    *   Python 3.10+
+    *   [Poetry](https://python-poetry.org/docs/#installation)
+
+2.  **Clone the repository:**
+    ```bash
+    git clone <repository_url> # Replace with your repo URL
+    cd code-agent # Or your project directory name
+    ```
+
+3.  **Create virtual environment and install dependencies:**
+    ```bash
+    # Recommended: Use a Python version management tool like pyenv if needed
+    python3 -m venv .venv
+    source .venv/bin/activate
+    pip install poetry
+    poetry install
+    ```
+    *(Alternatively, if you just use `poetry install` directly, Poetry might manage the virtual environment for you.)*
+
+    **Faster Alternative using `uv`:**
+
+    If you have `uv` installed (see [Quick Start](#quick-start)), you can use it for a much faster setup:
+
+    ```bash
+    # 1. Create the virtual environment
+    uv venv .venv
+
+    # 2. Activate the environment (Linux/macOS)
+    source .venv/bin/activate
+    #    Activate the environment (Windows - Command Prompt/PowerShell)
+    #    .venv\Scripts\activate
+
+    # 3. Install dependencies
+    uv pip install '.[dev]'
+    ```
+
 ## Contributors
 
 We welcome contributions to the Code Agent project! Whether you're fixing bugs, adding features, improving documentation, or reporting issues, your help is appreciated.
@@ -486,3 +487,39 @@ When submitting a PR:
 3. All checks must pass and coverage cannot drop below 80%
 4. At least one reviewer must approve the PR
 5. Use "Squash and merge" to maintain a clean history
+
+## PR Validation
+
+This repository includes an optional PR validation feature that provides immediate feedback on CI/CD checks after pushing changes. See [PR Validation Documentation](docs/PR_VALIDATION.md) for setup instructions.
+
+## Development
+
+### Git Hooks
+
+This project uses Git hooks to maintain code quality and consistency. These hooks are managed in the `.githooks` directory.
+
+- **Pre-commit:** Runs quick checks like linting and formatting.
+- **Post-commit:** Provides commit summaries and guidance.
+- **Pre-push:** Runs more thorough checks before pushing.
+
+**Important:** After cloning, install the hooks using:
+```bash
+./scripts/install-hooks.sh
+```
+Or configure Git to use them directly:
+```bash
+git config core.hooksPath .githooks
+```
+
+For detailed information on the hooks, see [docs/GIT_HOOKS.md](./docs/GIT_HOOKS.md).
+
+### PR Monitoring
+
+Since Git doesn't offer a reliable post-push hook, we use a standalone script to monitor Pull Request status after pushing changes.
+
+```bash
+# Run after pushing to check CI status
+./scripts/monitor-pr.sh
+```
+
+For details on usage and configuration, see the [PR Monitoring Script Documentation](./docs/PR_VALIDATION.md).

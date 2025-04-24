@@ -1,0 +1,75 @@
+#!/bin/bash
+
+# Simple pre-commit hook without Python dependencies
+# Provides basic checks while being environment-agnostic
+
+echo "Running simple pre-commit checks..."
+
+# Get changed files
+FILES=$(git diff --cached --name-only --diff-filter=ACMR | grep "\.py$" || true)
+if [ -z "$FILES" ]; then
+    echo "No Python files to check. Skipping."
+    exit 0
+fi
+
+# Check for large files
+for FILE in $FILES; do
+    SIZE=$(stat -f%z "$FILE" 2>/dev/null || stat -c%s "$FILE" 2>/dev/null)
+    if [ "$SIZE" -gt 500000 ]; then
+        echo "❌ Error: $FILE is too large ($SIZE bytes)!"
+        echo "   Please don't commit large files."
+        exit 1
+    fi
+done
+
+# Check for debug prints
+for FILE in $FILES; do
+    if grep -n "print(" "$FILE" >/dev/null; then
+        echo "⚠️  Warning: Found print statements in $FILE:"
+        grep -n "print(" "$FILE" | sed 's/^/   /'
+        # Don't exit with error, just warn
+    fi
+done
+
+# Check for unresolved merge conflicts
+for FILE in $FILES; do
+    if grep -l "^<<<<<<< " "$FILE" >/dev/null; then
+        echo "❌ Error: Unresolved merge conflicts in $FILE"
+        exit 1
+    fi
+done
+
+# Try running ruff directly if available
+if command -v ruff >/dev/null 2>&1; then
+    echo "Running ruff linting..."
+    LINT_FILES=$(echo "$FILES" | tr '\n' ' ')
+    if ! ruff check $LINT_FILES >/dev/null 2>&1; then
+        echo "⚠️  Ruff found issues. Running ruff with --fix..."
+        ruff check --fix $LINT_FILES >/dev/null 2>&1
+        
+        # Stage the fixed files
+        for FILE in $FILES; do
+            if [ -f "$FILE" ]; then
+                git add "$FILE"
+            fi
+        done
+    fi
+    
+    echo "Running ruff format..."
+    if ! ruff format --check $LINT_FILES >/dev/null 2>&1; then
+        echo "⚠️  Ruff format found issues. Formatting files..."
+        ruff format $LINT_FILES >/dev/null 2>&1
+        
+        # Stage the formatted files
+        for FILE in $FILES; do
+            if [ -f "$FILE" ]; then
+                git add "$FILE"
+            fi
+        done
+    fi
+else
+    echo "Ruff not found in PATH. Skipping linting and formatting."
+fi
+
+echo "✅ Simple pre-commit checks complete!"
+exit 0 
