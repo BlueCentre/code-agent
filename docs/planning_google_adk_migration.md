@@ -46,7 +46,8 @@ This project utilizes the following primary technologies:
 *   **LLM Interaction (Post-Migration):** `google.adk.models` (initially `Gemini`, potentially custom `BaseLlm` wrappers)
 *   **Testing:** `pytest`, `pytest-cov`, `pytest-mock`, `pytest-asyncio`
 *   **Linting/Formatting:** `ruff`, `pre-commit`
-*   **Virtual Environment:** `.venv` (managed by Poetry)
+*   **Virtual Environment:** `.venv` (managed by Poetry, potentially accelerated by `uv`)
+*   **Installer/Resolver:** Poetry (potential alternative/supplement: `uv`)
 
 ## 4. Proposed Target Architecture
 
