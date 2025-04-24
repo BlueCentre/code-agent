@@ -33,7 +33,22 @@ Our analysis revealed significant overlap between our custom code and the compon
 | `cli_agent/`                       | `google.adk.runners.Runner` / `LlmAgent`         | Decommission `cli_agent/` entirely; its functionality will be consolidated into the main agent package using ADK `Runner` and `LlmAgent`. |
 | `code_agent.config.*`              | Initialization parameters for ADK components     | Keep config loading logic, adapt to pass values to ADK constructors.       |
 
-## 3. Proposed Target Architecture
+## 3. Tech Stack Summary
+
+This project utilizes the following primary technologies:
+
+*   **Language:** Python 3.10+
+*   **Package Management:** Poetry
+*   **Core Framework (Post-Migration):** Google Agent Development Kit (via `google-cloud-aiplatform[adk]`)
+*   **Configuration:** Pydantic (Samples often use `pydantic-settings`)
+*   **CLI Framework:** Typer
+*   **LLM Interaction (Pre-Migration):** `litellm`
+*   **LLM Interaction (Post-Migration):** `google.adk.models` (initially `Gemini`, potentially custom `BaseLlm` wrappers)
+*   **Testing:** `pytest`, `pytest-cov`, `pytest-mock`, `pytest-asyncio`
+*   **Linting/Formatting:** `ruff`, `pre-commit`
+*   **Virtual Environment:** `.venv` (managed by Poetry)
+
+## 4. Proposed Target Architecture
 
 The following diagram illustrates the intended architecture after migrating to `google-adk`:
 
@@ -85,13 +100,13 @@ flowchart TD
 
 *Diagram Validation Note:* Based on `docs/feature_diagram_validation.md`, labels with punctuation or newlines should be quoted. This diagram uses simple labels or quotes where necessary.
 
-## 4. Migration Milestones
+## 5. Migration Milestones
 
 The migration will proceed in the following phases:
 
 1.  **Setup & Dependency Management**:
-    *   Add `google-adk` package to project dependencies (`requirements.txt` or `pyproject.toml`).
-    *   Install the new dependency in the `.venv` environment.
+    *   Ensure `google-cloud-aiplatform[adk]` package is listed as a dependency in `pyproject.toml` (instead of `google-adk` directly, aligning with ADK samples). Update version constraints if necessary.
+    *   Install/update dependencies in the `.venv` environment using `poetry install`.
     *   Review ADK documentation for any initial setup or configuration required (e.g., authentication for Google Cloud services if using Vertex AI components later).
 
 2.  **Tool Refactoring**:
@@ -153,13 +168,13 @@ The migration will proceed in the following phases:
     *   Execute the full test suite (`pytest`). Adapt existing tests as needed to work with the ADK agent structure and runner. Pay close attention to tests involving tool calls and state.
     *   Leverage ADK's evaluation capabilities ([https://google.github.io/adk-docs/evaluate/](https://google.github.io/adk-docs/evaluate/)) for more nuanced testing:
         *   Create test files (`*.test.json`) or eval sets (`*.evalset.json`) defining expected interactions, tool calls, and responses.
-        *   Use `google.adk.evaluation.AgentEvaluator` within `pytest` or the `adk eval` CLI command to run these evaluations.
+        *   Use `google.adk.evaluation.AgentEvaluator` within `pytest` or the `adk eval` CLI command to run these evaluations. (Note: This may require adding `google-cloud-aiplatform[evaluation]` to dev dependencies).
         *   Define appropriate evaluation criteria (`tool_trajectory_avg_score`, `response_match_score`) in `test_config.json` if needed.
     *   Perform manual testing of key user workflows.
     *   Verify code coverage remains above the required threshold (e.g., 80%).
     *   Run linters and formatters.
 
-## 5. Considerations & Risks
+## 6. Considerations & Risks
 
 *   **Dependencies**: Ensure `google-adk` dependencies don't conflict with existing project dependencies.
 *   **Learning Curve**: Team members may need time to familiarize themselves with ADK concepts and APIs.
@@ -177,7 +192,8 @@ The migration will proceed in the following phases:
     *   This may require adjustments to our current directory structure during or after the main refactoring milestones.
 *   **Refactoring Custom Security Logic**: Our existing security checks (likely in `code_agent/tools/security.py`) will need to be refactored. Instead of a direct replacement module, ADK encourages implementing security guardrails and validations using mechanisms like **Callbacks** (e.g., `before_tool_callback`) or integrating checks directly into **Tools** using `ToolContext` to access state/policy information. See the [Safety and Security docs](https://google.github.io/adk-docs/safety/).
 *   **Future Agent2Agent (A2A) Protocol Support**: While implementing the A2A protocol ([https://google.github.io/A2A/](https://google.github.io/A2A/)) is outside the scope of this initial migration, refactoring to ADK's structured agents, tools, and event-driven communication provides a significantly better foundation for potentially adopting or interacting with such interoperability standards in the future compared to the current custom implementation.
+*   **Environment/Tooling Consistency**: Ensure consistent use of the established environment management tools (Poetry, `.venv`). Avoid temporary environment wrappers like `nix-shell` for running standard project commands (like `poetry install`), as this can lead to inconsistencies or hide underlying environment setup issues.
 
-## 6. Conclusion
+## 7. Conclusion
 
-Migrating to `google-adk` represents a significant refactoring effort but promises substantial long-term benefits in terms of reduced maintenance, standardization, and access to a broader set of agent development features. By following the milestones outlined above, we can systematically transition our codebase while minimizing disruption. Furthermore, this migration establishes a foundation that will allow us to more readily adopt advanced **Multi-Agent System** patterns as our application complexity grows, leveraging the composition capabilities inherent in the ADK framework, including the use of **workflow agents** (`SequentialAgent`, `ParallelAgent`, `LoopAgent`) for structured task orchestration, enabling richer interactions through **Artifacts**, allowing fine-grained control via **Callbacks**, relying on the robust **ADK Runtime** for execution management, utilizing **Events** for standardized communication and state tracking, managing interactions via structured **Context** objects, implementing more effective **agent evaluations**, integrating **structured security measures**, and preparing for future **agent interoperability** (e.g., A2A).
+Migrating to `
