@@ -46,7 +46,7 @@ flowchart TD
 
     subgraph ADK Framework Application
         direction TB
-        CLI[CLI Interface (Typer/Argparse)] --> Runner[ADK Runner
+        CLI["CLI Interface (Typer/Argparse)"] --> Runner[ADK Runner
 (google.adk.runners.Runner)]
         Runner --> Agent[ADK Agent
 (google.adk.agents.LlmAgent)]
