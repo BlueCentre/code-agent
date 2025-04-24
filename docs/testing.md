@@ -1,10 +1,33 @@
-# End-to-End Testing Guide
+# Code Agent Testing Guide
 
-This document provides guidance on performing end-to-end tests for the CLI Agent application. These tests validate the entire application workflow from user input to output, ensuring that all components work together correctly.
+This document provides comprehensive guidance on testing the Code Agent CLI application, including general end-to-end testing procedures and historical test records.
 
-## Basic Test Examples
+## Table of Contents
+- [Introduction](#introduction)
+- [End-to-End Testing Guide](#end-to-end-testing-guide)
+  - [Basic Test Examples](#basic-test-examples)
+  - [Testing File Operations](#testing-file-operations)
+  - [Testing Shell Commands](#testing-shell-commands)
+  - [Testing Web Search Functionality](#testing-web-search-functionality)
+  - [Testing Error Handling](#testing-error-handling)
+  - [Testing Configuration](#testing-configuration)
+- [Automated End-to-End Testing](#automated-end-to-end-testing)
+- [Performance Testing](#performance-testing)
+- [Security Testing](#security-testing)
+- [Continuous Integration](#continuous-integration)
+- [Recommended Test Scenarios](#recommended-test-scenarios)
+- [Historical Test Records](#historical-test-records)
+  - [Gemini 2.0 Migration Testing](#gemini-20-migration-testing)
 
-### Testing the `chat` Command
+## Introduction
+
+End-to-end testing validates the entire application workflow from user input to output, ensuring that all components work together correctly. This document provides guidance on performing various types of tests for the Code Agent CLI.
+
+## End-to-End Testing Guide
+
+### Basic Test Examples
+
+#### Testing the `chat` Command
 
 Test basic chat functionality with piped input:
 
@@ -22,7 +45,7 @@ echo "List files in this directory\nexit" | code-agent chat
 echo "What is your name?\n/help\n/clear\nTell me another joke\n/exit" | code-agent chat
 ```
 
-### Testing the `run` Command
+#### Testing the `run` Command
 
 Test single prompt processing:
 
@@ -39,7 +62,7 @@ code-agent --provider groq --model llama3-70b-8192 run "Write a Dockerfile for a
 code-agent --provider anthropic run "Compare Python and JavaScript for web development"
 ```
 
-### Testing Ollama Commands
+#### Testing Ollama Commands
 
 Test integration with local Ollama models:
 
@@ -57,7 +80,7 @@ code-agent ollama run llama3 "Tell me a short joke"
 code-agent ollama chat codellama:13b "Write a sorting algorithm" --system "You are a helpful coding assistant"
 ```
 
-## Testing File Operations
+### Testing File Operations
 
 Test file reading and editing capabilities:
 
@@ -72,7 +95,7 @@ code-agent run "Create a new file called hello.py with a simple Hello World prog
 code-agent run "Add a docstring to hello.py"
 ```
 
-## Testing Shell Commands
+### Testing Shell Commands
 
 Test executing shell commands through the agent:
 
@@ -87,7 +110,7 @@ code-agent run "Show system information"
 code-agent run "Show git status of this repository"
 ```
 
-## Testing Web Search Functionality
+### Testing Web Search Functionality
 
 Test the agent's ability to search the web for information:
 
@@ -110,7 +133,7 @@ code-agent run "What is the population of Tokyo?"
 code-agent config set security.enable_web_search true  # Re-enable after test
 ```
 
-## Testing Error Handling
+### Testing Error Handling
 
 Test how the application handles errors:
 
@@ -131,7 +154,7 @@ code-agent run "Show me the contents of non_existent_file.txt"
 code-agent run "What is the current exchange rate between USD and EUR?"
 ```
 
-## Testing Configuration
+### Testing Configuration
 
 Test configuration management:
 
@@ -334,8 +357,6 @@ fi
 echo "All end-to-end tests completed successfully!"
 ```
 
-Make sure to create the individual test scripts referenced above, each focused on testing a specific aspect of the application.
-
 ## Recommended Test Scenarios
 
 When developing new features, always include end-to-end tests for:
@@ -347,3 +368,206 @@ When developing new features, always include end-to-end tests for:
 5. Security boundaries (permissions, restrictions)
 
 Remember that end-to-end tests complement unit and integration tests but do not replace them. Use all testing approaches for comprehensive quality assurance.
+
+## Historical Test Records
+
+This section contains records of specific test campaigns performed during major updates to the Code Agent.
+
+### Gemini 2.0 Migration Testing
+
+The following tests were performed after updating the default model to Gemini 2.0 Flash and fixing the API key access methods.
+
+#### Configuration Tests
+
+##### 1. Default Configuration Verification
+
+```bash
+code-agent config show
+```
+
+**Purpose**: Verify that the configuration reflects the updated default model.
+
+**Result**: ✅ Configuration showed `gemini-2.0-flash` as the default model, confirming the update was successful.
+
+##### 2. Provider List Verification
+
+```bash
+code-agent providers list
+```
+
+**Purpose**: Confirm the default provider and model in the providers list.
+
+**Result**: ✅ Output confirmed `ai_studio / gemini-2.0-flash` as the current default.
+
+##### 3. AI Studio Configuration Details
+
+```bash
+code-agent config aistudio
+```
+
+**Purpose**: Verify AI Studio configuration has been updated with the correct model information.
+
+**Result**: ✅ Displayed correct model information with Gemini 2.0 Flash listed as the default and also included Gemini 2.0 Pro as an available model.
+
+#### Basic Functionality Tests
+
+##### 4. Simple Query Test
+
+```bash
+code-agent run "What is the Python version and how can I check it in the terminal?"
+```
+
+**Purpose**: Test basic query handling without tool execution.
+
+**Result**: ✅ Agent responded correctly with information on how to check Python version.
+
+##### 5. Command Execution with Approval
+
+```bash
+code-agent run "List all Python files in the code_agent directory"
+```
+
+**Purpose**: Test that the agent requests approval before executing commands.
+
+**Result**: ✅ Agent correctly asked for permission to execute the command.
+
+##### 6. Command Execution with Auto-Approval
+
+```bash
+echo y | code-agent run "Find all Python files in the code_agent directory and its subdirectories"
+```
+
+**Purpose**: Test command execution workflow when approval is provided.
+
+**Result**: ✅ Command executed successfully after approval, listing Python files.
+
+##### 7. File Reading Test
+
+```bash
+code-agent run "Show me the first 10 lines of the README.md file"
+```
+
+**Purpose**: Verify file reading functionality.
+
+**Result**: ✅ Agent successfully read and displayed the beginning of the README.md file.
+
+##### 8. Web Search Functionality Test
+
+```bash
+code-agent run "What is the Model Context Protocol (MCP)?"
+```
+
+**Purpose**: Test the agent's ability to search the web for information not available in the local context.
+
+**Result**: ✅ Agent successfully used the web_search tool to find information about MCP and provided a well-summarized response.
+
+##### 9. Web Search Error Handling
+
+```bash
+# Temporarily disable web search in configuration
+code-agent config set security.enable_web_search false
+code-agent run "What is the latest version of Python?"
+code-agent config set security.enable_web_search true  # Re-enable after test
+```
+
+**Purpose**: Test how the agent handles web search when the feature is disabled.
+
+**Result**: ✅ Agent correctly reported that web search is disabled and offered alternative ways to find the information.
+
+#### Chat Mode Tests
+
+##### 10. Basic Chat Interaction
+
+```bash
+echo -e "Hello, what is your default model?\n/exit" | code-agent chat
+```
+
+**Purpose**: Test chat mode functionality with a simple interaction.
+
+**Result**: ✅ Chat session initialized properly, though the response about the default model was generic.
+
+##### 11. Web Search in Chat Mode
+
+```bash
+echo -e "What happened in the latest SpaceX launch?\n/exit" | code-agent chat
+```
+
+**Purpose**: Test web search functionality in chat mode for current events.
+
+**Result**: ✅ Agent searched the web and provided up-to-date information about the latest SpaceX launch.
+
+#### Advanced Use Case Tests
+
+These complex scenarios test multiple capabilities together and reflect real-world usage patterns.
+
+##### 12. Code Analysis and Explanation
+
+```bash
+code-agent run "Analyze the code_agent/agent/agent.py file and explain what the CodeAgent class does, including its main methods and how it uses tools"
+```
+
+**Purpose**: Test the agent's ability to analyze more complex code structures, understand class relationships, and provide clear explanations.
+
+**Result**: The agent read the file, identified key components of the CodeAgent class, explained the tool-calling mechanism, and provided a comprehensive overview of the agent framework.
+
+##### 13. Multi-Step File Operation
+
+```bash
+code-agent chat
+# Enter the following prompts:
+# 1. "Find Python files in the code_agent directory that import the 'rich' library"
+# 2. "For the files you found, identify which 'rich' components each file is using"
+# 3. "Create a summary report of rich library usage in our codebase and save it as docs/rich_usage.md"
+# 4. "/exit"
+```
+
+**Purpose**: Test sequential reasoning, memory of previous responses, and file creation.
+
+**Result**: The agent maintained context across multiple turns, executed searches for imports, analyzed component usage patterns, and generated a structured markdown document with its findings.
+
+##### 14. Code Refactoring Suggestion
+
+```bash
+code-agent run "Analyze our error handling in code_agent/tools/*.py files and suggest a consistent approach to improve error handling. Include a specific code example of how we could refactor one of the error handling sections."
+```
+
+**Purpose**: Test code analysis across multiple files, pattern recognition, and ability to generate improvement suggestions with concrete examples.
+
+**Result**: The agent identified current error handling patterns across the tool files, recognized inconsistencies, and provided a specific refactoring example with code.
+
+##### 15-20. Additional Advanced Tests
+
+Additional advanced tests were conducted to validate functionality around:
+- Command chaining with dynamic inputs
+- Configuration file analysis
+- Documentation generation
+- Web search for implementation
+- Error simulation and debugging
+- Configuration validation and security checks
+
+#### Model-Specific Tests
+
+##### 21. Alternative Model Test
+
+```bash
+code-agent --model gemini-1.5-flash run "Tell me a short joke about programming"
+```
+
+**Purpose**: Verify the ability to override the default model for a specific query.
+
+**Result**: ✅ Successfully used the specified model instead of the default, generating a programming joke.
+
+#### Test Summary
+
+The Gemini 2.0 migration tests confirmed that:
+
+1. Configuration changes were successful across all parts of the system.
+2. Basic functionality works correctly, including:
+   - Text query processing
+   - Command execution with approval
+   - File operations
+   - Web search capabilities
+3. Model selection and overrides are working properly.
+4. Chat mode functions correctly.
+
+These tests provided confidence that the changes made to update the default model and fix the API key access methods were implemented correctly and didn't break any existing functionality. 

@@ -23,7 +23,7 @@ cli-agent/
 ├── docs/             # Documentation files
 │   ├── architecture.md
 │   ├── CONTRIBUTING.md
-│   ├── development_testing.md
+│   ├── testing.md
 │   ├── feature_*.md          # Feature-specific documentation
 │   ├── getting_started_*.md  # Getting started guides
 │   ├── planning_*.md         # Planning documents

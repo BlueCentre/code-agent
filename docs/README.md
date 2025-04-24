@@ -11,8 +11,7 @@ This directory contains comprehensive documentation for the Code Agent project. 
 
 ### Development
 - [Git Workflow](GIT_WORKFLOW.md) - Guide to our Git workflow and PR process
-- [Testing](development_testing.md) - Testing procedures and guidelines
-- [End-to-End Testing](testing_end_to_end.md) - End-to-end testing examples and best practices
+- [Testing](testing.md) - Comprehensive testing guide including procedures, examples and best practices
 - [Coverage Verification](COVERAGE_VERIFICATION.md) - Test coverage requirements and verification
 - [Hermetic Builds](hermetic_builds.md) - Plan for implementing hermetic builds
 - [Release Process](release.md) - Process for creating new releases
@@ -44,7 +43,6 @@ This directory contains comprehensive documentation for the Code Agent project. 
 | Implementation | Getting Started | Complete | Points to priorities |
 | Git Workflow | Development | Complete | Initial version |
 | Testing | Development | Complete | Initial version |
-| End-to-End Testing | Development | Complete | Added in v0.1.3 |
 | Coverage Verification | Development | Complete | Initial version |
 | Hermetic Builds | Development | Complete | Initial version |
 | Release Process | Development | Complete | Initial version |
