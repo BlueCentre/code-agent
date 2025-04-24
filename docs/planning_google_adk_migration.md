@@ -412,6 +412,22 @@ The migration will proceed in the following phases. Each milestone contains spec
    - Did you notice any differences in response quality or format compared to the previous version?
    - Were there any errors or warnings during startup or execution?
 
+**Agent Implementation Prompt**:
+```
+Implement Milestone 1: Setup & Dependency Management for Google ADK Migration.
+
+Your tasks:
+1. Set up Git branch for ADK migration
+2. Add Google ADK dependencies to the project
+3. Create directory structure including sandbox for experimentation
+4. Verify successful installation
+5. Update documentation with setup procedures
+
+IMPORTANT: After completing each step, wait for the user to verify functionality and provide feedback before moving on. DO NOT push any changes without explicit user confirmation after User Acceptance Testing.
+
+After completing all tasks, commit your changes but DO NOT push until the user confirms all UAT has passed successfully.
+```
+
 ### 7.2a. Tool Refactoring
 **Status**: 🔲 Not Started | ⏳ In Progress | 🔍 In Review | ✅ Completed
 
@@ -497,20 +513,30 @@ The migration will proceed in the following phases. Each milestone contains spec
    code-agent run "Try to read a file that doesn't exist: nonexistent_file.txt"
    
    # Test tool with invalid parameters
-   code-agent run "Run a command with invalid arguments: ls --invalid-flag"
+   code-agent run "Run a command with incorrect syntax"
    ```
 
-3. **Test Chained Tool Usage**:
-   ```
-   # Test multiple tools in sequence
-   code-agent run "Create a new Python file called test.py with a print statement, then run it and show me the output"
-   ```
+3. **Feedback Points**:
+   - Do all tools function correctly through the ADK integration?
+   - Are error messages clear and helpful?
+   - Do tools handle edge cases properly?
+   - Is the performance acceptable for all tool operations?
 
-4. **Feedback Points**:
-   - Are all tools functioning as expected?
-   - Do error messages provide helpful information?
-   - Is tool performance comparable to or better than the previous version?
-   - Is the tool output formatting clear and readable?
+**Agent Implementation Prompt**:
+```
+Implement Milestone 2a: Tool Refactoring for Google ADK Migration.
+
+Your tasks:
+1. Create a complete inventory of existing tools with detailed documentation
+2. Create FunctionTool wrappers for each existing tool function
+3. Update function signatures to include ToolContext parameter
+4. Ensure proper error handling and return value formats
+5. Write tests for the wrapped tools
+
+IMPORTANT: Wait for user confirmation after creating the tool inventory document before starting implementation. After implementing each tool category, wait for user feedback on your approach before continuing.
+
+DO NOT commit or push any changes until the user confirms that all tools function properly and the User Acceptance Tests have been successfully completed.
+```
 
 ### 7.2b. Model Integration
 **Status**: 🔲 Not Started | ⏳ In Progress | 🔍 In Review | ✅ Completed
@@ -569,37 +595,42 @@ The migration will proceed in the following phases. Each milestone contains spec
 - [ ] Documentation updated with model integration insights and patterns
 
 **User Acceptance Testing Instructions**:
-1. **Test Available Models via code-agent**:
+1. **Test Different Model Providers**:
    ```
-   # Use the Gemini model explicitly
-   code-agent chat --model gemini-2.0-flash "Write a short poem about coding"
+   # Test with Google AI Studio models
+   code-agent --provider ai_studio --model gemini-1.5-pro "What's the capital of France?"
    
-   # If configured, test another provider
-   code-agent chat --model gpt-4o "Write a short poem about coding"
-   
-   # If Ollama is configured, test local model
-   code-agent chat --model ollama/llama3 "Write a short poem about coding"
+   # Test with OpenAI models
+   code-agent --provider openai --model gpt-3.5-turbo "What's the capital of Germany?"
    ```
 
-2. **Check Model Fallback**:
+2. **Check Response Quality**:
    ```
-   # If implemented, test fallback by using an unavailable model
-   code-agent chat --model unavailable-model "Hello, is the fallback working?"
-   # Should fall back to a default model and indicate fallback occurred
-   ```
-
-3. **Compare Response Quality**:
-   ```
-   # Run the same prompt on different models to compare
-   code-agent run --model gemini-2.0-flash "Explain how Python list comprehensions work"
-   code-agent run --model gpt-4o "Explain how Python list comprehensions work"
+   # Test complex prompts requiring reasoning
+   code-agent run "Explain the difference between inheritance and composition in OOP"
    ```
 
-4. **Feedback Points**:
-   - Can you switch between models successfully?
-   - Does model fallback work gracefully if a model is unavailable?
-   - Is response quality consistent across models?
-   - Are there noticeable differences in response formatting or style?
+3. **Feedback Points**:
+   - Do all model providers work correctly?
+   - Is the response quality consistent with expectations?
+   - Do model-specific parameters work correctly?
+   - Can you switch between models easily?
+
+**Agent Implementation Prompt**:
+```
+Implement Milestone 2b: Model Integration for Google ADK Migration.
+
+Your tasks:
+1. Create ADK model wrappers for each required provider (Google AI Studio, OpenAI, etc.)
+2. Implement provider-specific parameter handling
+3. Create model factory for configuration-based model selection
+4. Update model interaction patterns to use ADK interfaces
+5. Write tests for model wrappers and selection
+
+IMPORTANT: After implementing each model provider, pause for user testing of that specific provider. Request explicit feedback on response quality and behavior before proceeding to the next provider.
+
+DO NOT commit or push any changes until all models have been tested thoroughly and the user has confirmed successful completion of all User Acceptance Tests.
+```
 
 ### 7.3. Early Integration Testing
 **Status**: 🔲 Not Started | ⏳ In Progress | 🔍 In Review | ✅ Completed
@@ -803,37 +834,46 @@ The migration will proceed in the following phases. Each milestone contains spec
 - [ ] Documentation updated with session insights and patterns
 
 **User Acceptance Testing Instructions**:
-1. **Test Multi-Turn Conversations**:
+1. **Test Session Persistence**:
    ```
-   # Start a multi-turn conversation
-   code-agent chat "Let's work on a small Python project together"
-   # Continue with several follow-up messages
-   # Then exit the chat and restart
-   code-agent chat
-   # Check if the session is restored correctly
-   ```
-
-2. **Test Session Persistence**:
-   ```
-   # Create a named session
-   code-agent chat --session my-test-session "Remember that my favorite color is blue"
-   # Exit and resume the session
-   code-agent chat --session my-test-session "What's my favorite color?"
-   # Should recall the information from the previous session
+   # Start a chat session and create context
+   code-agent chat "My name is Alex and I'm working on a Python project"
+   
+   # Continue the session with a follow-up
+   code-agent chat "What was my name again?"
    ```
 
-3. **Check Session Commands**:
+2. **Test Session Management**:
    ```
-   # If implemented, test session management commands
-   code-agent sessions list
-   code-agent sessions delete my-test-session
+   # Create a new named session
+   code-agent chat --session project1 "I'm working on a web application"
+   
+   # Switch between sessions
+   code-agent chat --session project2 "I'm working on a machine learning model"
+   code-agent chat --session project1 "What was I working on again?"
    ```
 
-4. **Feedback Points**:
-   - Is conversation context maintained properly between messages?
-   - Does session restoration work correctly?
-   - Can you manage multiple sessions effectively?
-   - Is there clear feedback about which session you're using?
+3. **Feedback Points**:
+   - Does session persistence work correctly between interactions?
+   - Can users create and manage multiple sessions?
+   - Is conversation context maintained appropriately?
+   - Is there appropriate feedback about session state?
+
+**Agent Implementation Prompt**:
+```
+Implement Milestone 4: Session Integration for Google ADK Migration.
+
+Your tasks:
+1. Create session configuration framework
+2. Implement memory management with ADK session components
+3. Set up persistence mechanisms (in-memory, file-based)
+4. Create session management CLI interface
+5. Write tests for session functionality
+
+IMPORTANT: After implementing basic session functionality, pause for user testing before adding advanced features. Have the user verify that context is maintained correctly between interactions.
+
+DO NOT commit or push changes until the user has confirmed that all session management features work properly and the User Acceptance Tests have been successfully completed.
+```
 
 ### 7.4b. Agent Refactoring
 **Status**: 🔲 Not Started | ⏳ In Progress | 🔍 In Review | ✅ Completed
@@ -923,36 +963,48 @@ The migration will proceed in the following phases. Each milestone contains spec
 - [ ] Documentation updated with agent implementation insights
 
 **User Acceptance Testing Instructions**:
-1. **Test Agent Behavior and Personality**:
+1. **Test Basic Agent Functionality**:
    ```
-   # Test agent's reasoning capability
-   code-agent chat "Explain how you would solve this problem: find the longest substring without repeating characters in 'abcabcbb'"
+   # Test agent with simple prompts
+   code-agent chat "Hello, who are you?"
    
-   # Test agent's instruction following
-   code-agent chat "Give me exactly 5 bullet points about Python, numbered, with exactly one sentence each"
+   # Test agent with tool usage
+   code-agent run "List the files in this directory"
    ```
 
-2. **Test Streaming Responses**:
+2. **Test Agent Behavior with Different Inputs**:
    ```
-   # Test response streaming
-   code-agent chat --stream "Write a detailed explanation of how virtual environments work in Python"
-   ```
-
-3. **Test Agent Instructions**:
-   ```
-   # Test agent with custom instructions
-   code-agent chat --instructions "You are a security expert focused on code review" "Review this code snippet for security issues: user_input = input(); eval(user_input)"
+   # Test with complex reasoning
+   code-agent run "Explain how asynchronous programming works in Python"
+   
+   # Test with ambiguous requests
+   code-agent run "Improve this code"
    ```
 
-4. **Feedback Points**:
-   - Does the agent follow instructions precisely?
-   - Is the streaming response smooth and readable?
-   - Does the agent personality feel consistent?
-   - Is markdown formatting rendered correctly?
-   - Does the agent correctly reason through problems?
+3. **Feedback Points**:
+   - Does the agent maintain its previous capabilities?
+   - Is there any change in prompt handling or response quality?
+   - Does the agent handle tool selection appropriately?
+   - Are there any regressions in functionality?
+
+**Agent Implementation Prompt**:
+```
+Implement Milestone 3: Agent Refactoring for Google ADK Migration.
+
+Your tasks:
+1. Create ADK LlmAgent subclass for the Code Agent
+2. Implement prompt templates and response handlers
+3. Configure the agent with appropriate tools and callbacks
+4. Handle agent state management through ADK sessions
+5. Write tests for agent functionality
+
+IMPORTANT: After implementing the basic agent structure, pause for user testing before adding advanced features. Request specific feedback on the agent's behavior compared to the previous implementation.
+
+DO NOT commit or push changes until the user has verified that the agent maintains all previous capabilities and the User Acceptance Tests have been successfully completed.
+```
 
 ### 7.5. Runner Implementation
-**Status**: 🔲 Not Started | ⏳ In Progress | 🔍 In Review | ✅ Completed
+**Status**: �� Not Started | ⏳ In Progress | 🔍 In Review | ✅ Completed
 
 - [ ] Implement CLI interface preservation:
   - [ ] Maintain core "chat" and "run" commands from current implementation
@@ -1044,50 +1096,48 @@ The migration will proceed in the following phases. Each milestone contains spec
 - [ ] Documentation updated with runner implementation insights
 
 **User Acceptance Testing Instructions**:
-1. **Test Core CLI Commands**:
+1. **Test CLI Interface**:
    ```
-   # Test the help menu
+   # Test basic commands
    code-agent --help
+   code-agent run "Hello world"
+   code-agent chat "What can you do?"
    
-   # Test chat mode
-   code-agent chat "Hello, how are you today?"
-   
-   # Test run mode 
-   code-agent run "What files are in the current directory?"
-   
-   # Test additional flags
-   code-agent chat --verbose "Tell me about ADK"
+   # Test command-line options
+   code-agent --verbose run "List files in this directory"
+   code-agent --model gemini-1.5-pro chat "Tell me about yourself"
    ```
 
-2. **Test Progress Indicators**:
+2. **Check Configuration Options**:
    ```
-   # Run a command that takes some time
-   code-agent run "Search for comprehensive information about the Google Agent Development Kit, summarize the key components, and format the results as a markdown table"
-   ```
-
-3. **Test Artifact Generation**:
-   ```
-   # Generate and save an artifact
-   code-agent run "Create a Python script that demonstrates a binary search tree implementation and save it as bst.py"
+   # Test configuration loading
+   code-agent config show
    
-   # Check that the artifact was created
-   cat bst.py
+   # Test configuration overrides
+   code-agent --provider openai run "What time is it?"
    ```
 
-4. **Test Environment Variables**:
-   ```
-   # Test with environment variable configuration
-   export CODE_AGENT_MODEL="gemini-2.0-pro"
-   code-agent chat "Which model are you using?"
-   unset CODE_AGENT_MODEL
-   ```
+3. **Feedback Points**:
+   - Does the CLI maintain all previous functionality?
+   - Are all command-line options working correctly?
+   - Is the output formatting clear and helpful?
+   - Does configuration loading and overriding work properly?
 
-5. **Feedback Points**:
-   - Are all CLI commands and options working as expected?
-   - Is the progress indication clear and informative?
-   - Are artifacts generated and saved correctly?
-   - Is the CLI experience intuitive and user-friendly?
-   - Does environment variable configuration work properly?
+**Agent Implementation Prompt**:
+```
+Implement Milestone 5: Runner Implementation for Google ADK Migration.
+
+Your tasks:
+1. Create ADK Runner implementation for the CLI interface
+2. Set up configuration loading and validation
+3. Implement command-line argument handling with Typer
+4. Configure output formatting and display
+5. Write tests for runner functionality
+
+IMPORTANT: After implementing the basic runner structure, pause for user testing of the CLI interface. Request specific feedback on compatibility with previous command patterns.
+
+DO NOT commit or push changes until the user has confirmed that the CLI interface maintains all previous functionality and the User Acceptance Tests have been successfully completed.
+```
 
 ### 7.6. Progressive Code Decommissioning
 **Status**: 🔲 Not Started | ⏳ In Progress | 🔍 In Review | ✅ Completed
@@ -1185,6 +1235,22 @@ The migration will proceed in the following phases. Each milestone contains spec
    - Is there any noticeable loss of functionality?
    - Is there any change in performance or response quality?
    - Does everything feel well-integrated without references to removed components?
+
+**Agent Implementation Prompt**:
+```
+Implement Milestone 6: Progressive Code Decommissioning for Google ADK Migration.
+
+Your tasks:
+1. Identify components to decommission (old LLM, agent, CLI code)
+2. Systematically remove old implementation code
+3. Update references throughout the codebase
+4. Ensure all functionality is preserved with the new implementation
+5. Run comprehensive tests after each removal
+
+IMPORTANT: After removing each component, pause for user testing to verify that all functionality is maintained. Be extremely cautious about removing code that might still be needed.
+
+DO NOT commit or push changes until the user has confirmed that all functionality is maintained after code removal and the User Acceptance Tests have been successfully completed.
+```
 
 ### 7.7. Final Testing & Validation
 **Status**: 🔲 Not Started | ⏳ In Progress | 🔍 In Review | ✅ Completed
@@ -1347,13 +1413,68 @@ The migration will proceed in the following phases. Each milestone contains spec
 5. **Perform End-to-End Testing**:
    ```
    # Try a complex scenario with multiple tools
-   code-agent run "Search for information about Python async functions, create a sample async function, and explain how it works."
+   code-agent run "Create a Python script that reads a CSV file, analyzes the data, and creates a bar chart"
    ```
 
 6. **Feedback Points**:
-   - Does code coverage exceed 80%?
-   - Do different agent personas behave appropriately?
-   - Are evaluation metrics meeting expectations?
-   - Is response time tracking working correctly?
-   - Does the application handle complex scenarios well?
-   - Is the overall user experience polished and professional?
+   - Does the agent pass all tests with good coverage?
+   - Do all agent personas work correctly?
+   - Does the evaluation framework provide useful insights?
+   - Is response time tracking accurate and helpful?
+   - Does the agent handle complex scenarios correctly?
+
+**Agent Implementation Prompt**:
+```
+Implement Milestone 7: Final Testing & Validation for Google ADK Migration.
+
+Your tasks:
+1. Ensure comprehensive test coverage exceeds 80%
+2. Implement ADK evaluation capabilities with metrics
+3. Create documentation for different user types
+4. Implement response time tracking
+5. Perform final validation of all functionality
+
+IMPORTANT: After implementing each testing component, pause for user validation. Request specific feedback on test coverage, evaluation metrics, and documentation quality.
+
+DO NOT commit or push changes until the user has confirmed that all testing components work correctly and the User Acceptance Tests have been successfully completed.
+
+Once all testing is complete, prepare a final PR summary for the user to review before final approval.
+```
+
+## 8. Risk Analysis and Mitigation
+
+The migration process involves several high-level steps that could potentially introduce risks. Below is a brief analysis of potential risks and mitigation strategies:
+
+1. **Dependency Management**:
+   - Ensure compatibility with existing dependencies and Poetry environment.
+   - Plan for transitional dependencies during migration.
+
+2. **Code Decommissioning**:
+   - Carefully identify components to decommission and ensure all functionality is preserved.
+   - Test thoroughly after each removal to verify integrity.
+
+3. **User Acceptance Testing**:
+   - Implement a robust testing strategy to validate functionality.
+   - Ensure all User Acceptance Tests are completed before final deployment.
+
+4. **Documentation**:
+   - Create comprehensive documentation for the migration process.
+   - Update existing documentation to reflect new architecture and components.
+
+5. **Security**:
+   - Implement security guardrails using ADK Callbacks.
+   - Conduct security reviews throughout the migration process.
+
+6. **Performance**:
+   - Monitor performance metrics before and after migration.
+   - Address any performance regressions promptly.
+
+7. **Documentation**:
+   - Ensure all changes are documented in the repository.
+   - Provide clear instructions for future maintenance and troubleshooting.
+
+8. **Communication**:
+   - Keep stakeholders informed about the migration progress.
+   - Schedule regular check-ins to gather feedback and address concerns.
+
+By following these strategies, we aim to minimize risks and ensure a smooth and successful migration to the Google Agent Development Kit.
