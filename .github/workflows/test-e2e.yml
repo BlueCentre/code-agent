@@ -37,8 +37,10 @@ jobs:
           # Create and activate venv
           uv venv .venv
           source .venv/bin/activate
-          # Install project and dev dependencies
-          uv pip install '.[dev]'
+          # Install package in editable mode first
+          uv pip install -e .
+          # Install dev dependencies from pyproject.toml (using uv's understanding of poetry groups)
+          uv pip install --group dev
 
       - name: Run E2E tests
         run: |
