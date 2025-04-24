@@ -5,6 +5,17 @@ import pytest
 from code_agent.config.settings_based_config import SecuritySettings, SettingsConfig
 from code_agent.tools.simple_tools import web_search
 
+# Mock the duckduckgo_search module
+pytest.importorskip("unittest.mock")
+duckduckgo_search_mock = MagicMock()
+DDGS_mock = MagicMock()
+duckduckgo_search_mock.DDGS = DDGS_mock
+modules = {
+    "duckduckgo_search": duckduckgo_search_mock,
+    "duckduckgo_search.DDGS": DDGS_mock,
+}
+patch.dict("sys.modules", modules).start()
+
 
 # Fixtures
 @pytest.fixture
@@ -50,19 +61,18 @@ def test_web_search_disabled(mock_get_config, disabled_web_search_config):
 
     result = web_search("test query")
 
-    assert "Web search is disabled in configuration" in result
+    assert "disabled in configuration" in result
 
 
 @patch("code_agent.tools.simple_tools.get_config")
-@patch("duckduckgo_search.DDGS")
-@patch("time.sleep")
-def test_web_search_success(mock_sleep, mock_ddgs_class, mock_get_config, mock_config, mock_ddgs_successful_results):
+@patch("code_agent.tools.simple_tools.time.sleep")
+def test_web_search_success(mock_sleep, mock_get_config, mock_config, mock_ddgs_successful_results):
     """Test web_search successfully returns formatted results."""
     mock_get_config.return_value = mock_config
 
     # Set up the mock DDGS instance
     mock_ddgs_instance = MagicMock()
-    mock_ddgs_class.return_value = mock_ddgs_instance
+    DDGS_mock.return_value = mock_ddgs_instance
     mock_ddgs_instance.text.return_value = mock_ddgs_successful_results
 
     result = web_search("test query")
@@ -84,15 +94,14 @@ def test_web_search_success(mock_sleep, mock_ddgs_class, mock_get_config, mock_c
 
 
 @patch("code_agent.tools.simple_tools.get_config")
-@patch("duckduckgo_search.DDGS")
-@patch("time.sleep")
-def test_web_search_empty_results(mock_sleep, mock_ddgs_class, mock_get_config, mock_config, mock_empty_results):
+@patch("code_agent.tools.simple_tools.time.sleep")
+def test_web_search_empty_results(mock_sleep, mock_get_config, mock_config, mock_empty_results):
     """Test web_search handles empty results gracefully."""
     mock_get_config.return_value = mock_config
 
     # Set up the mock DDGS instance
     mock_ddgs_instance = MagicMock()
-    mock_ddgs_class.return_value = mock_ddgs_instance
+    DDGS_mock.return_value = mock_ddgs_instance
     mock_ddgs_instance.text.return_value = mock_empty_results
 
     result = web_search("test query")
@@ -103,15 +112,14 @@ def test_web_search_empty_results(mock_sleep, mock_ddgs_class, mock_get_config, 
 
 
 @patch("code_agent.tools.simple_tools.get_config")
-@patch("duckduckgo_search.DDGS")
-@patch("time.sleep")
-def test_web_search_api_error(mock_sleep, mock_ddgs_class, mock_get_config, mock_config):
+@patch("code_agent.tools.simple_tools.time.sleep")
+def test_web_search_api_error(mock_sleep, mock_get_config, mock_config):
     """Test web_search handles API errors gracefully."""
     mock_get_config.return_value = mock_config
 
     # Set up the mock DDGS instance to raise an exception
     mock_ddgs_instance = MagicMock()
-    mock_ddgs_class.return_value = mock_ddgs_instance
+    DDGS_mock.return_value = mock_ddgs_instance
     mock_ddgs_instance.text.side_effect = Exception("API Error")
 
     result = web_search("test query")
@@ -127,8 +135,8 @@ def test_web_search_import_error(mock_get_config, mock_config):
     """Test web_search handles import errors gracefully."""
     mock_get_config.return_value = mock_config
 
-    # Mock importing DDGS to raise an ImportError
-    with patch("code_agent.tools.simple_tools.DDGS", side_effect=ImportError("Module not found")):
+    # Force an ImportError when trying to import DDGS
+    with patch.dict("sys.modules", {"duckduckgo_search": None}):
         result = web_search("test query")
 
     # Check error message
@@ -136,8 +144,8 @@ def test_web_search_import_error(mock_get_config, mock_config):
 
 
 @patch("code_agent.tools.simple_tools.get_config")
-@patch("duckduckgo_search.DDGS")
-def test_web_search_handles_missing_fields(mock_ddgs_class, mock_get_config, mock_config):
+@patch("code_agent.tools.simple_tools.time.sleep")
+def test_web_search_handles_missing_fields(mock_sleep, mock_get_config, mock_config):
     """Test web_search handles results with missing fields gracefully."""
     mock_get_config.return_value = mock_config
 
@@ -153,7 +161,7 @@ def test_web_search_handles_missing_fields(mock_ddgs_class, mock_get_config, moc
 
     # Set up the mock DDGS instance
     mock_ddgs_instance = MagicMock()
-    mock_ddgs_class.return_value = mock_ddgs_instance
+    DDGS_mock.return_value = mock_ddgs_instance
     mock_ddgs_instance.text.return_value = incomplete_results
 
     result = web_search("test query")

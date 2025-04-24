@@ -6,7 +6,6 @@ without relying on complex decorators or tool classes.
 import difflib
 import shlex
 import subprocess
-import time
 from pathlib import Path
 from typing import Optional
 
@@ -261,7 +260,7 @@ def web_search(query: str) -> Optional[str]:
     config = get_config()
 
     # Check if web search is enabled in configuration
-    if not config.security.enable_web_search:
+    if not hasattr(config, "security") or not getattr(config.security, "enable_web_search", False):
         return "Error: Web search is disabled in configuration. Enable it in your config file to use this feature."
 
     try:
@@ -275,7 +274,10 @@ def web_search(query: str) -> Optional[str]:
         # Perform the search with rate limiting to avoid being blocked
         try:
             # Add a small delay before search to avoid rate limiting
+            import time
+
             time.sleep(0.5)
+            MAX_SEARCH_RESULTS = 3
             results = list(ddgs.text(query, max_results=MAX_SEARCH_RESULTS))
         except Exception as search_error:
             return f"Error performing web search: {search_error}\nThis might be due to network issues or rate limiting."
