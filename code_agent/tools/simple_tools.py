@@ -6,6 +6,7 @@ without relying on complex decorators or tool classes.
 import difflib
 import shlex
 import subprocess
+import time
 from pathlib import Path
 from typing import Optional
 
@@ -274,8 +275,6 @@ def web_search(query: str) -> Optional[str]:
         # Perform the search with rate limiting to avoid being blocked
         try:
             # Add a small delay before search to avoid rate limiting
-            import time
-
             time.sleep(0.5)
             MAX_SEARCH_RESULTS = 3
             results = list(ddgs.text(query, max_results=MAX_SEARCH_RESULTS))

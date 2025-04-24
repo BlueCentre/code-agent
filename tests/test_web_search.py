@@ -65,7 +65,7 @@ def test_web_search_disabled(mock_get_config, disabled_web_search_config):
 
 
 @patch("code_agent.tools.simple_tools.get_config")
-@patch("code_agent.tools.simple_tools.time.sleep")
+@patch("time.sleep")
 def test_web_search_success(mock_sleep, mock_get_config, mock_config, mock_ddgs_successful_results):
     """Test web_search successfully returns formatted results."""
     mock_get_config.return_value = mock_config
@@ -94,7 +94,7 @@ def test_web_search_success(mock_sleep, mock_get_config, mock_config, mock_ddgs_
 
 
 @patch("code_agent.tools.simple_tools.get_config")
-@patch("code_agent.tools.simple_tools.time.sleep")
+@patch("time.sleep")
 def test_web_search_empty_results(mock_sleep, mock_get_config, mock_config, mock_empty_results):
     """Test web_search handles empty results gracefully."""
     mock_get_config.return_value = mock_config
@@ -112,7 +112,7 @@ def test_web_search_empty_results(mock_sleep, mock_get_config, mock_config, mock
 
 
 @patch("code_agent.tools.simple_tools.get_config")
-@patch("code_agent.tools.simple_tools.time.sleep")
+@patch("time.sleep")
 def test_web_search_api_error(mock_sleep, mock_get_config, mock_config):
     """Test web_search handles API errors gracefully."""
     mock_get_config.return_value = mock_config
@@ -144,7 +144,7 @@ def test_web_search_import_error(mock_get_config, mock_config):
 
 
 @patch("code_agent.tools.simple_tools.get_config")
-@patch("code_agent.tools.simple_tools.time.sleep")
+@patch("time.sleep")
 def test_web_search_handles_missing_fields(mock_sleep, mock_get_config, mock_config):
     """Test web_search handles results with missing fields gracefully."""
     mock_get_config.return_value = mock_config
