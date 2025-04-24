@@ -79,7 +79,8 @@ To facilitate both the migration to ADK and potential future deployments (e.g., 
 │   │   └── other_agents.py   # Additional specialized agents
 │   ├── config/               # Configuration management
 │   │   ├── __init__.py
-│   │   └── settings.py       # Pydantic config models
+│   │   ├── settings.py       # Pydantic config models
+│   │   └── session_config.py # Session configuration options
 │   ├── tools/                # Core tool implementations
 │   │   ├── __init__.py
 │   │   ├── file_tools.py     # File operations (read, write, etc.)
@@ -128,13 +129,22 @@ To facilitate both the migration to ADK and potential future deployments (e.g., 
 ├── tests/                    # Test directory
 │   ├── __init__.py
 │   ├── conftest.py           # Pytest fixtures
+│   ├── test_config.py        # Test configuration management
+│   ├── test_harness.py       # Test harness for development
 │   ├── unit/                 # Unit tests
 │   │   ├── __init__.py
 │   │   ├── test_agent.py
 │   │   ├── test_tools.py
+│   │   ├── test_adk_agent.py
+│   │   ├── test_adk_models.py
+│   │   ├── test_adk_tools.py
+│   │   ├── test_adk_services.py
 │   │   └── ...
 │   └── integration/          # Integration tests
 │       ├── __init__.py
+│       ├── test_adk_minimal_integration.py
+│       ├── test_adk_e2e_scenarios.py
+│       ├── test_adk_runner.py
 │       └── ...
 ├── eval/                     # ADK evaluation directory (top-level)
 │   ├── __init__.py
@@ -148,7 +158,13 @@ To facilitate both the migration to ADK and potential future deployments (e.g., 
 │       └── custom_metrics.py
 ├── docs/                     # Documentation
 │   ├── planning_google_adk_migration.md
-│   └── ...
+│   ├── adk_architecture.md
+│   ├── getting_started.md
+│   ├── agent_customization.md
+│   └── user_guides/
+│       ├── developer_guide.md
+│       ├── qa_guide.md
+│       └── pm_guide.md
 ├── main.py                   # FastAPI entry point for GKE/cloud deployment
 ├── pyproject.toml            # Poetry configuration
 ├── poetry.lock               # Dependency lock file
@@ -156,6 +172,7 @@ To facilitate both the migration to ADK and potential future deployments (e.g., 
 ├── Dockerfile                # Container definition
 ├── .gitignore
 ├── .pre-commit-config.yaml
+├── .env.example              # Example environment variables file
 └── README.md
 ```
 
@@ -163,27 +180,31 @@ Key aspects of this structure:
 
 1. **Core Agent Package:** `code_agent/` contains all agent-related code.
    - Separates ADK-specific implementations in `adk/` subdirectory for clean organization.
-   - Adds `agents/` subdirectory to support multiple agent implementations.
+   - Adds `agents/` subdirectory to support multiple agent implementations including workflow agents.
    - Maintains existing tool implementations in `tools/` directory, which will be wrapped by ADK's `FunctionTool` in `adk/tools.py`.
+   - Includes specialized directories for safety, memory, and artifacts.
+   - Organizes tools into logical subdirectories by function and type.
 
-2. **Evaluation Directory:** `eval/` is now at the top level, separate from tests.
+2. **Testing Directory:** Comprehensive test structure with both unit and integration tests.
+   - Separate files for testing different components of the ADK implementation.
+   - Includes test harness and configuration management.
+   - Both minimal integration tests and end-to-end scenarios.
+
+3. **Evaluation Directory:** `eval/` is at the top level, separate from tests.
    - Provides clear separation between unit/integration tests and evaluation scenarios.
    - Contains evaluation sets and scripts for ADK's evaluation framework.
+   - Includes test cases and custom metrics directories.
 
-3. **Deployment-Ready Structure:**
+4. **Documentation:** Expanded documentation structure.
+   - Architecture documentation for ADK implementation.
+   - Getting started guide for new users.
+   - Agent customization documentation.
+   - User-specific guides for different types of users.
+
+5. **Deployment-Ready Structure:**
    - Places `main.py`, `requirements.txt`, and `Dockerfile` at the project root, following ADK's deployment recommendations.
    - `main.py` will use ADK's `get_fast_api_app()` for serving the agent via FastAPI.
-
-4. **Test Organization:**
-   - Separates unit and integration tests in their own directories.
-   - Keeps testing concerns separate from evaluation scenarios.
-
-5. **Configuration:**
-   - Maintains our existing config structure while adapting it to provide settings to ADK components.
-
-6. **Decommissioned Components:**
-   - The existing `cli_agent/` directory will be completely removed as part of milestone 7.
-   - The current `code_agent/agent/agent.py` and `code_agent/llm.py` will be replaced by ADK implementations.
+   - Example environment file for local development and testing.
 
 This structure supports a phased migration approach by:
 - Providing clear locations for new ADK-based code
@@ -303,6 +324,9 @@ The migration will proceed in the following phases. Each milestone contains spec
 ### 7.1. Setup & Dependency Management
 **Status**: 🔲 Not Started | ⏳ In Progress | 🔍 In Review | ✅ Completed
 
+- [ ] Set up Git branch for ADK migration:
+  - [ ] Create and switch to `feat/google-adk` branch: `git checkout -b feat/google-adk`
+  - [ ] Push branch to remote: `git push -u origin feat/google-adk`
 - [ ] Add `google-cloud-aiplatform[adk]` package to `pyproject.toml`
   - [ ] Use the latest version available
   - [ ] Note: We'll be using just the core ADK framework, not Vertex AI integration
@@ -314,11 +338,19 @@ The migration will proceed in the following phases. Each milestone contains spec
   - [ ] Verify installation with `uv pip list`
   - [ ] If the steps above fail, try to run `poetry install` to install updated dependencies
 - [ ] Verify successful installation of ADK packages
+- [ ] Create ADK development sandbox:
+  - [ ] Create a simple script in `sandbox/adk_sandbox.py` for testing ADK components
+  - [ ] Implement basic examples of agent, models, and tools for experimentation
+  - [ ] Document common patterns and insights gained from sandbox experiments
 - [ ] Update CI/CD pipelines to use uv for environment setup 
 - [ ] Review ADK documentation for initial setup requirements
 - [ ] Set up any required authentication for Google Cloud services (for API access only, not Vertex AI)
 - [ ] Create initial scaffolding for the new directory structure
 - [ ] Document environment setup procedure in README.md for new contributors
+- [ ] Document milestone completion:
+  - [ ] Summarize dependency decisions and reasoning
+  - [ ] Document any issues encountered and their solutions
+  - [ ] Create checklist for future dependency updates
 
 **Directory Structure Changes**:
 ```
@@ -328,58 +360,72 @@ The migration will proceed in the following phases. Each milestone contains spec
 │   ├── __init__.py           # Existing
 │   ├── adk/                  # Create this directory
 │   │   └── __init__.py       # Create new empty file
+├── sandbox/                  # Create development sandbox
+│   └── adk_sandbox.py        # Create ADK experimentation script
 ├── pyproject.toml            # Update with ADK dependencies
 ├── poetry.lock               # Updated by poetry lock
+├── docs/
+│   ├── planning_google_adk_migration.md
+│   └── migration_notes/
+│       └── milestone1_notes.md # Document setup insights and learnings
 └── README.md                 # Update with new setup instructions
 ```
 
-**Dependencies**: 
-- **Previous Milestones**: None
-- **Software**: uv (>=0.1.0), Poetry (>=1.2.0), Python (>=3.11)
-- **Documentation**: 
-  - [ADK Installation Guide](https://google.github.io/adk-docs/getting-started/install/)
-  - [Google AI Studio API Keys](https://ai.google.dev/tutorials/setup)
-  - Existing docs: git_development.md, testing.md, env_configuration.md, COVERAGE_VERIFICATION.md
-- **Knowledge**: Understanding of Python packaging, uv usage, Poetry configuration
-- **API Keys**: Google AI Studio API keys for Gemini model access
+**Milestone 1 Completion Checkpoint**:
+- [ ] All dependencies successfully installed and verified
+- [ ] Development sandbox functioning with basic ADK components
+- [ ] Directory structure created and pushed to feat/google-adk branch
+- [ ] Documentation updated with setup procedure and insights
+- [ ] No conflicts with existing packages identified
+- [ ] CI/CD pipeline updated and tested
 
-**Completion Criteria**: 
-- All dependencies successfully installed via uv
-- Virtual environment setup automated and documented
-- Directory structure established
-- No conflicts with existing packages
-- CI/CD pipelines updated to use uv
-- Core ADK framework functionality confirmed working without Vertex AI dependencies
+**User Acceptance Testing Instructions**:
+1. **Verify Environment Setup**:
+   ```
+   # Activate the virtual environment
+   source .venv/bin/activate
+   
+   # Verify ADK installation is accessible to code-agent
+   code-agent --version
+   # Should show the version and include ADK version information
+   ```
 
-**Validation Method**:
-1. Run `uv pip list` to confirm ADK is installed with correct version
-2. Verify Python imports work by creating a simple test script that imports key ADK modules
-3. Confirm directory structure matches the plan by using `ls -la` on relevant directories
-4. Run a basic smoke test that instantiates core ADK components (e.g., a simple Runner or Agent)
-5. Check for dependency conflicts
-6. Run CI pipeline to verify environment setup works in automated environments
+2. **Check Sandbox Functionality**:
+   ```
+   # Run a simple command that uses ADK components
+   code-agent run "Tell me what time it is"
+   
+   # The response should use the ADK framework and display properly
+   ```
 
-**Important Notes**:
-- **NEVER** use nix-shell to install additional tools needed for the migration
-- Always use uv or pip to install any required tools
-- Maintain compatibility with existing CI/CD workflows that use uv
-- Document any new dependencies or tools in the appropriate documentation files
+3. **Review Branch Structure**:
+   ```
+   # Check your current branch
+   git branch
+   
+   # Ensure you're on the feat/google-adk branch
+   ```
 
-**Dependency Management Policy**:
-- Always use the latest versions of libraries and dependencies
-- NEVER downgrade package versions to resolve conflicts
-- If conflicts arise between existing dependencies and ADK requirements, prioritize the ADK dependencies
-- Pin versions as needed, but prioritize staying current
-- If dependency issues occur, consult official documentation or search for solutions that maintain forward compatibility
-- Aim for functional backward compatibility where sensible, consulting for specific decisions
-- Document any version pinning decisions with rationale in comments or documentation
+4. **Feedback Points**:
+   - Did code-agent start up properly with the ADK dependencies?
+   - Was the output formatting clear and readable?
+   - Did you notice any differences in response quality or format compared to the previous version?
+   - Were there any errors or warnings during startup or execution?
 
 ### 7.2a. Tool Refactoring
 **Status**: 🔲 Not Started | ⏳ In Progress | 🔍 In Review | ✅ Completed
 
-- [ ] Inventory all existing tool functions in `code_agent/tools/`
+- [ ] Comprehensive tool inventory:
+  - [ ] Create `docs/migration_notes/tool_inventory.md` with a detailed inventory table
+  - [ ] For each tool, document:
+    - [ ] Function name and signature
+    - [ ] Return type and format
+    - [ ] Current error handling approach
+    - [ ] Dependencies and side effects
+    - [ ] Special behaviors or edge cases
+    - [ ] Migration approach and considerations
   - [ ] Tool dependencies identified in pyproject.toml (typer, pyyaml, rich, pydantic, requests, duckduckgo-search)
-  - [ ] Document tool signatures, return types, and dependencies
+  - [ ] Categorize tools by complexity and migration difficulty
 - [ ] Create empty `code_agent/adk/tools.py` module
 - [ ] For each core tool function:
   - [ ] Analyze function signature, docstring, and return values
@@ -398,6 +444,10 @@ The migration will proceed in the following phases. Each milestone contains spec
   - [ ] Ensure test coverage remains above 80%
 - [ ] Create utility functions for common tool operations if needed
 - [ ] Update migration documentation with clear information on when users can begin testing the implementation via code-agent CLI and chat functions
+- [ ] Document milestone completion:
+  - [ ] Document patterns and approaches used for tool migration
+  - [ ] Create reference guide for adding future tools
+  - [ ] Note any challenging tools and how their issues were resolved
 
 **Directory Structure Changes**:
 ```
@@ -414,30 +464,53 @@ The migration will proceed in the following phases. Each milestone contains spec
 ├── tests/
 │   ├── unit/
 │   │   └── test_adk_tools.py # New test file for ADK tool wrappers
+├── docs/
+│   └── migration_notes/
+│       ├── milestone1_notes.md
+│       ├── tool_inventory.md # Detailed tool inventory and migration plan
+│       └── milestone2a_notes.md # Document tool migration insights
 ```
 
-**Dependencies**: 
-- **Previous Milestones**: Setup & Dependency Management (7.1) completed
-- **Software**: Pytest for testing tool functions
-- **Documentation**:
-  - [ADK Tools Documentation](https://google.github.io/adk-docs/tools/)
-  - [Function Tools Guide](https://google.github.io/adk-docs/tools/function-tools/)
-  - [Tool Context Documentation](https://google.github.io/adk-docs/context/)
-- **Knowledge**: Understanding of existing tools functionality, ADK tool patterns, and Python type hints
-- **Code**: Access to existing tool implementations in `code_agent/tools/`
+**Milestone 2a Completion Checkpoint**:
+- [ ] Comprehensive tool inventory completed and documented
+- [ ] All tools successfully wrapped as FunctionTool instances
+- [ ] Tests passing for all wrapped tools with >80% coverage
+- [ ] Error handling patterns standardized and documented
+- [ ] Documentation updated with tool migration insights and patterns
 
-**Completion Criteria**: All tool functions successfully wrapped as `FunctionTool` instances, tests passing, no functionality loss.
+**User Acceptance Testing Instructions**:
+1. **Test Tool Functionality via code-agent**:
+   ```
+   # Test file tools
+   code-agent run "List all the files in the current directory"
+   
+   # Test terminal tools
+   code-agent run "What's my current working directory?"
+   
+   # Test search tools
+   code-agent run "Search for information about Python decorators"
+   ```
 
-**Validation Method**:
-1. Create unit tests for each wrapped tool that verify:
-   - Correct function signature with `ToolContext` parameter
-   - Proper return value format (dictionary with status)
-   - Error handling and reporting through ADK mechanisms
-   - Same core functionality as original implementation
-2. Create integration tests that call tools through the ADK framework
-3. Compare the tool inventory list with the implemented wrappers to ensure complete coverage
-4. For long-running tools, test progress reporting capabilities
-5. Verify docstrings are complete and properly formatted for ADK's tool description generation
+2. **Check Tool Error Handling**:
+   ```
+   # Test graceful error handling
+   code-agent run "Try to read a file that doesn't exist: nonexistent_file.txt"
+   
+   # Test tool with invalid parameters
+   code-agent run "Run a command with invalid arguments: ls --invalid-flag"
+   ```
+
+3. **Test Chained Tool Usage**:
+   ```
+   # Test multiple tools in sequence
+   code-agent run "Create a new Python file called test.py with a print statement, then run it and show me the output"
+   ```
+
+4. **Feedback Points**:
+   - Are all tools functioning as expected?
+   - Do error messages provide helpful information?
+   - Is tool performance comparable to or better than the previous version?
+   - Is the tool output formatting clear and readable?
 
 ### 7.2b. Model Integration
 **Status**: 🔲 Not Started | ⏳ In Progress | 🔍 In Review | ✅ Completed
@@ -482,35 +555,51 @@ The migration will proceed in the following phases. Each milestone contains spec
 │   ├── unit/
 │   │   └── test_adk_models.py # New test file for model implementations
 ├── .env.example              # Create example .env file for development
+├── docs/
+│   └── migration_notes/
+│       ├── previous_milestone_notes.md
+│       └── milestone2b_notes.md # Document model integration insights
 ```
 
-**Dependencies**: 
-- **Previous Milestones**: Setup & Dependency Management (7.1) completed
-- **Software**: Required LLM client libraries (e.g., `google-generativeai` for Gemini, `litellm` for other providers)
-- **Documentation**:
-  - [ADK Models Documentation](https://google.github.io/adk-docs/agents/models/)
-  - [Cloud & Proprietary Models via LiteLLM](https://google.github.io/adk-docs/agents/models/#using-cloud-proprietary-models-via-litellm)
-  - [Open & Local Models via LiteLLM](https://google.github.io/adk-docs/agents/models/#using-open-local-models-via-litellm)
-  - [BaseLlm Reference](https://google.github.io/adk-docs/api-reference/models/base/)
-  - [Gemini Model Reference](https://google.github.io/adk-docs/api-reference/models/gemini/)
-- **Knowledge**: LLM API integration, async Python, error handling patterns
-- **API Keys**: API keys for all required LLM providers
-- **Code**: Current `litellm` integration code for maintaining compatibility
+**Milestone 2b Completion Checkpoint**:
+- [ ] All required model providers successfully integrated
+- [ ] Model switching and configuration working correctly
+- [ ] Tests passing for all model implementations
+- [ ] Fallback and retry logic implemented and tested
+- [ ] Documentation updated with model integration insights and patterns
 
-**Completion Criteria**: All required LLM providers supported, successful connectivity tests, proper response formatting.
+**User Acceptance Testing Instructions**:
+1. **Test Available Models via code-agent**:
+   ```
+   # Use the Gemini model explicitly
+   code-agent chat --model gemini-2.0-flash "Write a short poem about coding"
+   
+   # If configured, test another provider
+   code-agent chat --model gpt-4o "Write a short poem about coding"
+   
+   # If Ollama is configured, test local model
+   code-agent chat --model ollama/llama3 "Write a short poem about coding"
+   ```
 
-**Validation Method**:
-1. Create unit tests for each model implementation that verify:
-   - Correct initialization with various configuration parameters
-   - Proper handling of API keys and authentication
-   - Expected response format from `generate_content` calls
-2. Create integration tests that:
-   - Simulate real API calls (or use mocks if appropriate)
-   - Test error handling for API failures
-   - Verify content safety filters work as expected
-3. Create a compatibility matrix of model providers and test each supported provider
-4. Benchmark response times and compare with previous implementation
-5. Validate that the model factory correctly instantiates the appropriate model based on config
+2. **Check Model Fallback**:
+   ```
+   # If implemented, test fallback by using an unavailable model
+   code-agent chat --model unavailable-model "Hello, is the fallback working?"
+   # Should fall back to a default model and indicate fallback occurred
+   ```
+
+3. **Compare Response Quality**:
+   ```
+   # Run the same prompt on different models to compare
+   code-agent run --model gemini-2.0-flash "Explain how Python list comprehensions work"
+   code-agent run --model gpt-4o "Explain how Python list comprehensions work"
+   ```
+
+4. **Feedback Points**:
+   - Can you switch between models successfully?
+   - Does model fallback work gracefully if a model is unavailable?
+   - Is response quality consistent across models?
+   - Are there noticeable differences in response formatting or style?
 
 ### 7.3. Early Integration Testing
 **Status**: 🔲 Not Started | ⏳ In Progress | 🔍 In Review | ✅ Completed
@@ -593,6 +682,43 @@ The migration will proceed in the following phases. Each milestone contains spec
 6. Create a simple CLI test command that demonstrates integrated functionality
 7. Review and address any issues discovered during integration
 
+**Milestone 3 Completion Checkpoint**:
+- [ ] Models and tools successfully integrated
+- [ ] Both minimal and end-to-end tests passing
+- [ ] Test fixtures created and documented
+- [ ] Authentication handling verified
+- [ ] Documentation updated with integration insights and patterns
+
+**User Acceptance Testing Instructions**:
+1. **Run Basic Integration Tests via code-agent**:
+   ```
+   # Test a tool-heavy workflow
+   code-agent run "Search for the latest Python version, then create a small Python script that demonstrates a new feature from that version"
+   
+   # Test a conversation-heavy workflow
+   code-agent chat "Let's discuss the best practices for error handling in Python. First, what are the main approaches?"
+   # Follow up with 2-3 more messages in the conversation
+   ```
+
+2. **Test Error Recovery**:
+   ```
+   # Test handling of a failed tool call
+   code-agent run "Try to execute an invalid shell command, then tell me what went wrong and suggest a fix"
+   ```
+
+3. **Test Authentication Handling**:
+   ```
+   # If implemented, test a tool requiring authentication
+   code-agent run "Show me my Google Cloud projects"
+   # Should either work with configured auth or guide you through auth setup
+   ```
+
+4. **Feedback Points**:
+   - Do complex workflows complete successfully?
+   - Is the conversation context maintained properly?
+   - Does the agent recover gracefully from errors?
+   - Is the authentication flow user-friendly?
+
 ### 7.4a. Session Integration
 **Status**: 🔲 Not Started | ⏳ In Progress | 🔍 In Review | ✅ Completed
 
@@ -669,6 +795,45 @@ The migration will proceed in the following phases. Each milestone contains spec
 5. Verify that event types (user, assistant, tool, etc.) are correctly assigned
 6. Confirm with stakeholders if any unique session handling needs are identified during implementation
 7. Re-evaluate need for custom event types or security measures during implementation
+
+**Milestone 4a Completion Checkpoint**:
+- [ ] Session services successfully implemented
+- [ ] Both in-memory and filesystem persistence working
+- [ ] State management verified with multi-turn conversations
+- [ ] Documentation updated with session insights and patterns
+
+**User Acceptance Testing Instructions**:
+1. **Test Multi-Turn Conversations**:
+   ```
+   # Start a multi-turn conversation
+   code-agent chat "Let's work on a small Python project together"
+   # Continue with several follow-up messages
+   # Then exit the chat and restart
+   code-agent chat
+   # Check if the session is restored correctly
+   ```
+
+2. **Test Session Persistence**:
+   ```
+   # Create a named session
+   code-agent chat --session my-test-session "Remember that my favorite color is blue"
+   # Exit and resume the session
+   code-agent chat --session my-test-session "What's my favorite color?"
+   # Should recall the information from the previous session
+   ```
+
+3. **Check Session Commands**:
+   ```
+   # If implemented, test session management commands
+   code-agent sessions list
+   code-agent sessions delete my-test-session
+   ```
+
+4. **Feedback Points**:
+   - Is conversation context maintained properly between messages?
+   - Does session restoration work correctly?
+   - Can you manage multiple sessions effectively?
+   - Is there clear feedback about which session you're using?
 
 ### 7.4b. Agent Refactoring
 **Status**: 🔲 Not Started | ⏳ In Progress | 🔍 In Review | ✅ Completed
@@ -751,6 +916,41 @@ The migration will proceed in the following phases. Each milestone contains spec
 4. Test response clarity and visual appeal with actual users if possible
 5. Verify streaming works correctly in different environments
 
+**Milestone 4b Completion Checkpoint**:
+- [ ] Agent implementation completed and tested
+- [ ] Streaming and markdown formatting working correctly
+- [ ] Callback system verified and documented
+- [ ] Documentation updated with agent implementation insights
+
+**User Acceptance Testing Instructions**:
+1. **Test Agent Behavior and Personality**:
+   ```
+   # Test agent's reasoning capability
+   code-agent chat "Explain how you would solve this problem: find the longest substring without repeating characters in 'abcabcbb'"
+   
+   # Test agent's instruction following
+   code-agent chat "Give me exactly 5 bullet points about Python, numbered, with exactly one sentence each"
+   ```
+
+2. **Test Streaming Responses**:
+   ```
+   # Test response streaming
+   code-agent chat --stream "Write a detailed explanation of how virtual environments work in Python"
+   ```
+
+3. **Test Agent Instructions**:
+   ```
+   # Test agent with custom instructions
+   code-agent chat --instructions "You are a security expert focused on code review" "Review this code snippet for security issues: user_input = input(); eval(user_input)"
+   ```
+
+4. **Feedback Points**:
+   - Does the agent follow instructions precisely?
+   - Is the streaming response smooth and readable?
+   - Does the agent personality feel consistent?
+   - Is markdown formatting rendered correctly?
+   - Does the agent correctly reason through problems?
+
 ### 7.5. Runner Implementation
 **Status**: 🔲 Not Started | ⏳ In Progress | 🔍 In Review | ✅ Completed
 
@@ -817,7 +1017,7 @@ The migration will proceed in the following phases. Each milestone contains spec
 
 **Completion Criteria**: 
 - Runner successfully running agent
-- CLI interface preserves existing commands while adopting ADK best practices
+- CLI interface preserving existing commands while adopting ADK best practices
 - User experience enhanced with markdown and progress indicators
 - Artifact handling implemented with both in-memory and filesystem options
 - Clean, visually appealing terminal output
@@ -837,26 +1037,77 @@ The migration will proceed in the following phases. Each milestone contains spec
 6. Verify artifact persistence across sessions where appropriate
 7. Compare user experience with original implementation
 
+**Milestone 5 Completion Checkpoint**:
+- [ ] Runner successfully implemented with chat and run commands
+- [ ] CLI interface presenting clean, appealing output
+- [ ] Artifact handling verified for both in-memory and filesystem storage
+- [ ] Documentation updated with runner implementation insights
+
+**User Acceptance Testing Instructions**:
+1. **Test Core CLI Commands**:
+   ```
+   # Test the help menu
+   code-agent --help
+   
+   # Test chat mode
+   code-agent chat "Hello, how are you today?"
+   
+   # Test run mode 
+   code-agent run "What files are in the current directory?"
+   
+   # Test additional flags
+   code-agent chat --verbose "Tell me about ADK"
+   ```
+
+2. **Test Progress Indicators**:
+   ```
+   # Run a command that takes some time
+   code-agent run "Search for comprehensive information about the Google Agent Development Kit, summarize the key components, and format the results as a markdown table"
+   ```
+
+3. **Test Artifact Generation**:
+   ```
+   # Generate and save an artifact
+   code-agent run "Create a Python script that demonstrates a binary search tree implementation and save it as bst.py"
+   
+   # Check that the artifact was created
+   cat bst.py
+   ```
+
+4. **Test Environment Variables**:
+   ```
+   # Test with environment variable configuration
+   export CODE_AGENT_MODEL="gemini-2.0-pro"
+   code-agent chat "Which model are you using?"
+   unset CODE_AGENT_MODEL
+   ```
+
+5. **Feedback Points**:
+   - Are all CLI commands and options working as expected?
+   - Is the progress indication clear and informative?
+   - Are artifacts generated and saved correctly?
+   - Is the CLI experience intuitive and user-friendly?
+   - Does environment variable configuration work properly?
+
 ### 7.6. Progressive Code Decommissioning
 **Status**: 🔲 Not Started | ⏳ In Progress | 🔍 In Review | ✅ Completed
 
-- [ ] Create a transition strategy for each component:
-  - [ ] Map which old components are replaced by which new components
-  - [ ] Determine order of replacement to minimize disruption
-- [ ] For each component to be decommissioned:
-  - [ ] Verify new ADK-based replacement works correctly through testing
-  - [ ] Update references to use new implementation
-  - [ ] Run tests to ensure replacement functions correctly
-  - [ ] Remove old component
-- [ ] Components to decommission (in suggested order):
+- [ ] Execute wholesale replacement approach:
+  - [ ] Identify all components to be replaced by ADK implementations
+  - [ ] Implement full ADK replacements for all components
+  - [ ] Test the complete ADK implementation thoroughly
+  - [ ] Remove all replaced components at once after verification
+- [ ] Components to decommission:
   - [ ] `code_agent/llm.py` (replaced by ADK models)
   - [ ] History management in `code_agent/agent/agent.py` (replaced by Session)
   - [ ] Tool invocation logic (replaced by ADK tool handling)
   - [ ] Main agent loop in `code_agent/agent/agent.py` (replaced by LlmAgent)
   - [ ] CLI runner parts in `code_agent/cli/main.py` (replaced by ADK Runner)
   - [ ] Entire `cli_agent/` directory
-- [ ] Remove unused imports and dependencies
+- [ ] Perform comprehensive testing of new implementation
+- [ ] Remove old implementation entirely once new is verified
 - [ ] Update documentation and references throughout the codebase
+- [ ] Ensure all changes are contained in the `feat/google-adk` branch
 
 **Directory Structure Changes**:
 ```
@@ -864,7 +1115,7 @@ The migration will proceed in the following phases. Each milestone contains spec
 ├── code_agent/
 │   ├── llm.py                   # Remove this file
 │   ├── agent/
-│   │   └── agent.py             # Heavily modify or replace this file
+│   │   └── agent.py             # Remove or replace this file entirely
 │   ├── adk/                     # All files from previous milestones
 ├── cli_agent/                   # Remove this entire directory
 ├── pyproject.toml               # Remove unused dependencies
@@ -872,7 +1123,7 @@ The migration will proceed in the following phases. Each milestone contains spec
 ```
 
 **Dependencies**: 
-- **Previous Milestones**: Runner Implementation (7.5) completed for full decommissioning, but can begin progressively as each component is ready
+- **Previous Milestones**: Runner Implementation (7.5) completed for full decommissioning
 - **Software**: 
   - Static analysis tools (e.g., pyflakes, mypy) to find unused code
   - Version control (git) for tracking removed code
@@ -883,37 +1134,106 @@ The migration will proceed in the following phases. Each milestone contains spec
   - Version control
 - **Code**: Full understanding of code dependencies and import graph
 
-**Completion Criteria**: All old code successfully removed, tests passing, no references to removed components.
+**Completion Criteria**: 
+- All old code successfully removed
+- Complete ADK implementation functioning properly
+- Tests passing against new implementation
+- No references to removed components
+- Clean codebase with no unused code or imports
+- All changes contained in `feat/google-adk` branch
 
 **Validation Method**:
-1. Run all tests after each component removal to ensure no regressions
+1. Run all tests against the new ADK implementation to ensure functionality
 2. Use static analysis tools to identify any remaining references to removed components
 3. Verify imports throughout the codebase to ensure no dependencies on removed modules
-4. Check for any unintended changes in behavior after removing old code
+4. Run the application with various prompts to ensure full functionality
 5. Confirm no import errors or module not found errors
 6. Verify documentation and comments are updated to reflect new architecture
-7. Run the application with various prompts to ensure full functionality remains
+
+**Milestone 6 Completion Checkpoint**:
+- [ ] All old code successfully removed
+- [ ] New implementation fully functional
+- [ ] No references to removed components remaining
+- [ ] Documentation updated with decommissioning insights
+
+**User Acceptance Testing Instructions**:
+1. **Verify Old Commands Still Work**:
+   ```
+   # Test that previous command patterns still function
+   code-agent chat "Hello world"
+   code-agent run "List the files in this directory"
+   
+   # Test any specific flags that were available in the old version
+   code-agent chat --verbose "Tell me about yourself"
+   ```
+
+2. **Verify Features After Removal**:
+   ```
+   # Test features that should still work after code removal
+   code-agent run "Search for information about Python decorators"
+   code-agent chat "Explain the concept of closures in Python"
+   ```
+
+3. **Check for Missing Functionality**:
+   ```
+   # Try any commands or features that might have been affected
+   code-agent run "Create a new Python file with a simple class definition"
+   ```
+
+4. **Feedback Points**:
+   - Do all existing commands and features still work properly?
+   - Is there any noticeable loss of functionality?
+   - Is there any change in performance or response quality?
+   - Does everything feel well-integrated without references to removed components?
 
 ### 7.7. Final Testing & Validation
 **Status**: 🔲 Not Started | ⏳ In Progress | 🔍 In Review | ✅ Completed
 
-- [ ] Run full test suite (`pytest`)
-- [ ] Adapt any remaining tests for ADK agent structure
-- [ ] Create new tests specific to ADK functionality
+- [ ] Ensure comprehensive test coverage:
+  - [ ] Run full test suite (`pytest`)
+  - [ ] Verify code coverage exceeds 80%
+  - [ ] Focus test coverage on:
+    - [ ] Agent behavior
+    - [ ] Tools functionality
+    - [ ] Integrations
+    - [ ] Configuration options
+    - [ ] System components
+  - [ ] Adapt any remaining tests for ADK agent structure
+  - [ ] Create new tests specific to ADK functionality
 - [ ] Implement ADK evaluation capabilities:
+  - [ ] Create specialized agent personas for evaluation:
+    - [ ] Code agent (software engineer)
+    - [ ] QA agent (quality assurance engineer)
+    - [ ] Program agent (program manager)
+  - [ ] Define evaluation metrics:
+    - [ ] Response accuracy
+    - [ ] Response speed
+    - [ ] Appropriate tool selection
+    - [ ] Minimal user assistance needed
   - [ ] Create test files (`*.test.json`)
   - [ ] Create eval sets (`*.evalset.json`)
   - [ ] Define interaction patterns, tool calls, and expected responses
   - [ ] Use `google.adk.evaluation.AgentEvaluator` with pytest
   - [ ] Run evaluations with `adk eval` CLI command
-  - [ ] Define evaluation criteria in `test_config.json`
-- [ ] Perform comprehensive manual testing of all workflows
-- [ ] Verify code coverage remains above 80%
-- [ ] Run linters and formatters
-- [ ] Document any behavior changes or differences from previous implementation
-- [ ] Create regression test suite for critical functions
-- [ ] Conduct performance comparison between old and new implementations
-- [ ] Create documentation for the new ADK-based architecture
+- [ ] Update documentation:
+  - [ ] Follow existing docs/ style and conventions
+  - [ ] Create documentation for different user types:
+    - [ ] Developers
+    - [ ] QA engineers
+    - [ ] Program managers
+    - [ ] Other specialized agent users
+  - [ ] Document agent extension/customization capabilities
+  - [ ] Create getting started guide for new users
+  - [ ] Update contributor documentation
+  - [ ] Document ADK-based architecture
+- [ ] Implement response time tracking:
+  - [ ] Add configurable agent response time tracking (off by default)
+  - [ ] Create configuration option for enabling timing information
+- [ ] Final validation:
+  - [ ] Run linters and formatters
+  - [ ] Document any behavior changes or differences from previous implementation
+  - [ ] Create regression test suite for critical functions
+  - [ ] Perform comprehensive manual testing of all workflows
 
 **Directory Structure Changes**:
 ```
@@ -930,7 +1250,12 @@ The migration will proceed in the following phases. Each milestone contains spec
 │       └── custom_metrics.py  # Create custom metrics if needed
 ├── docs/                      # Update documentation
 │   ├── adk_architecture.md    # Create architecture documentation
-│   └── ...
+│   ├── getting_started.md     # Create getting started guide
+│   ├── agent_customization.md # Document agent extension capabilities
+│   └── user_guides/           # User-specific documentation
+│       ├── developer_guide.md # Guide for developers
+│       ├── qa_guide.md        # Guide for QA engineers
+│       └── pm_guide.md        # Guide for program managers
 └── main.py                    # Create FastAPI entry point for potential cloud deployment
 ```
 
@@ -944,56 +1269,91 @@ The migration will proceed in the following phases. Each milestone contains spec
   - [ADK Evaluation Documentation](https://google.github.io/adk-docs/evaluate/)
   - [Agent Test Files Guide](https://google.github.io/adk-docs/evaluate/agent-test-files/)
   - [Evaluation Set Guide](https://google.github.io/adk-docs/evaluate/evaluation-sets/)
+  - Existing project documentation style and formats
 - **Knowledge**: 
   - Test design patterns
-  - Benchmarking techniques
-  - Documentation standards
+  - Documentation best practices
+  - Agent evaluation techniques
 - **Code**: Complete migrated codebase
 
-**Completion Criteria**: All tests passing, code coverage above 80%, no regressions in functionality, documentation updated.
+**Completion Criteria**: 
+- Test coverage exceeds 80% for all critical components
+- All tests passing
+- Multiple agent types successfully evaluated
+- Documentation complete for all user types and capabilities
+- Response time tracking implemented and configurable
+- No regressions in functionality
+- Clean codebase passing linting and formatting checks
 
 **Validation Method**:
-1. Verify test coverage metrics using `pytest-cov` and ensure 80%+ coverage
+1. Verify test coverage metrics using `pytest-cov` and ensure >80% coverage
 2. Run the full test suite and confirm all tests pass
-3. Execute ADK evaluation sets and verify expected scores
-4. Compare system behavior on a standardized set of test prompts between old and new implementations
-5. Conduct user acceptance testing with real users on key workflows
-6. Run performance benchmarks and compare with baseline
+3. Execute ADK evaluation sets with different agent personas
+4. Verify agent evaluation metrics meet expectations:
+   - Accuracy of responses
+   - Speed of responses
+   - Appropriate tool selection
+   - Minimal user assistance needed
+5. Review documentation for completeness and accuracy
+6. Test response time tracking functionality
 7. Verify all linters pass without errors or warnings
-8. Conduct security review of the new implementation
+8. Conduct security review of the implementation
 9. Test with edge cases and error conditions to ensure robust handling
-10. Validate documentation completeness and accuracy
+10. Validate user experience for different user types
 
-## 8. Considerations & Risks
+**Milestone 7 Completion Checkpoint**:
+- [ ] All tests passing with >80% coverage
+- [ ] Agent evaluation metrics meeting expectations
+- [ ] Documentation complete for all user types
+- [ ] Project ready for final review and release
 
-*   **Dependencies**: Ensure `google-adk` dependencies don't conflict with existing project dependencies.
-*   **Learning Curve**: Team members may need time to familiarize themselves with ADK concepts and APIs.
-*   **Behavioral Changes**: The `LlmAgent`'s internal prompting and tool-use logic might differ subtly from our custom `CodeAgent`. This could require adjustments to instructions or tool descriptions.
-*   **Configuration Mapping**: Ensure all settings from our `config.yaml` (verbosity, rules, API keys, model names) are correctly passed to the relevant ADK component initializers.
-*   **Testing Effort**: Significant effort may be required to adapt existing tests to the new ADK-based structure.
-*   **LLM Backend Flexibility (`litellm` Replacement & Local Models)**: 
-    *   Confirm ADK's built-in `Gemini` model support covers immediate needs.
-    *   To support other providers or **local models (e.g., Ollama)**, we will likely need to implement a **custom `BaseLlm` subclass** (see `google.adk.models`). This custom implementation could potentially wrap `litellm` or interact directly with the desired model API (e.g., Ollama's endpoint).
-    *   This structured approach via `BaseLlm` replaces the need for `code_agent/llm.py` and parts of `cli_agent/` related to model interaction.
-*   **Tool Authentication**: As more tools are added post-migration, especially those accessing protected resources (e.g., Google Cloud services via MCP Tools, external APIs), we will need to configure authentication. ADK provides mechanisms for this (see [ADK Authentication documentation](https://google.github.io/adk-docs/tools/authentication/)) using `AuthScheme` and `AuthCredential`, which the migration enables us to leverage systematically.
-*   **Future Deployment Alignment (GKE)**: To facilitate potential future deployment to Kubernetes environments like GKE, we should aim to structure the refactored project according to ADK deployment best practices (see [Deploy to GKE documentation](https://google.github.io/adk-docs/deploy/gke/)). This typically involves:
-    *   Having the core ADK agent definition(s) within a dedicated package (e.g., `code_agent/`).
-    *   Placing the FastAPI entry point (`main.py` using `get_fast_api_app`), `requirements.txt`, and `Dockerfile` at the project root level, outside the agent package.
-    *   This may require adjustments to our current directory structure during or after the main refactoring milestones.
-*   **Refactoring Custom Security Logic**: Our existing security checks (likely in `code_agent/tools/security.py`) will need to be refactored. Instead of a direct replacement module, ADK encourages implementing security guardrails and validations using mechanisms like **Callbacks** (e.g., `before_tool_callback`) or integrating checks directly into **Tools** using `ToolContext` to access state/policy information. See the [Safety and Security docs](https://google.github.io/adk-docs/safety/).
-*   **Future Agent2Agent (A2A) Protocol Support**: While implementing the A2A protocol ([https://google.github.io/A2A/](https://google.github.io/A2A/)) is outside the scope of this initial migration, refactoring to ADK's structured agents, tools, and event-driven communication provides a significantly better foundation for potentially adopting or interacting with such interoperability standards in the future compared to the current custom implementation.
-*   **Environment/Tooling Consistency**: Ensure consistent use of the established environment management tools (Poetry, `.venv`). Avoid temporary environment wrappers like `nix-shell` for running standard project commands (like `poetry install`), as this can lead to inconsistencies or hide underlying environment setup issues.
+**User Acceptance Testing Instructions**:
+1. **Verify Test Coverage**:
+   ```
+   # Run tests with coverage report
+   pytest --cov=code_agent --cov-report=term-missing
+   
+   # Check the coverage percentage exceeds 80%
+   # Look for "TOTAL XX%" at the bottom of the report
+   ```
 
-## 9. Conclusion
+2. **Test Different Agent Personas**:
+   ```
+   # Test code agent
+   code-agent chat --persona code "How would I implement a Python decorator?"
+   
+   # Test QA agent
+   code-agent chat --persona qa "What tests should I write for a user authentication system?"
+   
+   # Test program manager agent
+   code-agent chat --persona pm "Help me create a project timeline for a new feature."
+   ```
 
-Migrating to `google-adk` will significantly enhance the robustness, maintainability, and extensibility of our agent system. By leveraging ADK's standardized components and features, we can achieve a more robust and feature-rich agent framework. The migration process involves a series of steps to refactor existing code, integrate new components, and ensure compatibility with existing systems.
+3. **Run ADK Evaluation**:
+   ```
+   # Run evaluation using ADK eval
+   adk eval --evalset eval/scenarios.evalset.json
+   
+   # Review evaluation results
+   cat eval/results.json
+   ```
 
-The migration will proceed in phases, starting with setup and dependency management, tool refactoring, model integration, agent refactoring, session integration, runner implementation, decommissioning old code, and testing & validation. Each phase has specific tasks and considerations to ensure a smooth transition to the new ADK-based system.
+4. **Test Response Time Tracking**:
+   ```
+   # Enable response time tracking
+   code-agent chat --show-timing "Give me a quick response about Python lists."
+   ```
 
-By following this plan, we can position our codebase for future agent interoperability and provide a solid foundation for handling richer input/output beyond text using ADK artifacts. The migration will also position our codebase for potential future deployments to Kubernetes environments like GKE.
+5. **Perform End-to-End Testing**:
+   ```
+   # Try a complex scenario with multiple tools
+   code-agent run "Search for information about Python async functions, create a sample async function, and explain how it works."
+   ```
 
-The migration process involves significant effort, but the benefits of a more robust and feature-rich agent framework will be realized. The team should be prepared for a learning curve and potential behavioral changes in the new ADK-based system.
-
-The migration process will be closely monitored, and testing will be performed to ensure the new system meets the required performance and functionality standards.
-
-The migration to `google-adk` is a significant step towards achieving our long-term goals of a more robust and feature-rich agent system.
+6. **Feedback Points**:
+   - Does code coverage exceed 80%?
+   - Do different agent personas behave appropriately?
+   - Are evaluation metrics meeting expectations?
+   - Is response time tracking working correctly?
+   - Does the application handle complex scenarios well?
+   - Is the overall user experience polished and professional?
