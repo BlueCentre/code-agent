@@ -38,7 +38,7 @@ def test_agent_with_tool_definitions(mock_thinking, mock_litellm, mock_get_confi
     assert "web_search" in tool_names
 
     # Get web_search tool definition
-    web_search_tool = [tool for tool in tools if tool["function"]["name"] == "web_search"][0]
+    web_search_tool = next(tool for tool in tools if tool["function"]["name"] == "web_search")
 
     # Verify it has the correct schema
     assert web_search_tool["function"]["description"] == "Searches the web for information using a query string"
