@@ -25,29 +25,17 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install uv
-        run: curl -LsSf https://astral.sh/uv/install.sh | sh
-        env:
-          UV_BOOTSTRAP_SKIP_MODIFY_PATH: 1
-
-      - name: Install dependencies
+      - name: Install Poetry and Dependencies
         run: |
-          # Add uv to the PATH
-          export PATH="$HOME/.cargo/bin:$PATH"
-          # Create and activate venv
-          uv venv .venv
+          python -m venv .venv
           source .venv/bin/activate
-          # Install project and dev dependencies
-          uv pip install '.[dev]'
+          pip install --upgrade pip poetry
+          poetry install --with dev
 
       - name: Run E2E tests
         run: |
-          # Add uv to the PATH (optional but safe)
-          export PATH="$HOME/.cargo/bin:$PATH"
-          # Activate venv
-          source .venv/bin/activate
-          # Use explicit path to script
-          .venv/bin/./scripts/run_e2e_tests.sh # Assuming the script uses the venv python internally or is path-independent
+          # Run script using poetry to ensure correct environment for any python calls within
+          poetry run ./scripts/run_e2e_tests.sh
         env:
           AI_STUDIO_API_KEY: ${{ secrets.AI_STUDIO_API_KEY_TEST }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY_TEST }}

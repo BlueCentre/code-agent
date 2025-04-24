@@ -22,38 +22,21 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    # Install uv
-    - name: Install uv
-      run: curl -LsSf https://astral.sh/uv/install.sh | sh
-      env:
-        # Prevent the installer from modifying GitHub Actions environment files
-        UV_BOOTSTRAP_SKIP_MODIFY_PATH: 1
-
-    # Install dependencies using uv
-    - name: Install dependencies
+    - name: Install Poetry and Dependencies
       run: |
-        # Add uv to the PATH
-        export PATH="$HOME/.cargo/bin:$PATH"
-        # Create and activate venv
-        uv venv .venv
+        python -m venv .venv
         source .venv/bin/activate
-        # Install project and dev dependencies
-        uv pip install '.[dev]'
+        pip install --upgrade pip poetry
+        poetry install --with dev
 
     - name: Run tests with coverage
       run: |
-        # Add uv to the PATH (optional but safe)
-        export PATH="$HOME/.cargo/bin:$PATH"
-        # Activate venv
-        source .venv/bin/activate
-        # Use explicit path to python in venv
-        .venv/bin/python -m pytest tests/ --cov=code_agent --cov=cli_agent --cov-report=xml --cov-report=term --cov-fail-under=80
+        # Run using poetry to ensure correct environment
+        poetry run pytest tests/ --cov=code_agent --cov=cli_agent --cov-report=xml --cov-report=term --cov-fail-under=80
 
     - name: Generate Coverage Report
       run: |
-        # Add uv to the PATH (optional but safe)
-        export PATH="$HOME/.cargo/bin:$PATH"
-        # Activate venv
+        # Activate venv to run the python script
         source .venv/bin/activate
         # Use a multi-line Python script instead of one-liners to avoid f-string backslash issues
         cat > generate_coverage.py << 'EOF'
@@ -101,9 +84,5 @@ jobs:
 
     - name: Run linting
       run: |
-        # Add uv to the PATH (optional but safe)
-        export PATH="$HOME/.cargo/bin:$PATH"
-        # Activate venv (ruff should be installed via .[dev])
-        source .venv/bin/activate
-        # Use explicit path to python in venv
-        .venv/bin/python -m ruff check . --output-format=github
+        # Run using poetry to ensure correct environment
+        poetry run ruff check . --output-format=github

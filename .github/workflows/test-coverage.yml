@@ -28,28 +28,22 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Install uv
-      run: curl -LsSf https://astral.sh/uv/install.sh | sh
-      env:
-        UV_BOOTSTRAP_SKIP_MODIFY_PATH: 1
-
-    - name: Install dependencies
+    - name: Install Poetry and Dependencies
       run: |
-        export PATH="$HOME/.cargo/bin:$PATH"
-        uv venv .venv
+        python -m venv .venv
         source .venv/bin/activate
-        uv pip install '.[dev]'
+        pip install --upgrade pip poetry
+        poetry install --with dev
 
     - name: Run tests with coverage
       run: |
-        export PATH="$HOME/.cargo/bin:$PATH"
-        source .venv/bin/activate
+        # Run using poetry to ensure correct environment
         if [[ "${{ github.event.inputs.modules }}" == "code_agent.tools.native_tools" ]]; then
           echo "Running tests for native_tools module only"
-          .venv/bin/python -m pytest tests/test_native_tools.py tests/test_native_tools_additional.py --cov=code_agent.tools.native_tools --cov-report=xml --cov-report=term --cov-fail-under=80
+          poetry run pytest tests/test_native_tools.py tests/test_native_tools_additional.py --cov=code_agent.tools.native_tools --cov-report=xml --cov-report=term --cov-fail-under=80
         else
           echo "Running tests for all modules"
-          .venv/bin/python -m pytest tests/ --cov=code_agent --cov=cli_agent --cov-report=xml --cov-report=term --cov-fail-under=80
+          poetry run pytest tests/ --cov=code_agent --cov=cli_agent --cov-report=xml --cov-report=term --cov-fail-under=80
         fi
 
     - name: Upload coverage report
