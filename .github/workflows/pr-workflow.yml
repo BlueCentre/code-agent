@@ -37,10 +37,8 @@ jobs:
         # Create and activate venv
         uv venv .venv
         source .venv/bin/activate
-        # Install package in editable mode first
-        uv pip install -e .
-        # Install dev dependencies from pyproject.toml (using uv's understanding of poetry groups)
-        uv pip install --group dev
+        # Install project and dev dependencies
+        uv pip install '.[dev]'
 
     - name: Run tests with coverage
       run: |
