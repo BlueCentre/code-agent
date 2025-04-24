@@ -1,59 +1,64 @@
-# PR Validation Hook
+# PR Monitoring Script (`monitor-pr.sh`)
 
-This repository includes an optional Git hook that validates GitHub pull request checks after pushing changes. This provides immediate feedback on whether your CI/CD checks are passing, without needing to manually check GitHub.
+This repository includes a script (`scripts/monitor-pr.sh`) to check the status of GitHub pull request checks after pushing changes. This provides immediate feedback on whether your CI/CD checks are passing without needing to manually check GitHub.
+
+This script replaces the previous experimental post-push hook validation.
 
 ## Requirements
 
-- GitHub CLI (`gh`) installed and authenticated
-- A `.env` file with `PULL_REQUEST_VALIDATE=true`
+- GitHub CLI (`gh`) installed and authenticated.
+  - Installation: [GitHub CLI Installation](https://cli.github.com/manual/installation)
+  - Authentication: Run `gh auth login`
 
 ## How It Works
 
-After pushing changes to a branch with an open PR, the hook:
+The `monitor-pr.sh` script is designed to be run manually after you push changes to a branch associated with an open pull request. The `post-commit` and `pre-push` Git hooks will remind you to use this script.
 
-1. Checks if the feature is enabled via the `.env` file
-2. Verifies GitHub CLI is installed and authenticated
-3. Identifies any open PR for the current branch
-4. Polls GitHub API to check CI/CD status
-5. Notifies you when all checks pass or when any fail
+When executed, the script:
 
-The validation runs in the background to avoid blocking your workflow.
+1.  Identifies the open PR for your current branch.
+2.  Fetches the current status of all associated CI/CD checks (e.g., GitHub Actions workflows).
+3.  By default, it polls the GitHub API periodically to wait for checks to complete.
+4.  Displays the progress and final status (pass, fail, pending) of the checks.
+5.  Provides a direct link to the PR on GitHub.
 
-## Git Hook Flow
+## Usage
 
-This repository uses a series of Git hooks to ensure code quality:
+```bash
+# Run after pushing changes to a branch with an open PR
+./scripts/monitor-pr.sh
 
-1. **Pre-commit hook**: Runs linting, formatting checks, and basic validation
-2. **Pre-push hook**: Runs tests and ensures code quality before pushing
-3. **Post-push hook**: Validates PR checks after pushing (when enabled)
+# Specify a branch explicitly if not on the PR branch
+./scripts/monitor-pr.sh your-feature-branch
 
-## Setup
-
-1. Create a `.env` file in the repository root (if it doesn't exist)
-2. Add the following line to enable validation:
-   ```
-   PULL_REQUEST_VALIDATE=true
-   ```
-3. Install GitHub CLI if not already installed:
-   - [GitHub CLI Installation](https://cli.github.com/manual/installation)
-4. Authenticate GitHub CLI:
-   ```
-   gh auth login
-   ```
+# Check status once without polling/waiting
+./scripts/monitor-pr.sh --no-poll
+```
 
 ## Configuration
 
-The hook has the following default behavior:
-- Polls GitHub API every 5 seconds
-- Shows status updates every 30 seconds
-- Times out after 10 minutes
-- Runs asynchronously in the background
+You can customize the script's polling behavior by creating a `.env` file in the repository root with specific variables.
+
+For complete environment configuration details, see [Environment Configuration](./ENV_CONFIGURATION.md).
+
+```dotenv
+# .env
+PR_MONITOR_WAIT_MINUTES=10    # Optional: Maximum time to wait (default: 10 minutes)
+PR_MONITOR_POLL_SECONDS=15    # Optional: Polling interval (default: 15 seconds)
+```
+
+| Variable                    | Default | Description                                       |
+| --------------------------- | ------- | ------------------------------------------------- |
+| `PR_MONITOR_WAIT_MINUTES` | `10`    | Maximum time in minutes to wait for checks.     |
+| `PR_MONITOR_POLL_SECONDS` | `15`    | How often (in seconds) to poll for status updates. |
+
+*Note: The script reads these variables if the `.env` file exists.*
 
 ## Troubleshooting
 
-If you encounter issues:
+If you encounter issues with the script:
 
-1. Check that GitHub CLI is properly installed: `gh --version`
-2. Verify authentication: `gh auth status`
-3. Confirm your PR exists: `gh pr list --head $(git branch --show-current)`
-4. Check your `.env` file has `PULL_REQUEST_VALIDATE=true`
+1.  Ensure GitHub CLI is installed: `gh --version`
+2.  Verify GitHub CLI authentication: `gh auth status`
+3.  Confirm a PR exists for your branch: `gh pr list --head $(git branch --show-current)`
+4.  Check the script's output for specific error messages from `gh` or the script itself.

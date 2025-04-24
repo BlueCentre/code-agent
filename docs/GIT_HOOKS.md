@@ -30,7 +30,9 @@ The pre-push hook runs more thorough checks before pushing to the remote:
 
 ## PR Monitoring
 
-Since Git doesn't provide a reliable post-push hook mechanism, we use a standalone script to monitor pull request status:
+Since Git doesn't provide a reliable post-push hook mechanism, we use a standalone script (`scripts/monitor-pr.sh`) to monitor pull request status after pushing.
+
+**For detailed usage, configuration, and troubleshooting information about this script, see the [PR Monitoring Script Documentation](./PR_VALIDATION.md).**
 
 ### monitor-pr.sh
 The PR monitoring script can be run after pushing to check CI/CD status:
@@ -77,12 +79,11 @@ This approach doesn't copy the hooks but uses them directly from the source loca
 
 ## Configuration
 
-You can customize the PR monitoring script behavior by adding the following to your `.env` file:
+For configuration options and environment variables:
 
-```
-PR_MONITOR_WAIT_MINUTES=10    # Maximum wait time in minutes (default: 10)
-PR_MONITOR_POLL_SECONDS=15    # Polling interval in seconds (default: 15)
-```
+* See [Environment Configuration](./ENV_CONFIGURATION.md) for all available settings
+* PR monitoring script settings can be customized in your `.env` file
+* For detailed PR monitoring documentation, see [PR Monitoring Script](./PR_VALIDATION.md)
 
 ## Requirements
 
