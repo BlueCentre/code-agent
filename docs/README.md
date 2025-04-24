@@ -10,7 +10,7 @@ This directory contains comprehensive documentation for the Code Agent project. 
 - [Implementation](getting_started_implementation.md) - Implementation details and status
 
 ### Development
-- [Git Workflow](GIT_WORKFLOW.md) - Guide to our Git workflow and PR process
+- [Git Development](git_development.md) - Comprehensive guide to Git workflow, hooks, and PR validation
 - [Testing](testing.md) - Comprehensive testing guide including procedures, examples and best practices
 - [Coverage Verification](COVERAGE_VERIFICATION.md) - Test coverage requirements and verification
 - [Hermetic Builds](hermetic_builds.md) - Plan for implementing hermetic builds
@@ -41,7 +41,7 @@ This directory contains comprehensive documentation for the Code Agent project. 
 | Requirements | Getting Started | Complete | Initial version |
 | Architecture | Getting Started | Needs validation | Initial version |
 | Implementation | Getting Started | Complete | Points to priorities |
-| Git Workflow | Development | Complete | Initial version |
+| Git Development | Development | Complete | Initial version |
 | Testing | Development | Complete | Initial version |
 | Coverage Verification | Development | Complete | Initial version |
 | Hermetic Builds | Development | Complete | Initial version |

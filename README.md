@@ -404,7 +404,7 @@ This project follows a standardized Git workflow to ensure code quality and main
 - Branch names follow the convention: `<type>/<description>` (e.g., `feat/user-auth`, `fix/login-bug`)
 - Commit messages follow the [Conventional Commits](https://www.conventionalcommits.org/) format
 - Pull requests include automated test results and coverage reports as comments
-- See [Git Workflow Documentation](docs/GIT_WORKFLOW.md) for complete details
+- See [Git Development Documentation](docs/git_development.md#git-workflow) for complete details
 
 ### Quick Example: Creating a Feature Branch
 
@@ -511,7 +511,7 @@ Or configure Git to use them directly:
 git config core.hooksPath .githooks
 ```
 
-For detailed information on the hooks, see [docs/GIT_HOOKS.md](./docs/GIT_HOOKS.md).
+For detailed information on the hooks, see [docs/git_development.md](./docs/git_development.md#automated-quality-controls).
 
 ### PR Monitoring
 
@@ -522,4 +522,4 @@ Since Git doesn't offer a reliable post-push hook, we use a standalone script to
 ./scripts/monitor-pr.sh
 ```
 
-For details on usage and configuration, see the [PR Monitoring Script Documentation](./docs/PR_VALIDATION.md).
+For details on usage and configuration, see the [PR Monitoring Script Documentation](./docs/git_development.md#pr-monitoring-and-validation).

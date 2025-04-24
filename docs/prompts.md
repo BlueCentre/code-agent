@@ -1,7 +1,7 @@
 # Effective Prompts
 
 - Let's start a new feature branch and work on our next task from priorities. Make sure this new feature branch follow our contributor's guide and that it has the latest main. Please give me a plan first before making any changes. Also confirm with me before updating the priorities list and before creating the PR.
--  @GIT_WORKFLOW.md @planning_web_search.md Let's work on this new feature. Please repeat the plan for me to review before you do anything 
+-  @git_development.md @planning_web_search.md Let's work on this new feature. Please repeat the plan for me to review before you do anything 
   - Ok please start once you are done implementing, please following enhance @testing.md to add this new feature so we can fully validate.
   - Please use @monitor-pr.sh and check for issues. Loop through and fix all errors.
   - Don't use NixOS if a command fails

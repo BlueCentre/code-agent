@@ -14,7 +14,7 @@ PR_MONITOR_WAIT_MINUTES=10
 PR_MONITOR_POLL_SECONDS=15
 ```
 
-The PR monitoring script checks GitHub pull request status and CI/CD checks after pushing changes. For more details, see [PR_VALIDATION.md](./PR_VALIDATION.md).
+The PR monitoring script checks GitHub pull request status and CI/CD checks after pushing changes. For more details, see [git_development.md](./git_development.md#pr-monitoring-and-validation).
 
 ## API Keys
 
