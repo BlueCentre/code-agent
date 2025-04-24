@@ -87,6 +87,29 @@ code-agent run "Show system information"
 code-agent run "Show git status of this repository"
 ```
 
+## Testing Web Search Functionality
+
+Test the agent's ability to search the web for information:
+
+```bash
+# Basic web search
+code-agent run "What is the current weather in London?"
+
+# Technical documentation search
+code-agent run "Find the documentation for Python's requests library and summarize the key features"
+
+# Current events search
+code-agent run "What were the major tech announcements in the last month?"
+
+# Combined search and local operation
+code-agent run "Search for best Python logging practices and create a logging_example.py file implementing them"
+
+# Search with disabled functionality
+code-agent config set security.enable_web_search false
+code-agent run "What is the population of Tokyo?"
+code-agent config set security.enable_web_search true  # Re-enable after test
+```
+
 ## Testing Error Handling
 
 Test how the application handles errors:
@@ -103,6 +126,9 @@ OPENAI_API_KEY="" code-agent --provider openai run "Hello"
 
 # Reading non-existent file
 code-agent run "Show me the contents of non_existent_file.txt"
+
+# Web search connection errors (can be simulated by disconnecting from network)
+code-agent run "What is the current exchange rate between USD and EUR?"
 ```
 
 ## Testing Configuration
@@ -116,6 +142,11 @@ code-agent config show
 # Provider-specific configuration
 code-agent config openai
 code-agent config ollama
+
+# Enable/disable web search
+code-agent config set security.enable_web_search false
+code-agent config show  # Verify setting changed
+code-agent config set security.enable_web_search true  # Restore default
 ```
 
 ## Automated End-to-End Testing
@@ -160,6 +191,9 @@ time code-agent run "What is the capital of France?"
 
 # Test with large prompts
 code-agent run "$(cat large_prompt.txt)"
+
+# Measure web search response time
+time code-agent run "What are the latest developments in quantum computing?"
 ```
 
 ## Security Testing
@@ -172,6 +206,9 @@ code-agent run "Execute rm -rf /"  # Should be blocked or require confirmation
 
 # Test path validation
 code-agent run "Read the file /etc/passwd"  # Should be restricted
+
+# Test web search security
+code-agent run "Search for information about <insert sensitive info here>"  # Should sanitize query
 ```
 
 ## Troubleshooting Failed Tests
@@ -182,7 +219,8 @@ When end-to-end tests fail, check the following:
 2. Verify that API keys are properly configured
 3. Check that Ollama service is running (for local model tests)
 4. Examine logs for detailed error messages
-5. Confirm network connectivity for cloud API calls
+5. Confirm network connectivity for cloud API calls and web searches
+6. Verify that duckduckgo-search package is installed correctly
 
 ## Continuous Integration
 
@@ -280,6 +318,9 @@ echo "Running file operation tests..."
 
 echo "Running model provider tests..."
 ./scripts/test_providers.sh
+
+echo "Running web search tests..."
+./scripts/test_web_search.sh
 
 echo "Running Ollama integration tests..."
 # Only if Ollama is installed in the CI environment

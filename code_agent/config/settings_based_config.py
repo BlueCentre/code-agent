@@ -48,6 +48,12 @@ class SecuritySettings(BaseModel):
         description="Enable command validation to prevent execution of dangerous commands",
     )
 
+    # Web search settings
+    enable_web_search: bool = Field(
+        default=True,
+        description="Enable web search functionality to retrieve information from the internet",
+    )
+
 
 class FileOperationsSettings(BaseModel):
     """Configuration for file operation features."""
