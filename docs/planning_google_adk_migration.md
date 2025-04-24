@@ -443,19 +443,30 @@ The migration will proceed in the following phases. Each milestone contains spec
 **Status**: 🔲 Not Started | ⏳ In Progress | 🔍 In Review | ✅ Completed
 
 - [ ] Create `code_agent/adk/models.py` module
-- [ ] Identify all current LLM providers used in the system
+- [ ] Implement multi-provider support:
+  - [ ] Google AI Studio for Gemini models (primary)
+  - [ ] LiteLLM integration for proprietary models (OpenAI, Anthropic, etc.)
+  - [ ] First-class support for locally hosted Ollama models via LiteLLM
+  - [ ] Follow implementation guidance in [ADK Models documentation](https://google.github.io/adk-docs/agents/models/)
 - [ ] For Google Gemini models:
   - [ ] Instantiate a `google.adk.models.Gemini` model
   - [ ] Configure with appropriate settings from `code_agent.config`
   - [ ] Test connectivity to the LLM through the ADK model instance
-- [ ] For other model providers:
-  - [ ] Create custom `BaseLlm` subclasses as needed
-  - [ ] Implement required methods (`generate_content`, etc.)
-  - [ ] Test connectivity and response formatting
-- [ ] If keeping `litellm` support:
-  - [ ] Create a `LiteLlmWrapper` class extending `BaseLlm`
-  - [ ] Implement the necessary interface methods
+- [ ] Create LiteLLM wrapper integration:
+  - [ ] Implement `LiteLlm` wrapper class as shown in ADK documentation
+  - [ ] Support seamless switching between model providers
+  - [ ] Ensure compatibility with all required providers
   - [ ] Test with various model providers
+- [ ] Implement Configuration Management:
+  - [ ] Adopt Google ADK's approach to configuration management
+  - [ ] Support environment variables for API keys (following ADK patterns)
+  - [ ] Implement .env file support for development and testing
+  - [ ] Make configuration simple for end users
+- [ ] Implement model fallback mechanism:
+  - [ ] Create fallback behavior for when primary model is unavailable
+  - [ ] Make timeout and retry logic configurable
+  - [ ] Implement sensible defaults that prioritize user experience
+  - [ ] Design to avoid interrupting user workflow
 - [ ] Create factory function/class to instantiate appropriate model based on config
 - [ ] Verify all models produce properly formatted responses for ADK agents
 
@@ -470,19 +481,21 @@ The migration will proceed in the following phases. Each milestone contains spec
 ├── tests/
 │   ├── unit/
 │   │   └── test_adk_models.py # New test file for model implementations
+├── .env.example              # Create example .env file for development
 ```
 
 **Dependencies**: 
 - **Previous Milestones**: Setup & Dependency Management (7.1) completed
-- **Software**: Required LLM client libraries (e.g., `google-generativeai` for Gemini)
+- **Software**: Required LLM client libraries (e.g., `google-generativeai` for Gemini, `litellm` for other providers)
 - **Documentation**:
   - [ADK Models Documentation](https://google.github.io/adk-docs/agents/models/)
+  - [Cloud & Proprietary Models via LiteLLM](https://google.github.io/adk-docs/agents/models/#using-cloud-proprietary-models-via-litellm)
+  - [Open & Local Models via LiteLLM](https://google.github.io/adk-docs/agents/models/#using-open-local-models-via-litellm)
   - [BaseLlm Reference](https://google.github.io/adk-docs/api-reference/models/base/)
-  - [Gemini Model Reference](https://google.github.io/adk-docs/api-reference/models/gemini/) 
-  - Documentation for other model providers (e.g., OpenAI, Anthropic, etc.)
+  - [Gemini Model Reference](https://google.github.io/adk-docs/api-reference/models/gemini/)
 - **Knowledge**: LLM API integration, async Python, error handling patterns
 - **API Keys**: API keys for all required LLM providers
-- **Code**: Current `litellm` integration code if maintaining compatibility
+- **Code**: Current `litellm` integration code for maintaining compatibility
 
 **Completion Criteria**: All required LLM providers supported, successful connectivity tests, proper response formatting.
 
@@ -502,12 +515,33 @@ The migration will proceed in the following phases. Each milestone contains spec
 ### 7.3. Early Integration Testing
 **Status**: 🔲 Not Started | ⏳ In Progress | 🔍 In Review | ✅ Completed
 
-- [ ] Create a minimal end-to-end test that integrates tools and models
-- [ ] Build a simple test harness for calling models with tools
-- [ ] Test basic tool calling flows without the full agent implementation
-- [ ] Verify tool execution and response handling
-- [ ] Document any issues or incompatibilities discovered
-- [ ] Adjust tool and model implementations based on integration findings
+- [ ] Research Google ADK's recommended testing approaches and best practices
+- [ ] Design testing strategy with clear separation between:
+  - [ ] Minimal integration tests (focused on specific component interactions)
+  - [ ] Comprehensive end-to-end scenarios (testing full workflows)
+- [ ] Create integration test plan prioritizing:
+  - [ ] Model response handling testing (first priority)
+  - [ ] Tool execution testing (second priority)
+- [ ] Set up test environment:
+  - [ ] Research and implement ADK-recommended mocking approaches
+  - [ ] Create mock implementations for external services/APIs
+  - [ ] Develop reusable test fixtures for common components
+- [ ] Implement authentication handling:
+  - [ ] Support API keys via .env file for local testing
+  - [ ] Allow GitHub secrets integration for pipeline testing
+  - [ ] Implement conditional test skipping when keys aren't available
+  - [ ] Create mock authentication for tests that don't require real APIs
+- [ ] Create minimal integration tests:
+  - [ ] Build test harness for calling models with tools
+  - [ ] Test basic tool calling flows
+  - [ ] Verify tool execution and response handling
+- [ ] Document test coverage and success criteria:
+  - [ ] Define expected functionality for each feature
+  - [ ] Create pass/fail validation for each test case
+  - [ ] Focus on validating end-user experience
+- [ ] Implement adjustments based on integration findings:
+  - [ ] Document any issues or incompatibilities discovered
+  - [ ] Adjust tool and model implementations as needed
 - [ ] Create integration test fixtures for future component testing
 
 **Directory Structure Changes**:
@@ -515,48 +549,76 @@ The migration will proceed in the following phases. Each milestone contains spec
 /
 ├── tests/
 │   ├── integration/
-│   │   └── test_adk_integration.py # New integration test file
-│   ├── conftest.py         # May need updates for test fixtures
-│   └── test_harness.py     # Optional test harness for development
+│   │   ├── test_adk_minimal_integration.py  # Minimal component tests
+│   │   └── test_adk_e2e_scenarios.py        # End-to-end workflow tests
+│   ├── conftest.py                          # Test fixtures and utilities
+│   ├── test_harness.py                      # Optional test harness for development
+│   └── test_config.py                       # Test configuration management
+├── .env.test.example                        # Template for test environment variables
 ```
 
 **Dependencies**: 
 - **Previous Milestones**: Tool Refactoring (7.2a) and Model Integration (7.2b) at least partially completed
-- **Software**: Pytest, pytest-asyncio for async testing
+- **Software**: Pytest, pytest-asyncio for async testing, pytest-mock for mocking
 - **Documentation**: 
   - [ADK Tool Execution Flow](https://google.github.io/adk-docs/tools/creating-tools/)
   - [ADK Events Documentation](https://google.github.io/adk-docs/events/)
+  - [ADK Testing Recommendations](https://google.github.io/adk-docs/getting-started/testing/)
 - **Knowledge**: Understanding of LLM tool calling patterns, test fixture design, mock object usage
-- **API Keys**: API keys for at least one model provider for live testing
+- **API Keys**: API keys for at least one model provider for live testing (in .env for local, GitHub secrets for CI)
 - **Code**: Implemented tool wrappers and model interfaces from previous milestones
 
-**Completion Criteria**: Successful integration of tools and models, working tool execution flow, test fixtures created.
+**Completion Criteria**: 
+- Successful integration of tools and models demonstrated through passing tests
+- Clear distinction between minimal integration tests and comprehensive end-to-end scenarios
+- Test fixtures created and reusable
+- Authentication handling works correctly (both real and mocked)
+- Features validated through appropriate test coverage
+- All integration tests pass and validate user experience requirements
 
 **Validation Method**:
-1. Execute integration tests that verify:
+1. Execute minimal integration tests that verify:
    - Models can generate valid tool calls
    - Tools can be executed with proper context
    - Results are correctly formatted and returned
-2. Document test coverage of integration points
-3. Verify error propagation between components
-4. Create a simple CLI test command that demonstrates integrated functionality
-5. Review and address any issues discovered during integration
+2. Execute end-to-end scenario tests that validate:
+   - Complete user workflows function as expected
+   - Feature requirements are met from user perspective
+3. Verify authentication handling works correctly:
+   - Tests run with real API keys when available
+   - Tests use mocked authentication when appropriate
+   - Tests skip gracefully when required keys aren't available
+4. Document test coverage relative to feature requirements
+5. Verify error propagation between components
+6. Create a simple CLI test command that demonstrates integrated functionality
+7. Review and address any issues discovered during integration
 
 ### 7.4a. Session Integration
 **Status**: 🔲 Not Started | ⏳ In Progress | 🔍 In Review | ✅ Completed
 
-- [ ] Create `code_agent/adk/services.py` module if custom service needed
-- [ ] Choose appropriate ADK Session Service (start with `InMemorySessionService`)
-- [ ] Instantiate and configure the session service
-- [ ] Analyze current history management in `CodeAgent`
-- [ ] Map existing history operations to ADK session events and state
-- [ ] If custom session behavior needed:
-  - [ ] Create custom `SessionService` class
-  - [ ] Implement required methods for session management
-  - [ ] Test with the early integration components
-- [ ] Ensure proper event types are used for different message types
+- [ ] Implement session state persistence:
+  - [ ] Start with InMemorySessionService for initial implementation
+  - [ ] Add filesystem-based persistence as an alternative option
+  - [ ] Ensure critical state is preserved (history, context, rules)
+  - [ ] Design for future extension to other persistence mechanisms
+- [ ] Configure and optimize session service:
+  - [ ] Create `code_agent/adk/services.py` module 
+  - [ ] Instantiate and configure the session service
+  - [ ] Add performance configuration options with sensible defaults
+  - [ ] Optimize for best end user experience
+- [ ] Analyze current history management in `CodeAgent`:
+  - [ ] Identify all existing state persisted in current implementation
+  - [ ] Map existing history operations to ADK session events and state
+  - [ ] Confirm if any unique session handling needs exist (consult during implementation)
+- [ ] Implement event handling:
+  - [ ] Utilize ADK's standard event types
+  - [ ] Ensure proper event types are used for different message types
+  - [ ] Review need for custom event types during implementation
 - [ ] Create utility functions for common session operations if needed
-- [ ] Test session persistence and retrieval
+- [ ] Test session persistence and retrieval:
+  - [ ] Test in-memory persistence
+  - [ ] Test filesystem persistence
+  - [ ] Verify proper state recovery
 
 **Directory Structure Changes**:
 ```
@@ -567,7 +629,9 @@ The migration will proceed in the following phases. Each milestone contains spec
 │   │   ├── tools.py          # From previous milestone
 │   │   ├── models.py         # From previous milestone
 │   │   ├── services.py       # Create new file with service implementations
-│   │   └── memory.py         # Create optional memory management utilities
+│   │   └── memory.py         # Create memory management utilities
+│   ├── config/
+│   │   └── session_config.py # Add session configuration options
 ├── tests/
 │   ├── unit/
 │   │   └── test_adk_services.py # New test file for services
@@ -583,7 +647,13 @@ The migration will proceed in the following phases. Each milestone contains spec
 - **Knowledge**: Event-driven design patterns, state management patterns
 - **Code**: Current history management code in `CodeAgent` to understand existing patterns
 
-**Completion Criteria**: Session service successfully integrated, history properly managed, event flow working correctly.
+**Completion Criteria**: 
+- InMemorySessionService successfully integrated
+- Filesystem-based alternative implemented
+- History properly managed in both approaches
+- Event flow working correctly
+- Performance optimized with configurable options
+- No session security mechanisms required (at this stage)
 
 **Validation Method**:
 1. Create unit tests for session management that verify:
@@ -593,25 +663,37 @@ The migration will proceed in the following phases. Each milestone contains spec
 2. Create integration tests that:
    - Simulate multi-turn conversations
    - Verify events are properly sequenced
-   - Test session persistence (if implemented)
+   - Test session persistence (both in-memory and filesystem)
 3. Compare the event structure between old and new implementations for key test cases
 4. Test session state access from tools and agents
 5. Verify that event types (user, assistant, tool, etc.) are correctly assigned
-6. Perform load testing to ensure session performance with large history
+6. Confirm with stakeholders if any unique session handling needs are identified during implementation
+7. Re-evaluate need for custom event types or security measures during implementation
 
 ### 7.4b. Agent Refactoring
 **Status**: 🔲 Not Started | ⏳ In Progress | 🔍 In Review | ✅ Completed
 
 - [ ] Create `code_agent/adk/agent.py` module
 - [ ] Create `AdkCodeAgent` class inheriting from `google.adk.agents.LlmAgent`
-- [ ] Analyze existing agent instructions and prompt patterns
-- [ ] Migrate core instructions to `instruction` or `global_instruction` parameters
-- [ ] Configure agent with tools from step 7.2a
-- [ ] Configure agent with model instance(s) from step 7.2b
-- [ ] Implement any custom behavior required in `_run_async_impl` or similar methods
-- [ ] Set up appropriate `generate_content_config` parameters
-- [ ] Identify any complex logic in current `CodeAgent.run_turn` that needs custom implementation
-- [ ] Design and implement needed callback functions for logging, validation, etc.
+- [ ] Configure agent with flexible, sensible defaults:
+  - [ ] Design default instructions geared towards software and platform engineers
+  - [ ] Make instruction parameters configurable
+  - [ ] Follow Google ADK's approach for agent configuration
+- [ ] Implement standard ADK agent capabilities:
+  - [ ] Configure agent with tools from step 7.2a
+  - [ ] Configure agent with model instance(s) from step 7.2b
+  - [ ] Set up appropriate `generate_content_config` parameters
+  - [ ] Enable response streaming by default
+- [ ] Research and implement callback system:
+  - [ ] Follow Google ADK's recommendations for monitoring and logging
+  - [ ] Design callbacks that enhance user experience
+  - [ ] Document potential callback use cases for future implementation
+  - [ ] Create placeholder for user-delighting callback features (to be defined)
+- [ ] Implement response formatting:
+  - [ ] Use markdown for visually appealing responses
+  - [ ] Ensure clear dialog formatting between users and agent(s)
+  - [ ] Research and implement ADK's recommendations for response truncation
+  - [ ] Design format that works well in both chat and run modes
 - [ ] Create any necessary utility methods for agent configuration
 - [ ] Unit test the agent implementation
 
@@ -625,9 +707,7 @@ The migration will proceed in the following phases. Each milestone contains spec
 │   │   ├── models.py         # From previous milestone
 │   │   ├── services.py       # From previous milestone
 │   │   ├── agent.py          # Create new file with agent implementation
-│   │   └── callbacks.py      # Optional for custom callbacks
-│   ├── agents/
-│   │   └── code_agent.py     # May need updates for reference
+│   │   └── callbacks.py      # Implementation for callbacks system
 ├── tests/
 │   ├── unit/
 │   │   └── test_adk_agent.py # New test file for agent implementation
@@ -641,43 +721,68 @@ The migration will proceed in the following phases. Each milestone contains spec
   - [LLM Agent Guide](https://google.github.io/adk-docs/agents/llm-agents/)
   - [Agent Callbacks](https://google.github.io/adk-docs/callbacks/)
   - [Agent Context](https://google.github.io/adk-docs/context/invocation-context/)
+  - [Streaming Responses](https://google.github.io/adk-docs/api-reference/agents/llm-agent/#streaming-responses)
 - **Knowledge**: Agent design patterns, prompt engineering, instruction formatting
 - **Code**: 
-  - Existing `CodeAgent` implementation to understand current behavior
-  - Prompt templates and instruction sets from current implementation
+  - Existing `CodeAgent` implementation (for reference only)
+  - Tool and model implementations from previous milestones
 
-**Completion Criteria**: Agent successfully instantiated, core instructions preserved, tests passing.
+**Completion Criteria**: 
+- Agent successfully instantiated and functioning
+- Configuration flexible with sensible defaults
+- Response formatting visually appealing with markdown
+- Streaming responses enabled
+- Callback framework established
+- Tests passing
 
 **Validation Method**:
 1. Create unit tests for the agent class that verify:
    - Proper initialization with various configuration parameters
-   - Correct handling of instructions and prompt templates
+   - Correct handling of instructions and formatting
    - Appropriate tool registration
    - Model configuration
+   - Streaming response capability
 2. Create integration tests with simulated prompts that:
    - Test the agent's response generation
-   - Verify tool selection and execution logic
-   - Compare responses with the previous implementation for key test cases
-3. Review the instruction template against original to ensure persona consistency
-4. Test custom behaviors and callbacks with specific scenarios
-5. Perform A/B testing between old and new agent implementations on standardized prompts
-6. Verify memory/history handling through multi-turn conversations
+   - Verify response formatting and markdown rendering
+   - Validate streaming functionality
+   - Test callback system
+3. Confirm callback extensibility for future enhancements
+4. Test response clarity and visual appeal with actual users if possible
+5. Verify streaming works correctly in different environments
 
 ### 7.5. Runner Implementation
 **Status**: 🔲 Not Started | ⏳ In Progress | 🔍 In Review | ✅ Completed
 
-- [ ] Analyze current `code_agent.cli.main.py` implementation
-- [ ] Choose appropriate ADK Runner class (e.g., `InMemoryRunner`)
-- [ ] Instantiate and configure the runner with agent from step 7.4b
-- [ ] Configure runner with session service from step 7.4a
-- [ ] Add initial `InMemoryArtifactService` configuration
-- [ ] Adapt CLI argument parsing to work with the runner
-- [ ] Implement event handling for runner output
-- [ ] Create user response formatting logic
-- [ ] Test runner with basic prompts
-- [ ] Handle tool execution events appropriately
-- [ ] Create appropriate error handling and retry logic if needed
-- [ ] Test end-to-end operation with various prompts
+- [ ] Implement CLI interface preservation:
+  - [ ] Maintain core "chat" and "run" commands from current implementation
+  - [ ] Preserve configuration management functionality
+  - [ ] Adopt Google ADK's approach where it improves user experience
+  - [ ] Analyze current `code_agent.cli.main.py` implementation
+- [ ] Configure ADK Runner:
+  - [ ] Choose appropriate ADK Runner class (e.g., `InMemoryRunner`)
+  - [ ] Make configuration options flexible with sensible defaults
+  - [ ] Implement configurable error handling and retry policies
+  - [ ] Instantiate and configure the runner with agent from step 7.4b
+  - [ ] Configure runner with session service from step 7.4a
+- [ ] Implement artifact handling:
+  - [ ] Start with `InMemoryArtifactService` for development
+  - [ ] Add filesystem-based artifact storage as alternative
+  - [ ] Support existing artifacts (chat history, rules)
+  - [ ] Enable expansion to other artifact types per ADK capabilities
+  - [ ] Follow best practices from [ADK Artifacts documentation](https://google.github.io/adk-docs/artifacts/)
+- [ ] Enhance user experience:
+  - [ ] Format responses using markdown for visual appeal
+  - [ ] Implement progress indicators for all operations
+  - [ ] Ensure clean, non-verbose output focused on user needs
+  - [ ] Design for a delightful and productive experience
+  - [ ] Adapt CLI argument parsing to work with the runner
+- [ ] Implement operations:
+  - [ ] Create event handling for runner output
+  - [ ] Create user response formatting logic
+  - [ ] Test runner with basic prompts
+  - [ ] Handle tool execution events appropriately
+  - [ ] Test end-to-end operation with various prompts
 
 **Directory Structure Changes**:
 ```
@@ -689,7 +794,8 @@ The migration will proceed in the following phases. Each milestone contains spec
 │   ├── adk/
 │   │   ├── __init__.py      # From previous milestones
 │   │   ├── agent.py         # From previous milestone
-│   │   └── artifacts.py     # Optional for artifact handling
+│   │   ├── services.py      # From previous milestone
+│   │   └── artifacts.py     # New file for artifact handling
 ├── tests/
 │   ├── integration/
 │   │   └── test_adk_runner.py # New test file for runner integration
@@ -697,7 +803,7 @@ The migration will proceed in the following phases. Each milestone contains spec
 
 **Dependencies**: 
 - **Previous Milestones**: Session Integration (7.4a) and Agent Refactoring (7.4b) completed
-- **Software**: Typer (for CLI interface)
+- **Software**: Typer (for CLI interface), rich (for terminal formatting)
 - **Documentation**: 
   - [ADK Runtime Documentation](https://google.github.io/adk-docs/runtime/)
   - [Runner Guide](https://google.github.io/adk-docs/runtime/runners/)
@@ -705,23 +811,31 @@ The migration will proceed in the following phases. Each milestone contains spec
 - **Knowledge**: 
   - CLI application design patterns
   - Event processing
-  - Async handling in CLI applications
+  - Terminal formatting for good UX
+  - Artifact management
 - **Code**: Current CLI implementation in `code_agent.cli.main.py`
 
-**Completion Criteria**: Runner successfully running agent, proper CLI interaction, end-to-end tests passing.
+**Completion Criteria**: 
+- Runner successfully running agent
+- CLI interface preserves existing commands while adopting ADK best practices
+- User experience enhanced with markdown and progress indicators
+- Artifact handling implemented with both in-memory and filesystem options
+- Clean, visually appealing terminal output
+- End-to-end tests passing
 
 **Validation Method**:
 1. Create unit tests for runner configuration and initialization
 2. Create integration tests that:
-   - Test runner with various CLI arguments
+   - Test runner with "chat" and "run" commands
    - Verify event handling and response formatting
    - Test tool execution flow
    - Validate error handling and recovery
+   - Test artifact storage and retrieval
 3. Perform end-to-end testing with realistic prompts
-4. Compare CLI output format between old and new implementations
-5. Test artifact handling capabilities
-6. Measure performance metrics (response time, memory usage)
-7. Test streaming response functionality if implemented
+4. Validate terminal output formatting and visual appeal
+5. Test progress indicators during long-running operations
+6. Verify artifact persistence across sessions where appropriate
+7. Compare user experience with original implementation
 
 ### 7.6. Progressive Code Decommissioning
 **Status**: 🔲 Not Started | ⏳ In Progress | 🔍 In Review | ✅ Completed
