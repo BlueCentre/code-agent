@@ -71,6 +71,7 @@ cli-agent/
     * **Apply Edits:** Propose file changes with diff preview and confirmation
     * **Execute Commands:** Run native terminal commands with safety checks
     * **Search Capabilities:** Find files, locate code patterns, and analyze codebases
+    * **Web Search:** Access online information directly within the CLI for research and problem-solving
 
 *   **Advanced Security Controls:**
     * Path validation to prevent path traversal attacks
@@ -344,6 +345,7 @@ Activate the virtual environment first: `source .venv/bin/activate`
 1.  **Prerequisites:**
     *   Python 3.10+
     *   [Poetry](https://python-poetry.org/docs/#installation)
+    *   (Optional but recommended) [UV](https://github.com/astral-sh/uv) - for faster dependency installation
 
 2.  **Clone the repository:**
     ```bash
