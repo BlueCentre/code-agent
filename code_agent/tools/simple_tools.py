@@ -6,7 +6,9 @@ without relying on complex decorators or tool classes.
 import difflib
 import shlex
 import subprocess
+import time
 from pathlib import Path
+from typing import Optional
 
 from rich import print
 from rich.console import Console
@@ -28,6 +30,9 @@ console = Console()
 
 # Define a max file size limit (e.g., 1MB)
 MAX_FILE_SIZE_BYTES = 1 * 1024 * 1024
+
+# Define the maximum number of search results to return
+MAX_SEARCH_RESULTS = 3
 
 
 # --- Helper for Path Validation ---
@@ -240,3 +245,62 @@ def run_native_command(command: str) -> str:
         return f"Error: Permission denied when executing '{base_command}'. Check file permissions or if elevated privileges are required."
     except Exception as e:
         return f"Error executing command: {e}"
+
+
+# --- WEB SEARCH Tool ---
+def web_search(query: str) -> Optional[str]:
+    """
+    Searches the web using DuckDuckGo and returns formatted results.
+
+    Args:
+        query: The search query string
+
+    Returns:
+        A formatted string of search results, or an error message if the search fails
+    """
+    config = get_config()
+
+    # Check if web search is enabled in configuration
+    if not hasattr(config, "security") or not getattr(config.security, "enable_web_search", False):
+        return "Error: Web search is disabled in configuration. Enable it in your config file to use this feature."
+
+    try:
+        from duckduckgo_search import DDGS
+
+        print(f"[yellow]Searching the web for:[/yellow] {query}")
+
+        # Initialize the DuckDuckGo search client
+        ddgs = DDGS()
+
+        # Perform the search with rate limiting to avoid being blocked
+        try:
+            # Add a small delay before search to avoid rate limiting
+            time.sleep(0.5)
+            MAX_SEARCH_RESULTS = 3
+            results = list(ddgs.text(query, max_results=MAX_SEARCH_RESULTS))
+        except Exception as search_error:
+            return f"Error performing web search: {search_error}\nThis might be due to network issues or rate limiting."
+
+        # Check if we got any results
+        if not results:
+            return f"No results found for query: '{query}'\nTry rephrasing your search query."
+
+        # Format the results
+        formatted_results = ["### Web Search Results", ""]
+
+        for i, result in enumerate(results, 1):
+            title = result.get("title", "No Title")
+            body = result.get("body", "No content available")
+            href = result.get("href", "No URL available")
+
+            formatted_results.append(f"**Result {i}:** {title}")
+            formatted_results.append(f"{body}")
+            formatted_results.append(f"*Source: {href}*")
+            formatted_results.append("")  # Empty line for spacing
+
+        return "\n".join(formatted_results)
+
+    except ImportError:
+        return "Error: Required package 'duckduckgo-search' is not installed. Please install it to use the web search feature."
+    except Exception as e:
+        return f"Error during web search: {e}"

@@ -76,9 +76,32 @@ code-agent run "Show me the first 10 lines of the README.md file"
 
 **Result**: ✅ Agent successfully read and displayed the beginning of the README.md file.
 
+### 8. Web Search Functionality Test
+
+```bash
+code-agent run "What is the Model Context Protocol (MCP)?"
+```
+
+**Purpose**: Test the agent's ability to search the web for information not available in the local context.
+
+**Result**: ✅ Agent successfully used the web_search tool to find information about MCP and provided a well-summarized response.
+
+### 9. Web Search Error Handling
+
+```bash
+# Temporarily disable web search in configuration
+code-agent config set security.enable_web_search false
+code-agent run "What is the latest version of Python?"
+code-agent config set security.enable_web_search true  # Re-enable after test
+```
+
+**Purpose**: Test how the agent handles web search when the feature is disabled.
+
+**Result**: ✅ Agent correctly reported that web search is disabled and offered alternative ways to find the information.
+
 ## Chat Mode Tests
 
-### 9. Basic Chat Interaction
+### 10. Basic Chat Interaction
 
 ```bash
 echo -e "Hello, what is your default model?\n/exit" | code-agent chat
@@ -88,11 +111,21 @@ echo -e "Hello, what is your default model?\n/exit" | code-agent chat
 
 **Result**: ✅ Chat session initialized properly, though the response about the default model was generic.
 
+### 11. Web Search in Chat Mode
+
+```bash
+echo -e "What happened in the latest SpaceX launch?\n/exit" | code-agent chat
+```
+
+**Purpose**: Test web search functionality in chat mode for current events.
+
+**Result**: ✅ Agent searched the web and provided up-to-date information about the latest SpaceX launch.
+
 ## Advanced Use Case Tests
 
 These complex scenarios test multiple capabilities together and reflect real-world usage patterns.
 
-### 10. Code Analysis and Explanation
+### 12. Code Analysis and Explanation
 
 ```bash
 code-agent run "Analyze the code_agent/agent/agent.py file and explain what the CodeAgent class does, including its main methods and how it uses tools"
@@ -102,7 +135,7 @@ code-agent run "Analyze the code_agent/agent/agent.py file and explain what the 
 
 **Expected Result**: The agent should read the file, identify the key components of the CodeAgent class, explain the tool-calling mechanism, and provide a comprehensive overview of how the agent framework functions.
 
-### 11. Multi-Step File Operation
+### 13. Multi-Step File Operation
 
 ```bash
 code-agent chat
@@ -117,7 +150,7 @@ code-agent chat
 
 **Expected Result**: The agent should maintain context across multiple turns, execute searches for imports, analyze component usage patterns, and generate a structured markdown document with its findings.
 
-### 12. Code Refactoring Suggestion
+### 14. Code Refactoring Suggestion
 
 ```bash
 code-agent run "Analyze our error handling in code_agent/tools/*.py files and suggest a consistent approach to improve error handling. Include a specific code example of how we could refactor one of the error handling sections."
@@ -127,7 +160,7 @@ code-agent run "Analyze our error handling in code_agent/tools/*.py files and su
 
 **Expected Result**: The agent should identify current error handling patterns across the tool files, recognize inconsistencies or areas for improvement, and provide a specific refactoring example with code.
 
-### 13. Command Chain with Dynamic Inputs
+### 15. Command Chain with Dynamic Inputs
 
 ```bash
 code-agent run "Find all TODO comments in our codebase, create a prioritized list based on their context, and save it as docs/planning_priorities.md"
@@ -137,7 +170,7 @@ code-agent run "Find all TODO comments in our codebase, create a prioritized lis
 
 **Expected Result**: The agent should execute a grep-like search for TODOs, analyze the context of each to determine priority, organize them into a meaningful structure, and create a new markdown file.
 
-### 14. Configuration File Analysis and Modification
+### 16. Configuration File Analysis and Modification
 
 ```bash
 code-agent run "Analyze our config.yaml template and suggest two additional configuration options that would be useful based on how the codebase uses configuration. Then show me how you would modify the template to include these options."
@@ -147,7 +180,7 @@ code-agent run "Analyze our config.yaml template and suggest two additional conf
 
 **Expected Result**: The agent should analyze the configuration template, trace how configuration values are used in the codebase, suggest relevant additions, and demonstrate the YAML modifications needed.
 
-### 15. Interactive Documentation Generation
+### 17. Interactive Documentation Generation
 
 ```bash
 # Set auto_approve_edits to true for this test
@@ -158,7 +191,17 @@ code-agent run "Create a comprehensive user guide for the 'code-agent config' co
 
 **Expected Result**: The agent should identify all config subcommands, extract their functionality from the code, generate appropriate examples, and create a well-formatted markdown file.
 
-### 16. Complex Error Simulation and Debugging
+### 18. Web Search for Documentation and Implementation
+
+```bash
+code-agent run "Research the best practices for implementing rate limiting in a Python API and create a sample implementation file at examples/rate_limiting.py"
+```
+
+**Purpose**: Test the agent's ability to search the web for best practices, synthesize information from multiple sources, and implement a functional solution.
+
+**Expected Result**: The agent should search for information about rate limiting approaches, compare options from different sources, and create a well-documented example implementation that follows Python best practices.
+
+### 19. Complex Error Simulation and Debugging
 
 ```bash
 code-agent run "If I get the error 'Error during agent execution (AuthenticationError): Invalid API key', walk me through all the possible causes and debugging steps I should take to fix it."
@@ -168,7 +211,7 @@ code-agent run "If I get the error 'Error during agent execution (Authentication
 
 **Expected Result**: The agent should provide a comprehensive troubleshooting guide that covers various authentication scenarios, configuration locations, environment variables, and validation steps.
 
-### 17. Configuration Validation and Security Checks
+### 20. Configuration Validation and Security Checks
 
 ```bash
 code-agent config validate --verbose
@@ -186,7 +229,7 @@ When run with the verbose flag, it should display all validation details even if
 
 ## Model-Specific Tests
 
-### 8. Alternative Model Test
+### 21. Alternative Model Test
 
 ```bash
 code-agent --model gemini-1.5-flash run "Tell me a short joke about programming"
@@ -205,6 +248,7 @@ The end-to-end tests confirm that:
    - Text query processing
    - Command execution with approval
    - File operations
+   - Web search capabilities
 3. Model selection and overrides are working properly.
 4. Chat mode functions correctly.
 
@@ -218,3 +262,4 @@ For more robust testing, consider implementing:
 2. Expanded chat mode testing with multi-turn interactions
 3. Edge case testing with invalid models and providers
 4. Performance benchmarking between different models
+5. Network degradation tests to ensure web search handles connectivity issues gracefully

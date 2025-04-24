@@ -115,6 +115,10 @@ security:
   # Enable command validation to prevent execution of dangerous commands (true/false)
   command_validation: true
 
+  # Enable web search functionality (true/false)
+  # When enabled, the agent can search the web for information
+  enable_web_search: true
+
 # ===============================
 # File Operations Settings
 # ===============================

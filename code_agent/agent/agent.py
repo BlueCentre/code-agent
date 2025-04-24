@@ -9,7 +9,7 @@ from rich import print
 from code_agent.config import SettingsConfig, get_config
 from code_agent.tools.error_utils import format_api_error, format_tool_error
 from code_agent.tools.progress_indicators import operation_error, operation_warning, thinking_indicator
-from code_agent.tools.simple_tools import apply_edit, read_file, run_native_command
+from code_agent.tools.simple_tools import apply_edit, read_file, run_native_command, web_search
 
 
 class CodeAgent:
@@ -51,6 +51,10 @@ class CodeAgent:
         self.base_instruction_parts.append(
             "- run_native_command(command): Executes a native terminal command after asking for "
             "user confirmation (unless auto-approved or on allowlist). Use cautiously."
+        )
+        self.base_instruction_parts.append(
+            "- web_search(query): Searches the web using DuckDuckGo to find "
+            "up-to-date information or external documentation. Use when local files or commands don't provide the answer."
         )
 
         # Add specific guidance for file listing
@@ -486,6 +490,23 @@ class CodeAgent:
                     },
                 },
             },
+            {
+                "type": "function",
+                "function": {
+                    "name": "web_search",
+                    "description": "Searches the web for information using a query string",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "query": {
+                                "type": "string",
+                                "description": "The search query string",
+                            }
+                        },
+                        "required": ["query"],
+                    },
+                },
+            },
         ]
 
         # Build messages including history
@@ -504,6 +525,7 @@ class CodeAgent:
             "read_file": read_file,
             "apply_edit": apply_edit,
             "run_native_command": run_native_command,
+            "web_search": web_search,
         }
 
         try:
