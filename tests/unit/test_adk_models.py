@@ -538,7 +538,7 @@ def test_enhanced_gemini_properties():
 async def test_enhanced_gemini_empty_response():
     """Test handling empty response in EnhancedGemini."""
     with patch("google.generativeai.configure"):
-        with patch.object(EnhancedGemini, "_create_model") as mock_create_model:
+        with patch.object(EnhancedGemini, "_create_model"):
             with patch.object(EnhancedGemini, "_process_string_prompt") as mock_process:
                 # Set up mock to return None
                 mock_process.return_value = None
