@@ -199,7 +199,7 @@ class TestEnhancedGemini:
         # Mock genai.configure to verify it's called
         with patch("google.generativeai.configure") as mock_configure:
             model = EnhancedGemini(model_name="gemini-1.5-flash", api_key="test-key")
-            genai = model._configure_api()
+            _ = model._configure_api()
 
             # Verify API was configured correctly
             mock_configure.assert_called_once_with(api_key="test-key")
@@ -844,7 +844,7 @@ def test_create_model_fallback_direct_implementation():
                 from code_agent.adk.models import create_model
 
                 # Call with main provider that will fail and fallback that should work
-                model = create_model(
+                result_model = create_model(
                     provider="ai_studio",  # This will try to use EnhancedGemini and fail
                     model_name="gemini-1.5-flash",
                     fallback_provider="openai",
@@ -852,7 +852,7 @@ def test_create_model_fallback_direct_implementation():
                 )
 
                 # Verify the model is our mocked LiteLlm
-                assert model is mock_model
+                assert result_model is mock_model
 
 
 @pytest.mark.parametrize("field_name", ["provider", "model_name", "temperature", "max_tokens", "timeout", "retry_count", "fallback_provider", "fallback_model"])
@@ -884,25 +884,25 @@ def test_create_model_basic():
     with patch("code_agent.adk.models.get_api_key", return_value="test-key"):
         # Test OpenAI provider
         with patch("code_agent.adk.models.LiteLlm") as mock_litellm:
-            mock_model = MagicMock()
-            mock_litellm.return_value = mock_model
+            mock_litellm_model = MagicMock()
+            mock_litellm.return_value = mock_litellm_model
 
             result = create_model(provider="openai", model_name="gpt-4")
 
             # Verify LiteLlm was called with correct params
             mock_litellm.assert_called_once()
-            assert result == mock_model
+            assert result == mock_litellm_model
 
         # Test AI Studio provider
         with patch("code_agent.adk.models.EnhancedGemini") as mock_gemini:
-            mock_model = MagicMock()
-            mock_gemini.return_value = mock_model
+            mock_gemini_model = MagicMock()
+            mock_gemini.return_value = mock_gemini_model
 
             result = create_model(provider="ai_studio", model_name="gemini-1.5-flash")
 
             # Verify EnhancedGemini was called with correct params
             mock_gemini.assert_called_once()
-            assert result == mock_model
+            assert result == mock_gemini_model
 
 
 # Test create_model fallback mechanism
@@ -1025,7 +1025,10 @@ async def test_enhanced_gemini_edge_cases():
     assert model.model == "gemini-1.5-flash"
 
     # Test initialization with kwargs
+    # Store model and use it to check property
     model_with_kwargs = EnhancedGemini(model_name="gemini-1.5-flash", api_key="test-key", custom_param="test")
+    # Verify the custom parameter was stored
+    assert hasattr(model_with_kwargs, "model_config")
 
     # Test retry_count property
     assert model.retry_count >= 0

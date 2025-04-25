@@ -406,6 +406,9 @@ class EnhancedGemini(BaseLlm):
                 raise
 
         # This should never be reached due to the raise in the loop
+        # Only add this as a safety measure if for some reason we get here with last_error
+        if "last_error" in locals():
+            raise ValueError(f"Gemini error: {last_error}")
         raise ValueError("Unknown error in Gemini")
 
     async def generate_content(self, prompt: Union[str, List[Dict[str, str]]], **kwargs: Any) -> Tuple[str, Dict[str, Any]]:
