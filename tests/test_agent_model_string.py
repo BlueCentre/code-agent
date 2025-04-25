@@ -100,29 +100,27 @@ def test_ollama_integration(mock_get, agent_with_config):
 
 @patch("rich.prompt.Confirm.ask", return_value=False)
 @patch("importlib.util.find_spec", return_value=True)
-def test_handle_model_not_found_with_gemini(mock_find_spec, mock_confirm, agent_with_config):
+@patch("google.generativeai.configure")
+@patch("google.generativeai.list_models")
+def test_handle_model_not_found_with_gemini(mock_list_models, mock_configure, mock_find_spec, mock_confirm, agent_with_config):
     """Test handling model not found errors with Gemini models."""
     # Force the provider to be ai_studio (Gemini)
     agent_with_config.config.default_provider = "ai_studio"
     agent_with_config.config.api_keys.ai_studio = "fake-api-key"
-
-    # Mock the google.generativeai module directly instead of trying to load it
-    mock_genai = MagicMock()
 
     # Set up mock response for list_models
     mock_model1 = MagicMock()
     mock_model1.name = "models/gemini-1.5-pro"
     mock_model2 = MagicMock()
     mock_model2.name = "models/gemini-1.5-flash"
-    mock_genai.list_models.return_value = [mock_model1, mock_model2]
+    mock_list_models.return_value = [mock_model1, mock_model2]
 
-    with patch.dict("sys.modules", {"google.generativeai": mock_genai}):
-        # Test the method with our mocked module
-        result = agent_with_config._handle_model_not_found_error("gemini-pro")
+    # Test the method
+    result = agent_with_config._handle_model_not_found_error("gemini-pro")
 
-    # Verify mock was configured correctly
-    mock_genai.configure.assert_called_once_with(api_key="fake-api-key")
-    mock_genai.list_models.assert_called_once()
+    # Verify our mocks were called correctly
+    mock_configure.assert_called_once_with(api_key="fake-api-key")
+    mock_list_models.assert_called_once()
 
     # Check that the result contains available models
     assert "Available models" in result
