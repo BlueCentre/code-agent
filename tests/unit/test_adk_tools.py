@@ -221,6 +221,55 @@ def test_list_dir_nonexistent_path(mock_tool_context):
     assert len(mock_tool_context.logger.error_messages) >= 1
 
 
+def test_list_dir_not_a_directory(tmp_path, mock_tool_context):
+    """Test the list_dir tool with a path that's a file, not a directory."""
+    # Arrange
+    tool = create_list_dir_tool()
+
+    # Create a test file
+    test_file = tmp_path / "test_file.txt"
+    test_file.write_text("This is not a directory")
+
+    # Act
+    result = tool.func(mock_tool_context, str(test_file))
+
+    # Assert
+    assert "Error:" in result
+    assert "not a directory" in result
+    assert len(mock_tool_context.logger.error_messages) >= 1
+
+
+def test_list_dir_empty_directory(tmp_path, mock_tool_context):
+    """Test the list_dir tool with an empty directory."""
+    # Arrange
+    tool = create_list_dir_tool()
+    empty_dir = tmp_path / "empty_dir"
+    empty_dir.mkdir()
+
+    # Act
+    result = tool.func(mock_tool_context, str(empty_dir))
+
+    # Assert
+    assert "Directory is empty" in result
+    assert len(mock_tool_context.logger.info_messages) >= 1
+
+
+def test_list_dir_exception_handling(mock_tool_context):
+    """Test exception handling in the list_dir tool."""
+    # Arrange
+    tool = create_list_dir_tool()
+
+    # Mock Path.resolve to raise an exception
+    with mock.patch("pathlib.Path.resolve", side_effect=PermissionError("Permission denied")):
+        # Act
+        result = tool.func(mock_tool_context, "/test/path")
+
+        # Assert
+        assert "Error listing directory" in result
+        assert "Permission denied" in result
+        assert len(mock_tool_context.logger.error_messages) >= 1
+
+
 def test_run_terminal_cmd_tool(mock_tool_context):
     """Test the run_terminal_cmd tool."""
     # Arrange
@@ -281,3 +330,83 @@ def test_run_terminal_cmd_with_background(mock_tool_context):
         # Assert
         assert mock_run.called
         assert len(mock_tool_context.logger.warning_messages) >= 1  # Should warn about background not supported
+
+
+def test_read_file_with_pagination(tmp_path, mock_tool_context):
+    """Test the read_file tool with pagination enabled."""
+    # Arrange
+    tool = create_read_file_tool()
+    file_path = tmp_path / "large_file.txt"
+
+    # Create a large file with 100 lines
+    file_path.write_text("\n".join([f"Line {i}" for i in range(1, 101)]))
+
+    # Mock security check
+    with mock.patch("code_agent.tools.file_tools.is_path_safe", return_value=(True, None)):
+        # Act with pagination enabled, offset and limit
+        result = tool.func(mock_tool_context, str(file_path), offset=10, limit=20, enable_pagination=True)
+
+        # Assert
+        assert "Line 11" in result  # 0-indexed, so line 11 is the first line after offset 10
+        assert "Line 30" in result  # Should include up to line 30 (offset 10 + limit 20)
+        assert "Line 31" not in result  # Should not include line 31
+        assert len(mock_tool_context.logger.info_messages) >= 2
+
+
+def test_run_terminal_cmd_error(mock_tool_context):
+    """Test the run_terminal_cmd tool with a failing command."""
+    # Arrange
+    tool = create_run_terminal_cmd_tool()
+    command = "invalid_command"
+
+    # Mock security checks and functions
+    with (
+        mock.patch("code_agent.tools.native_tools.is_command_safe", return_value=(True, None, False)),
+        mock.patch("code_agent.tools.native_tools.Confirm.ask", return_value=True),
+        mock.patch("code_agent.tools.native_tools.console"),
+        mock.patch("code_agent.tools.native_tools.Panel"),
+        mock.patch("code_agent.tools.native_tools.Text"),
+        mock.patch("code_agent.tools.native_tools.print"),
+        mock.patch("code_agent.tools.progress_indicators.print"),
+        mock.patch("subprocess.run", side_effect=Exception("Command failed")),
+    ):
+        # Act
+        result = tool.func(mock_tool_context, command)
+
+        # Assert
+        assert "Error executing command" in result
+        assert len(mock_tool_context.logger.error_messages) >= 1
+
+
+def test_get_file_tools():
+    """Test the get_file_tools function returns the expected list of tools."""
+    from code_agent.adk.tools import get_file_tools
+
+    # Act
+    tools = get_file_tools()
+
+    # Assert
+    assert len(tools) >= 4  # Should include read_file, delete_file, apply_edit, and list_dir
+
+    # Check that all returned items are FunctionTool instances
+    from google.adk.tools import FunctionTool
+
+    for tool in tools:
+        assert isinstance(tool, FunctionTool)
+
+
+def test_get_all_tools():
+    """Test the get_all_tools function returns all the expected tools."""
+    from code_agent.adk.tools import get_all_tools
+
+    # Act
+    tools = get_all_tools()
+
+    # Assert
+    assert len(tools) >= 5  # Should include all file tools plus terminal cmd
+
+    # Check that all returned items are FunctionTool instances
+    from google.adk.tools import FunctionTool
+
+    for tool in tools:
+        assert isinstance(tool, FunctionTool)

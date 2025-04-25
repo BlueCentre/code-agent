@@ -335,6 +335,10 @@ class EnhancedGemini(BaseLlm):
 
     def _extract_text(self, response):
         """Extract text from a response object."""
+        # Handle None response explicitly
+        if response is None:
+            return ""
+
         if hasattr(response, "text"):
             return response.text
         else:
@@ -502,6 +506,9 @@ def create_model(
                 fallback_provider=None,  # Prevent infinite fallback loop
                 fallback_model=None,
             )
+        else:
+            # If initial provider is unknown and no valid fallback is available, raise error
+            raise ValueError(f"Unsupported provider: '{target_provider}'. Known providers: {known_providers}")
 
     # Get API key for the provider
     api_key = get_api_key(target_provider)
@@ -525,19 +532,19 @@ def create_model(
             return EnhancedGemini(
                 model_name=target_model,
                 api_key=api_key,
-                temperature=temperature,
+                temperature=temperature if temperature is not None else 0.7,  # Use default if None
                 max_output_tokens=max_tokens,
                 timeout=timeout,
-                retry_count=retry_count,
+                retry_count=retry_count if retry_count is not None else 2,  # Use default if None
             )
         elif target_provider == "ollama":
             # Use specialized Ollama wrapper
             return OllamaLlm(
                 model_name=target_model,
-                temperature=temperature,
+                temperature=temperature if temperature is not None else 0.7,  # Use default if None
                 max_tokens=max_tokens,
                 timeout=timeout,
-                retry_count=retry_count,
+                retry_count=retry_count if retry_count is not None else 2,  # Use default if None
             )
         else:
             # Use general LiteLlm wrapper for other providers
@@ -548,10 +555,10 @@ def create_model(
                 provider=target_provider,
                 model_name=target_model,
                 api_key=api_key,
-                temperature=temperature,
+                temperature=temperature if temperature is not None else 0.7,  # Use default if None
                 max_tokens=max_tokens,
                 timeout=timeout,
-                retry_count=retry_count,
+                retry_count=retry_count if retry_count is not None else 2,  # Use default if None
             )
     except Exception as e:
         # If fallback is configured and this isn't already a fallback attempt,

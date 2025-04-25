@@ -209,8 +209,15 @@ def run_terminal_cmd(tool_context: ToolContext, command: str, is_background: boo
     result = original_run_command(command)
 
     # Log the result
-    if result.startswith("Error:"):
-        tool_context.logger.error(f"Failed to run command: {command}")
+    # Check for known error prefixes/substrings returned by original_run_command
+    if (
+        result.startswith("Error:")
+        or "Error executing command:" in result
+        or "Command timed out" in result
+        or result.startswith("Command execution not permitted:")
+        or "[red]Error (exit code:" in result
+    ):  # Check for non-zero exit code message
+        tool_context.logger.error(f"Failed to run command: {command} -> {result}")
     else:
         tool_context.logger.info(f"Successfully ran command: {command}")
 

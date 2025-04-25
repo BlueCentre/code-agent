@@ -472,35 +472,85 @@ class TestEnhancedGemini:
             mock_handle_error.assert_any_call(error, 1)  # Second attempt (retry)
 
 
-# Add standalone test for EnhancedGemini
 @pytest.mark.asyncio
-async def test_enhanced_gemini_methods():
-    """Test for EnhancedGemini to help improve coverage."""
-    # Patch the generate_content_async method to return a simple response
-    with patch("code_agent.adk.models.EnhancedGemini.generate_content_async") as mock_async:
-        # Configure the mock to return a simple value
-        mock_async.return_value = ("Mocked content", {"provider": "ai_studio"})
+async def test_enhanced_gemini_error_handling():
+    """Test error handling in EnhancedGemini with various exception types."""
+    # Test with API key error
+    with patch("google.generativeai.configure") as mock_configure:
+        mock_configure.side_effect = Exception("Invalid API key")
+        model = EnhancedGemini(model_name="gemini-1.5-flash", api_key="invalid-key")
 
-        # Create the model instance
-        model = EnhancedGemini(model_name="gemini-1.5-flash", api_key="test-key", temperature=0.7, max_output_tokens=100, timeout=30, retry_count=2)
+        with pytest.raises(ValueError) as excinfo:
+            await model.generate_content("Test prompt")
 
-        # Test both the generate_content_async and generate_content methods
-        result1, metadata1 = await model.generate_content_async("Test prompt")
-        result2, metadata2 = await model.generate_content("Test prompt")
+        assert "Authentication failed" in str(excinfo.value)
 
-        # Verify the mock was called correctly
-        assert mock_async.call_count == 2
-        mock_async.assert_any_call("Test prompt")
+    # Test with model creation error
+    with patch("google.generativeai.configure") as mock_configure:
+        with patch("google.generativeai.GenerativeModel") as mock_model_class:
+            mock_model_class.side_effect = Exception("Model not available")
+            model = EnhancedGemini(model_name="nonexistent-model", api_key="test-key")
 
-        # Verify results
-        assert result1 == "Mocked content"
-        assert result2 == "Mocked content"
-        assert metadata1["provider"] == "ai_studio"
-        assert metadata2["provider"] == "ai_studio"
+            with pytest.raises(ValueError) as excinfo:
+                await model.generate_content("Test prompt")
 
-        # Test properties
-        assert model.model_name == "gemini-1.5-flash"
-        assert model.retry_count == 2
+            assert "Model not available" in str(excinfo.value)
+
+
+def test_enhanced_gemini_env_variables():
+    """Test EnhancedGemini initialization with environment variables."""
+    # Test with GOOGLE_API_KEY
+    with patch.dict(os.environ, {"GOOGLE_API_KEY": "google-env-key"}):
+        with patch("google.generativeai.configure") as mock_configure:
+            model = EnhancedGemini(model_name="gemini-1.5-flash")
+
+            # Verify API was configured with env key
+            model._configure_api()
+            mock_configure.assert_called_once_with(api_key="google-env-key")
+
+    # Test with AI_STUDIO_API_KEY
+    with patch.dict(os.environ, {"AI_STUDIO_API_KEY": "aistudio-env-key", "GOOGLE_API_KEY": ""}):
+        with patch("google.generativeai.configure") as mock_configure:
+            model = EnhancedGemini(model_name="gemini-1.5-flash")
+
+            # Verify API was configured with env key
+            model._configure_api()
+            mock_configure.assert_called_once_with(api_key="aistudio-env-key")
+
+    # Test with no API key
+    with patch.dict(os.environ, {"GOOGLE_API_KEY": "", "AI_STUDIO_API_KEY": ""}):
+        with pytest.raises(ValueError) as excinfo:
+            EnhancedGemini(model_name="gemini-1.5-flash")
+
+        assert "API key is required" in str(excinfo.value)
+
+
+def test_enhanced_gemini_properties():
+    """Test property methods in EnhancedGemini."""
+    model = EnhancedGemini(model_name="gemini-1.5-flash", api_key="test-key", retry_count=3)
+
+    # Test property methods
+    assert model.model_name == "gemini-1.5-flash"
+    assert model.retry_count == 3
+
+
+@pytest.mark.asyncio
+async def test_enhanced_gemini_empty_response():
+    """Test handling empty response in EnhancedGemini."""
+    with patch("google.generativeai.configure"):
+        with patch.object(EnhancedGemini, "_create_model") as mock_create_model:
+            with patch.object(EnhancedGemini, "_process_string_prompt") as mock_process:
+                # Set up mock to return None
+                mock_process.return_value = None
+
+                model = EnhancedGemini(model_name="gemini-1.5-flash", api_key="test-key")
+
+                # Should handle None response
+                content, metadata = await model.generate_content("Test prompt")
+
+                # Expect empty content
+                assert content == ""
+                assert "model" in metadata
 
 
 class TestCreateModel(unittest.TestCase):
@@ -1032,3 +1082,60 @@ async def test_enhanced_gemini_edge_cases():
 
     # Test retry_count property
     assert model.retry_count >= 0
+
+
+@patch("code_agent.adk.models.get_config")
+@patch("code_agent.adk.models.get_api_key")
+def test_create_model_with_missing_provider(mock_get_api_key, mock_get_config):
+    """Test creating a model with a missing provider."""
+    # Setup
+    mock_config = MagicMock()
+    mock_config.default_provider = "unknown_provider"
+    mock_config.default_model = "some-model"
+    mock_get_config.return_value = mock_config
+    mock_get_api_key.return_value = "test-key"
+
+    # Test attempt to create model with unknown provider
+    with pytest.raises(ValueError) as excinfo:
+        create_model()
+
+    assert "Unsupported provider" in str(excinfo.value)
+
+
+@patch("code_agent.adk.models.get_config")
+@patch("code_agent.adk.models.get_api_key")
+def test_create_model_with_none_values(mock_get_api_key, mock_get_config):
+    """Test creating a model with None values for optional parameters."""
+    # Setup
+    mock_config = MagicMock()
+    mock_config.default_provider = "openai"
+    mock_config.default_model = "gpt-3.5-turbo"
+    mock_get_config.return_value = mock_config
+    mock_get_api_key.return_value = "test-key"
+
+    # Create with None values for optional params
+    model = create_model(temperature=None, max_tokens=None, timeout=None, retry_count=None)
+
+    # Should still create model with defaults
+    assert isinstance(model, LiteLlm)
+    assert model.model_name == "gpt-3.5-turbo"
+
+
+@patch("code_agent.adk.models.get_config")
+@patch("code_agent.adk.models.get_api_key")
+def test_create_model_explicit_provider_override(mock_get_api_key, mock_get_config):
+    """Test creating a model with explicit provider that overrides config."""
+    # Setup
+    mock_config = MagicMock()
+    mock_config.default_provider = "openai"
+    mock_config.default_model = "gpt-3.5-turbo"
+    mock_get_config.return_value = mock_config
+    mock_get_api_key.return_value = "test-key"
+
+    # Create with explicit provider
+    model = create_model(provider="anthropic", model_name="claude-3-haiku")
+
+    # Should create model with specified provider
+    assert isinstance(model, LiteLlm)
+    assert model.provider == "anthropic"
+    assert model.model_name == "claude-3-haiku"
