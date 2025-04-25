@@ -293,6 +293,72 @@ class EnhancedGemini(BaseLlm):
         self._timeout = timeout
         self._retry_count = retry_count
 
+    def _configure_api(self):
+        """Configure the Google Generative AI API with the API key."""
+        import google.generativeai as genai
+
+        genai.configure(api_key=self._api_key)
+        return genai
+
+    def _create_model(self, genai):
+        """Create and return a Gemini model instance."""
+        return genai.GenerativeModel(self._model_name)
+
+    async def _process_string_prompt(self, model, prompt):
+        """Process a string prompt and return the response."""
+        response = await model.generate_content_async(prompt)
+        # Handle async generator
+        if hasattr(response, "__aiter__"):
+            parts = []
+            async for part in response:
+                parts.append(part)
+            response = parts[-1] if parts else None
+        return response
+
+    async def _process_message_list(self, model, messages):
+        """Process a list of messages and return the chat response."""
+        # Convert list of message dicts to chat format
+        chat = model.start_chat()
+        for message in messages:
+            if message["role"] == "user":
+                response = await chat.send_message_async(message["content"])
+                # Handle async generator
+                if hasattr(response, "__aiter__"):
+                    parts = []
+                    async for part in response:
+                        parts.append(part)
+                    response = parts[-1] if parts else None
+            # For simplicity, we ignore assistant messages as they're already part of the history
+
+        # Get the last response from the chat
+        return chat.last
+
+    def _extract_text(self, response):
+        """Extract text from a response object."""
+        if hasattr(response, "text"):
+            return response.text
+        else:
+            return str(response)
+
+    def _build_metadata(self, attempt):
+        """Build metadata for the response."""
+        return {
+            "provider": "ai_studio",
+            "model": self._model_name,
+            "attempt": attempt + 1,
+        }
+
+    def _handle_error(self, error, attempt):
+        """Handle errors, either by logging for retry or raising."""
+        if attempt < self._retry_count:
+            # Log the error and signal for retry
+            print(f"Gemini error (attempt {attempt + 1}/{self._retry_count + 1}): {error}")
+            return True  # Retry
+        else:
+            # Format error message and re-raise on final attempt
+            error_message = format_api_error(error, "ai_studio", self._model_name)
+            raise ValueError(f"Gemini error: {error_message}") from error
+
     async def generate_content_async(self, prompt: Union[str, List[Dict[str, str]]], **kwargs: Any) -> Tuple[str, Dict[str, Any]]:
         """
         Generate content using the Google Generative AI Python SDK.
@@ -304,71 +370,40 @@ class EnhancedGemini(BaseLlm):
         Returns:
             A tuple of (generated_text, metadata)
         """
-        import google.generativeai as genai
-
         # Use a retry loop for resilience
         last_error = None
         for attempt in range(self._retry_count + 1):
             try:
                 # Configure the API
-                genai.configure(api_key=self._api_key)
+                genai = self._configure_api()
 
                 # Create a model
-                model = genai.GenerativeModel(self._model_name)
+                model = self._create_model(genai)
 
                 # Process the prompt
                 if isinstance(prompt, str):
                     # Simple text prompt
-                    response = await model.generate_content_async(prompt)
-                    # Handle async generator
-                    if hasattr(response, "__aiter__"):
-                        parts = []
-                        async for part in response:
-                            parts.append(part)
-                        response = parts[-1] if parts else None
+                    response = await self._process_string_prompt(model, prompt)
                 else:
-                    # Convert list of message dicts to chat format
-                    chat = model.start_chat()
-                    for message in prompt:
-                        if message["role"] == "user":
-                            response = await chat.send_message_async(message["content"])
-                            # Handle async generator
-                            if hasattr(response, "__aiter__"):
-                                parts = []
-                                async for part in response:
-                                    parts.append(part)
-                                response = parts[-1] if parts else None
-                        # For simplicity, we ignore assistant messages as they're already part of the history
-
-                    # Get the last response from the chat
-                    response = chat.last
+                    # Chat messages
+                    response = await self._process_message_list(model, prompt)
 
                 # Extract text from response
-                if hasattr(response, "text"):
-                    result_text = response.text
-                else:
-                    result_text = str(response)
+                result_text = self._extract_text(response)
 
                 # Build metadata
-                metadata = {
-                    "provider": "ai_studio",
-                    "model": self._model_name,
-                    "attempt": attempt + 1,
-                }
+                metadata = self._build_metadata(attempt)
 
                 # Return the result
                 return result_text, metadata
 
             except Exception as e:
                 last_error = e
-                if attempt < self._retry_count:
-                    # Log the error and retry
-                    print(f"Gemini error (attempt {attempt + 1}/{self._retry_count + 1}): {e}")
+                should_retry = self._handle_error(e, attempt)
+                if should_retry:
                     continue
-                else:
-                    # Format error message and re-raise on final attempt
-                    error_message = format_api_error(e, "ai_studio", self._model_name)
-                    raise ValueError(f"Gemini error: {error_message}") from e
+                # If _handle_error didn't raise, we still propagate the exception
+                raise
 
         # This should never be reached due to the raise in the loop
         raise ValueError("Unknown error in Gemini")
