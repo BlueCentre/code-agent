@@ -293,7 +293,7 @@ jobs:
 
       - name: Archive test artifacts
         if: always()  # Run even if tests fail
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: e2e-test-results
           path: |
