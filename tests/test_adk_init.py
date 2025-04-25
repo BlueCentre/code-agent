@@ -14,9 +14,8 @@ def test_adk_package_init():
     # Test that our module correctly exports the google.adk version
     assert code_agent.adk.__adk_version__ == actual_adk_version
 
-    # Test that the session config components are exported
-    assert hasattr(code_agent.adk, "SessionConfig")
-    assert hasattr(code_agent.adk, "SessionPersistenceType")
-    assert hasattr(code_agent.adk, "SessionMemoryType")
-    assert hasattr(code_agent.adk, "create_default_session_config")
-    assert hasattr(code_agent.adk, "create_persistent_session_config")
+    # Test that the tool components are exported
+    assert hasattr(code_agent.adk, "create_read_file_tool")
+    assert hasattr(code_agent.adk, "create_delete_file_tool")
+    assert hasattr(code_agent.adk, "create_apply_edit_tool")
+    assert hasattr(code_agent.adk, "get_file_tools")
