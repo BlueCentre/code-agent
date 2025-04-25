@@ -7,7 +7,7 @@ readme = "README.md"
 packages = [{include = "code_agent"}, {include = "cli_agent"}]
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = "^3.11"
 typer = {extras = ["all"], version = "^0.12.3"}
 litellm = "^1.39.2"
 pyyaml = "^6.0.1"
@@ -37,8 +37,8 @@ build-backend = "poetry.core.masonry.api"
 [tool.ruff]
 # Same as Black.
 line-length = 160
-# Assume Python 3.10+.
-target-version = "py310"
+# Assume Python 3.11+.
+target-version = "py311"
 
 [tool.ruff.lint]
 # Enable Pyflakes (F) and a subset of the pycodestyle (E, W) rules by default.
