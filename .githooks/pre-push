@@ -34,7 +34,7 @@ echo "Running linting checks..."
 if command_exists ruff; then
   CHANGED_PYTHON_FILES=$(git diff --name-only --cached | grep "\.py$" || true)
   if [ -n "$CHANGED_PYTHON_FILES" ]; then
-    if ! ruff check $CHANGED_PYTHON_FILES; then
+    if ! ruff check --fix --force-exit $CHANGED_PYTHON_FILES; then
       echo "❌ Linting checks failed. Please fix the issues before pushing."
       exit 1
     fi
