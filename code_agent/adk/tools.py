@@ -163,9 +163,9 @@ def list_dir(tool_context: ToolContext, relative_workspace_path: str = ".") -> s
                     size = f.stat().st_size
                     size_str = f"{size} bytes"
                     if size > 1024:
-                        size_str = f"{size/1024:.1f} KB"
+                        size_str = f"{size / 1024:.1f} KB"
                     if size > 1024 * 1024:
-                        size_str = f"{size/(1024*1024):.1f} MB"
+                        size_str = f"{size / (1024 * 1024):.1f} MB"
                 except Exception:
                     size_str = "unknown size"
 

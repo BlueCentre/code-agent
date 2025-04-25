@@ -21,3 +21,12 @@ from code_agent.adk.tools import (  # noqa
     get_file_tools,
     get_all_tools,
 )
+
+# Re-export model implementations
+from code_agent.adk.models import (  # noqa
+    LiteLlm,
+    OllamaLlm,
+    create_model,
+    get_model_providers,
+    get_default_models_by_provider,
+)
