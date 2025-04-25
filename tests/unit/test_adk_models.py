@@ -524,7 +524,7 @@ class TestCreateModel(unittest.TestCase):
         mock_enhanced_gemini.return_value = mock_instance
 
         # Create model
-        model = create_model()
+        _ = create_model()
 
         # Verify the correct class was instantiated with proper parameters
         mock_enhanced_gemini.assert_called_once()
@@ -639,7 +639,7 @@ class TestCreateModel(unittest.TestCase):
         mock_gemini.return_value = MagicMock(spec=EnhancedGemini)
 
         # Create model with implied fallback
-        model = create_model()
+        _ = create_model()
 
         # Verify fallback was used
         mock_gemini.assert_called_once()
@@ -665,7 +665,7 @@ class TestCreateModel(unittest.TestCase):
         mock_litellm.side_effect = ValueError("Connection error")
 
         # Create model with explicit fallback
-        model = create_model(provider="anthropic", model_name="claude-3-haiku", fallback_provider="ai_studio", fallback_model="gemini-1.5-flash")
+        _ = create_model(provider="anthropic", model_name="claude-3-haiku", fallback_provider="ai_studio", fallback_model="gemini-1.5-flash")
 
         # Verify fallback was used with explicit config
         mock_gemini.assert_called_once_with(
@@ -737,7 +737,7 @@ class TestCreateModel(unittest.TestCase):
                 mock_recursive_create.side_effect = [MagicMock()]  # Second call returns a mock
 
                 # Call the actual create_model function with unknown provider
-                model = create_model(provider="unknown_provider", fallback_provider="ai_studio", fallback_model="gemini-1.5-flash")
+                _ = create_model(provider="unknown_provider", fallback_provider="ai_studio", fallback_model="gemini-1.5-flash")
 
                 # Verify warning was printed about unknown provider
                 mock_print.assert_called_with("Unknown provider 'unknown_provider'. Falling back to ai_studio/gemini-1.5-flash")
