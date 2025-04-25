@@ -231,11 +231,11 @@ def test_run_terminal_cmd_tool(mock_tool_context):
     with (
         mock.patch("code_agent.tools.native_tools.is_command_safe", return_value=(True, None, False)),
         mock.patch("code_agent.tools.native_tools.Confirm.ask", return_value=True),
-        mock.patch("code_agent.tools.native_tools.console") as mock_console,
-        mock.patch("code_agent.tools.native_tools.Panel") as mock_panel,
+        mock.patch("code_agent.tools.native_tools.console"),
+        mock.patch("code_agent.tools.native_tools.Panel"),
         mock.patch("code_agent.tools.native_tools.Text") as mock_text,
-        mock.patch("code_agent.tools.native_tools.print") as mock_print,
-        mock.patch("code_agent.tools.progress_indicators.print") as mock_progress_print,
+        mock.patch("code_agent.tools.native_tools.print"),
+        mock.patch("code_agent.tools.progress_indicators.print"),
         mock.patch("subprocess.run") as mock_run,
     ):
         # Setup mock subprocess.run
@@ -245,7 +245,7 @@ def test_run_terminal_cmd_tool(mock_tool_context):
         mock_text.return_value = "EXECUTE COMMAND"
 
         # Act
-        result = tool.func(mock_tool_context, command)
+        tool.func(mock_tool_context, command)
 
         # Assert
         assert mock_run.called
@@ -262,11 +262,11 @@ def test_run_terminal_cmd_with_background(mock_tool_context):
     with (
         mock.patch("code_agent.tools.native_tools.is_command_safe", return_value=(True, None, False)),
         mock.patch("code_agent.tools.native_tools.Confirm.ask", return_value=True),
-        mock.patch("code_agent.tools.native_tools.console") as mock_console,
-        mock.patch("code_agent.tools.native_tools.Panel") as mock_panel,
+        mock.patch("code_agent.tools.native_tools.console"),
+        mock.patch("code_agent.tools.native_tools.Panel"),
         mock.patch("code_agent.tools.native_tools.Text") as mock_text,
-        mock.patch("code_agent.tools.native_tools.print") as mock_print,
-        mock.patch("code_agent.tools.progress_indicators.print") as mock_progress_print,
+        mock.patch("code_agent.tools.native_tools.print"),
+        mock.patch("code_agent.tools.progress_indicators.print"),
         mock.patch("subprocess.run") as mock_run,
     ):
         # Setup mock subprocess.run
@@ -276,7 +276,7 @@ def test_run_terminal_cmd_with_background(mock_tool_context):
         mock_text.return_value = "EXECUTE COMMAND"
 
         # Act
-        result = tool.func(mock_tool_context, command, is_background=True)
+        tool.func(mock_tool_context, command, is_background=True)
 
         # Assert
         assert mock_run.called

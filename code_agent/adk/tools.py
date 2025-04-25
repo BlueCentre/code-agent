@@ -166,7 +166,7 @@ def list_dir(tool_context: ToolContext, relative_workspace_path: str = ".") -> s
                         size_str = f"{size/1024:.1f} KB"
                     if size > 1024 * 1024:
                         size_str = f"{size/(1024*1024):.1f} MB"
-                except:
+                except Exception:
                     size_str = "unknown size"
 
                 result.append(f"  📄 {f.name} ({size_str})")
