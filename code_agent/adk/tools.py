@@ -6,10 +6,15 @@ adapting them to work with the Google ADK framework.
 """
 
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Any, Callable, Dict, List, Tuple, Union
+import os
+import logging
+import functools
+import tempfile
 
 from google.adk.memory import BaseMemoryService
 from google.adk.tools import FunctionTool, ToolContext
+from google.adk.tools.google_search_tool import google_search
 
 from code_agent.tools.file_tools import ReadFileArgs  # Import the ReadFileArgs class
 from code_agent.tools.file_tools import delete_file as original_delete_file
@@ -19,7 +24,12 @@ from code_agent.tools.simple_tools import apply_edit as original_apply_edit
 
 # from code_agent.tools.memory_tools import load_memory as original_load_memory # Removed
 from .services import get_memory_service
+from code_agent.config import get_config
+from code_agent.tools.verbosity import get_controller
 
+logger = logging.getLogger(__name__)
+config = get_config()
+verbosity_controller = get_controller()
 
 # --- Read File Tool ---
 def read_file(tool_context: ToolContext, path: str, offset: Optional[int] = None, limit: Optional[int] = None, enable_pagination: bool = False) -> str:
@@ -27,7 +37,6 @@ def read_file(tool_context: ToolContext, path: str, offset: Optional[int] = None
     Reads a file and returns its contents.
 
     Args:
-        tool_context: The ADK ToolContext
         path: The path of the file to read
         offset: Line number to start reading from (0-indexed)
         limit: Maximum number of lines to read
@@ -61,7 +70,6 @@ def delete_file(tool_context: ToolContext, path: str) -> str:
     Deletes a file at the specified path.
 
     Args:
-        tool_context: The ADK ToolContext
         path: The path of the file to delete
 
     Returns:
@@ -88,7 +96,6 @@ def apply_edit(tool_context: ToolContext, target_file: str, code_edit: str) -> s
     Applies proposed content changes to a file after showing a diff and requesting user confirmation.
 
     Args:
-        tool_context: The ADK ToolContext
         target_file: The path of the file to edit
         code_edit: The proposed content to apply to the file
 
@@ -116,7 +123,6 @@ def list_dir(tool_context: ToolContext, relative_workspace_path: str = ".") -> s
     Lists the contents of a directory.
 
     Args:
-        tool_context: The ADK ToolContext
         relative_workspace_path: Path to list contents of, relative to the workspace root
 
     Returns:
@@ -198,7 +204,6 @@ def run_terminal_cmd(tool_context: ToolContext, command: str, is_background: boo
     Executes a terminal command after security checks and user confirmation.
 
     Args:
-        tool_context: The ADK ToolContext
         command: The terminal command to execute
         is_background: Whether to run the command in the background
 
@@ -238,7 +243,6 @@ async def load_memory(tool_context: ToolContext, query: str, app_name: str = "co
     Load relevant information from long-term memory based on a search query.
 
     Args:
-        tool_context: The ADK ToolContext (used for logging)
         query: The search query to find relevant information
         app_name: The name of the application (defaults to 'code_agent')
         user_id: The ID of the user (defaults to 'default_user')
@@ -255,12 +259,8 @@ async def load_memory(tool_context: ToolContext, query: str, app_name: str = "co
     # Search memory for relevant information
     # Add error handling for the memory search itself
     try:
-        # Assuming search_memory can be called directly (or potentially needs await if async)
-        # Need to verify if BaseMemoryService.search_memory is async or not
-        # If it is async, we need: search_response = await memory_service.search_memory(...)
-        # If it is sync, the current code is fine.
-        # Let's assume it's synchronous for now based on the original code.
-        search_response = memory_service.search_memory(app_name, user_id, query)
+        # Use search instead of search_memory to match the API
+        search_response = memory_service.search(app_name, user_id, query)
     except Exception as e:
         error_msg = f"Error searching memory for '{query}': {e!s}"
         tool_context.logger.error(error_msg, exc_info=True)
@@ -292,52 +292,56 @@ async def load_memory(tool_context: ToolContext, query: str, app_name: str = "co
 
 
 def create_read_file_tool() -> FunctionTool:
-    """Creates an ADK FunctionTool for reading files."""
+    """Create a read file tool for the codebase."""
     return FunctionTool(
         func=read_file,
     )
 
 
 def create_delete_file_tool() -> FunctionTool:
-    """Creates an ADK FunctionTool for deleting files."""
+    """Create a delete file tool for the codebase."""
     return FunctionTool(
         func=delete_file,
     )
 
 
 def create_apply_edit_tool() -> FunctionTool:
-    """Creates an ADK FunctionTool for editing files."""
+    """Create a apply edit tool for the codebase."""
     return FunctionTool(
         func=apply_edit,
     )
 
 
 def create_list_dir_tool() -> FunctionTool:
-    """Creates an ADK FunctionTool for listing directory contents."""
+    """Create a list directory tool for the codebase."""
     return FunctionTool(
         func=list_dir,
     )
 
 
 def create_run_terminal_cmd_tool() -> FunctionTool:
-    """Creates an ADK FunctionTool for running terminal commands."""
+    """Create a run terminal command tool."""
     return FunctionTool(
         func=run_terminal_cmd,
     )
 
 
-def create_load_memory_tool() -> FunctionTool:
-    """Creates an ADK FunctionTool for loading memory."""
-    return FunctionTool(
-        func=load_memory,
-    )
+def create_google_search_tool() -> FunctionTool:
+    """Create a Google Search tool.
+    
+    This tool uses Google's search capability to find information on the web.
+    It requires a valid Google API key to be set in the environment.
+    """
+    # We use the built-in google_search tool provided by Google ADK
+    # No need to wrap it as it's already configured properly
+    return google_search
 
 
 # --- Tool Collection ---
 
 
-def get_file_tools() -> list[FunctionTool]:
-    """Returns a list of all file-related tools."""
+def get_file_tools() -> List[FunctionTool]:
+    """Get all file tools."""
     return [
         create_read_file_tool(),
         create_delete_file_tool(),
@@ -346,13 +350,10 @@ def get_file_tools() -> list[FunctionTool]:
     ]
 
 
-def get_all_tools() -> list[FunctionTool]:
-    """Returns a list of all available *local* tools (excluding built-ins like search)."""
-    return [
-        create_read_file_tool(),
-        create_delete_file_tool(),
-        create_apply_edit_tool(),
-        create_list_dir_tool(),
-        create_run_terminal_cmd_tool(),
-        create_load_memory_tool(),
-    ]
+def get_all_tools() -> List[FunctionTool]:
+    """Get all tools."""
+    tools = get_file_tools()
+    tools.append(create_run_terminal_cmd_tool())
+    # Add google_search tool to the list of all tools
+    tools.append(create_google_search_tool())
+    return tools

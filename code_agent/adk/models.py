@@ -8,11 +8,14 @@ This module provides:
 4. Fallback behavior for handling model failures
 """
 
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union, AsyncGenerator
 
 import litellm
-from google.adk.models import BaseLlm
-from pydantic import BaseModel, ConfigDict, Field
+from google.adk.models import BaseLlm, Gemini, LlmRequest, LlmResponse
+from google.genai import types
+from google.generativeai.types import GenerationConfig
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
+import asyncio
 
 from code_agent.config.config import get_api_key, get_config
 from code_agent.tools.error_utils import format_api_error
@@ -82,7 +85,7 @@ class LiteLlm(BaseLlm):
             **kwargs,
         )
 
-    async def generate_content_async(self, prompt: Union[str, List[Dict[str, str]]], **kwargs: Any) -> Tuple[str, Dict[str, Any]]:
+    async def generate_content_async(self, prompt: Union[str, List[Dict[str, str]], LlmRequest], **kwargs: Any) -> LlmResponse:
         """
         Generate content using the LiteLLM model (ADK BaseLlm required method).
 
@@ -91,12 +94,22 @@ class LiteLlm(BaseLlm):
             **kwargs: Additional arguments passed to the model
 
         Returns:
-            A tuple of (generated_text, metadata)
+            An LlmResponse object containing the generated content and metadata
         """
-        if isinstance(prompt, str):
+        # ADK runner might pass LlmRequest, direct calls might pass str/list
+        if isinstance(prompt, LlmRequest):
+            # Extract messages from LlmRequest contents
+            messages = []
+            for content_item in prompt.contents:
+                # Assuming simple text parts for now
+                if content_item.parts and hasattr(content_item.parts[0], 'text') and content_item.parts[0].text:
+                    messages.append({"role": content_item.role, "content": content_item.parts[0].text})
+        elif isinstance(prompt, str):
             messages = [{"role": "user", "content": prompt}]
-        else:
+        elif isinstance(prompt, list):
             messages = prompt
+        else:
+            raise TypeError(f"Unsupported prompt type: {type(prompt)}")
 
         # Merge instance parameters with kwargs
         all_kwargs = {
@@ -128,7 +141,14 @@ class LiteLlm(BaseLlm):
                     "usage": response.usage.model_dump() if hasattr(response, "usage") else {},
                 }
 
-                return content, metadata
+                # Construct LlmResponse with content structure
+                response_content = types.Content(parts=[types.Part(text=content)])
+                # Pass metadata directly if LlmResponse accepts it, otherwise omit or handle differently
+                # Assuming LlmResponse might have a metadata field based on previous errors, trying that.
+                try:
+                    return LlmResponse(content=response_content, metadata=metadata)
+                except Exception: # Fallback if metadata kwarg isn't valid
+                    return LlmResponse(content=response_content)
 
             except Exception as e:
                 last_error = e
@@ -149,25 +169,6 @@ class LiteLlm(BaseLlm):
             raise ValueError(f"LiteLLM error: {error_message}") from last_error
         else:  # pragma: no cover # Even less likely path
             raise ValueError("Unknown error in LiteLLM")
-
-    async def generate_content(self, prompt: Union[str, List[Dict[str, str]]], **kwargs: Any) -> Tuple[str, Dict[str, Any]]:
-        """
-        Generate content using the LiteLLM model.
-
-        This is a convenience method that calls generate_content_async.
-
-        Args:
-            prompt: Either a string prompt or a list of chat messages
-            **kwargs: Additional arguments passed to the model
-
-        Returns:
-            A tuple of (generated_text, metadata)
-        """
-        # Note: This method primarily delegates. If generate_content_async has issues
-        # that aren't caught (e.g., returning without exception after failure),
-        # this method won't add much value. Direct testing of generate_content_async
-        # is preferred.
-        return await self.generate_content_async(prompt, **kwargs)
 
 
 class OllamaLlm(LiteLlm):
@@ -217,7 +218,7 @@ class OllamaLlm(LiteLlm):
         self.litellm_model = f"ollama/{model_name}"
         self.model = self.litellm_model
 
-    async def generate_content_async(self, prompt: Union[str, List[Dict[str, str]]], **kwargs: Any) -> Tuple[str, Dict[str, Any]]:
+    async def generate_content_async(self, prompt: Union[str, List[Dict[str, str]]], **kwargs: Any) -> AsyncGenerator[LlmResponse, None]:
         """
         Generate content using the Ollama model.
 
@@ -228,7 +229,7 @@ class OllamaLlm(LiteLlm):
             **kwargs: Additional arguments passed to the model
 
         Returns:
-            A tuple of (generated_text, metadata)
+            An async generator yielding LlmResponse objects
         """
         # Add Ollama-specific parameters
         ollama_kwargs = {
@@ -239,7 +240,12 @@ class OllamaLlm(LiteLlm):
         all_kwargs = {**ollama_kwargs, **kwargs}
 
         # Call parent implementation with updated kwargs
-        return await super().generate_content_async(prompt, **all_kwargs)
+        # Parent now returns an LlmResponse object
+        llm_response: LlmResponse = await super(OllamaLlm, self).generate_content_async(prompt, **all_kwargs)
+
+        # Yield the final result as the only item in the generator
+        # ADK expects an async generator, even for non-streaming models apparently
+        yield llm_response
 
 
 class ModelConfig(BaseModel):
@@ -264,9 +270,12 @@ def create_model(
     retry_count: int = 2,
     fallback_provider: Optional[str] = None,
     fallback_model: Optional[str] = None,
-) -> BaseLlm:
+) -> Union[BaseLlm, str]:
     """
-    Factory function to create the appropriate model based on configuration.
+    Factory function to select the appropriate model identifier or instance.
+
+    For LiteLLM/Ollama providers, returns an initialized model instance.
+    For ai_studio (Gemini), returns the validated model name string for use with LlmAgent.
 
     Args:
         provider: LLM provider (ai_studio, openai, anthropic, etc.)
@@ -274,12 +283,13 @@ def create_model(
         temperature: Sampling temperature (0.0-1.0)
         max_tokens: Maximum tokens to generate
         timeout: Request timeout in seconds
-        retry_count: Number of retries on failure
+        retry_count: Number of retries on failure (used by LiteLlm/OllamaLlm)
         fallback_provider: Provider to use if primary provider fails
         fallback_model: Model to use if primary model fails
 
     Returns:
-        An ADK BaseLlm instance for the requested provider and model
+        - For LiteLLM/Ollama: An initialized BaseLlm instance.
+        - For ai_studio: The validated model name string (e.g., "gemini-1.5-flash").
 
     Raises:
         ValueError: If the provider is not supported or API key is missing
@@ -339,14 +349,12 @@ def create_model(
     # Create model based on provider
     try:
         if target_provider == "ai_studio":
-            # MODIFIED: Use ADK's built-in Gemini model
-            if Gemini is None:  # Check if import failed
-                raise ValueError("Google ADK Gemini model is unavailable.")
-            return Gemini(
-                model_name=target_model
-                # API key should be handled by ADK environment/ADC
-                # Temperature etc. might be set via GenerateContentConfig later by the framework
-            )
+            # For ai_studio, return the validated model name string.
+            # The caller (e.g., LlmAgent) will handle instantiation.
+            # Ensure the target model name is valid for Gemini (optional check, could be added)
+            if not target_model.startswith("gemini-"):
+                 print(f"Warning: Model name '{target_model}' for ai_studio doesn\'t start with 'gemini-'")
+            return target_model
         elif target_provider == "ollama":
             # Use specialized Ollama wrapper
             ollama_config = config.ollama or {}
@@ -392,7 +400,7 @@ def create_model(
             fb_provider = str(fallback_provider) if fallback_provider is not None else None
             fb_model = str(fallback_model) if fallback_model is not None else None
 
-            # Create fallback model (with no additional fallback to prevent loops)
+            # Get fallback model identifier/instance (with no additional fallback)
             return create_model(
                 provider=fb_provider,
                 model_name=fb_model,

@@ -452,13 +452,13 @@ Examples:
                                         function_response = "No function result available."
 
                                         if function_name == "google_search" and "query" in function_args:
-                                            # Since ADK's direct tool usage is complex in this context,
-                                            # implement a basic search result for demonstration
+                                            # In CLI mode, we use a simulated implementation
                                             try:
                                                 query = function_args["query"]
+                                                verbosity_controller.show_verbose(f"Using simulated search for '{query}' in CLI mode")
+                                                verbosity_controller.show_warning("Note: For real Google Search, use this agent in ADK deployment mode")
                                                 
-                                                # Create a simulated search result for demonstration
-                                                # Create custom search results based on common queries
+                                                # Simulated search results based on common queries
                                                 if "lithium" in query.lower() or "battery" in query.lower() or "batteries" in query.lower():
                                                     search_results = [
                                                         {

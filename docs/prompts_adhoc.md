@@ -1,0 +1,8 @@
+- In this prompt, I want you to:
+  - use uv command for all commands in this repository
+  - watch the terminal output for interactive commands and fix issues
+  - only address my request, don't add any other text or comments
+  - always use the official google adk docs for all code implementation
+  - always use the official google adk docs if you encounter any issues
+  - clean up old code when replacing it with new code
+  - update relevant files and documentation
