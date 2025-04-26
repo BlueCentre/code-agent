@@ -2,6 +2,10 @@ import os  # For environment variables
 import sys  # For command-line arguments
 from typing import Optional
 
+from dotenv import load_dotenv  # Import dotenv
+
+load_dotenv()  # Load .env file into environment variables
+
 # Explicitly configure the API key for the models
 import google.generativeai as genai
 import typer

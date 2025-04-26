@@ -1,6 +1,9 @@
 - In this prompt, I want you to:
   - use uv command for all commands in this repository
-  - watch the terminal output for interactive commands and fix issues
+  - watch the terminal interaction outputs for interactive commands and fix issues
+  - don't run it in the backaground since you cannot monitor the terminal
+  - if you encounter any issues related to authentication, the run 'source .env' to load the environment variables and use sandbox/ tests to verify functionality
+  - verify .env exist by running 'ls -la' and 'cat .env'
   - only address my request, don't add any other text or comments
   - always use the official google adk docs for all code implementation
   - always use the official google adk docs if you encounter any issues
