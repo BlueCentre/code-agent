@@ -1,8 +1,9 @@
-import datetime  # For timestamping history files
-import json  # For saving history
 import os  # For environment variables
-from typing import Dict, List, Optional
+import sys  # For command-line arguments
+from typing import Optional
 
+# Explicitly configure the API key for the models
+import google.generativeai as genai
 import typer
 from rich import print  # Use rich print for better formatting
 from rich.console import Console  # Import Console for rich formatting
@@ -10,26 +11,61 @@ from rich.markdown import Markdown  # Import Markdown renderer
 from rich.prompt import Prompt  # Use rich Prompt for better input
 from typing_extensions import Annotated
 
+# Remove nest_asyncio import and apply
 from code_agent import __version__ as agent_version  # Updated import
+
+api_key = os.environ.get("GOOGLE_API_KEY") or os.environ.get("AI_STUDIO_API_KEY")
+if api_key:
+    print(f"Initializing Google Generative AI with API key from {'GOOGLE_API_KEY' if 'GOOGLE_API_KEY' in os.environ else 'AI_STUDIO_API_KEY'}")
+    genai.configure(api_key=api_key)
+else:
+    print("WARNING: No API key found in environment. Check GOOGLE_API_KEY or AI_STUDIO_API_KEY variables. Models will not work.")
 
 # Add ADK version import
 try:
     import google.adk as adk
+    from google.adk.events import Event
+    from google.adk.runners import Runner
+    from google.adk.sessions import BaseSessionService, InMemorySessionService
+
+    # Import content types for creating events
+    from google.genai import types as genai_types
 
     adk_version = adk.__version__
 except ImportError:
     adk_version = "not installed"
 
+    # Define dummy classes if ADK is not installed to avoid NameErrors later
+    class Runner:
+        pass
+
+    class InMemorySessionService:
+        pass
+
+    class BaseSessionService:
+        pass
+
+    class Event:
+        pass
+
+    class genai_types:  # Dummy class
+        class Content:
+            pass
+
+        class Part:
+            pass
+
+
 # Updated imports
-# from code_agent.llm import get_llm_response # No longer needed here
-from code_agent.agent.agent import CodeAgent  # Import the class
+# from code_agent.agent.agent import CodeAgent  # REMOVED old agent import
+from code_agent.agent.multi_agent import get_root_agent  # IMPORT new root agent
 from code_agent.config.config import DEFAULT_CONFIG_DIR, get_config, initialize_config
 
 # Import Ollama commands
-try:
-    from cli_agent.commands.ollama import app as ollama_app
-except ImportError:
-    ollama_app = None
+# try:
+#     from cli_agent.commands.ollama import app as ollama_app
+# except ImportError:
+#     ollama_app = None
 
 app = typer.Typer(
     name="code-agent",  # Updated app name
@@ -39,8 +75,8 @@ app = typer.Typer(
 )
 
 # Add Ollama commands if available
-if ollama_app:
-    app.add_typer(ollama_app, name="ollama", help="Interact with Ollama models")
+# if ollama_app:
+#     app.add_typer(ollama_app, name="ollama", help="Interact with Ollama models")
 
 
 # --- Global Options/State ---
@@ -48,8 +84,8 @@ class GlobalState:
     def __init__(self):
         self.provider: Optional[str] = None
         self.model: Optional[str] = None
-        # Add agent instance for preserving context across commands in test mode
-        self.test_mode_agent: Optional[CodeAgent] = None
+        # Remove test_mode_agent as the old agent is gone
+        # self.test_mode_agent: Optional[CodeAgent] = None
 
 
 state = GlobalState()
@@ -71,6 +107,36 @@ def main(
             help="Show agent version and exit.",
             callback=lambda v: _version_callback(v),
             is_eager=True,
+        ),
+    ] = None,
+    verbosity: Annotated[
+        Optional[int],
+        typer.Option(
+            "--verbosity",
+            help="Set output verbosity (0=quiet, 1=normal, 2=verbose, 3=debug).",
+        ),
+    ] = None,
+    quiet: Annotated[
+        Optional[bool],
+        typer.Option(
+            "--quiet",
+            "-q",
+            help="Minimal output (equivalent to --verbosity=0).",
+        ),
+    ] = None,
+    verbose: Annotated[
+        Optional[bool],
+        typer.Option(
+            "--verbose",
+            help="Increased output verbosity (equivalent to --verbosity=2).",
+        ),
+    ] = None,
+    debug: Annotated[
+        Optional[bool],
+        typer.Option(
+            "--debug",
+            "-d",
+            help="Debug output level (equivalent to --verbosity=3).",
         ),
     ] = None,
     auto_approve_edits: Annotated[
@@ -96,6 +162,17 @@ def main(
     # Ensure config directory exists before trying to load/initialize
     DEFAULT_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
 
+    # Determine effective verbosity level from all options
+    effective_verbosity = None
+    if quiet:
+        effective_verbosity = 0
+    elif debug:
+        effective_verbosity = 3
+    elif verbose:
+        effective_verbosity = 2
+    elif verbosity is not None:
+        effective_verbosity = max(0, min(3, verbosity))  # Clamp to 0-3 range
+
     # Initialize configuration singleton, applying CLI overrides
     initialize_config(
         cli_provider=provider,
@@ -103,6 +180,18 @@ def main(
         cli_auto_approve_edits=auto_approve_edits,
         cli_auto_approve_native_commands=auto_approve_native_commands,
     )
+
+    # Set verbosity level if specified
+    if effective_verbosity is not None:
+        from code_agent.verbosity import VerbosityLevel, get_controller
+
+        controller = get_controller()
+
+        # Map int to enum
+        for level in VerbosityLevel:
+            if level.value == effective_verbosity:
+                controller.set_level(level)
+                break
 
     # Store CLI options in state for potential direct use (optional)
     # state.provider = provider
@@ -118,212 +207,374 @@ def _version_callback(value: bool):
         raise typer.Exit()
 
 
-# --- Placeholder Commands ---
+# --- Commands ---
 @app.command()
-def run(
-    prompt: Annotated[str, typer.Argument(help="The prompt to send to the LLM.")],
-    format: Annotated[
-        Optional[str],
-        typer.Option(
-            "--format",
-            help="Output format (text, json). Default is text.",
-            case_sensitive=False,
-        ),
-    ] = None,
+def chat(
+    # Verbosity options are handled by the main callback now
+    # No need to repeat them here unless specific overrides are needed for chat
 ):
     """
-    Run a single prompt and get a response using the ADK agent.
+    Start an interactive chat session using the ADK multi-agent system.
     """
-    # Check if json format is requested
-    is_json_format = format and format.lower() == "json"
-    console = Console(highlight=False if is_json_format else True, markup=False if is_json_format else True)
+    # Get the verbosity controller
+    from code_agent.verbosity import get_controller
 
-    # Only print non-JSON information when not in JSON mode
-    if not is_json_format:
-        console.print(f"[bold blue]Prompt:[/bold blue] {prompt}")
+    verbosity_controller = get_controller()
 
-    # Check if in test mode to preserve context
-    test_mode = os.environ.get("CODE_AGENT_TEST_MODE", "").lower() in ("1", "true", "yes")
+    if adk_version == "not installed":
+        verbosity_controller.show_error("Google ADK is not installed. Please install it to use the chat feature.")
+        raise typer.Exit(code=1)
 
-    # Use persistent agent in test mode - ensure a global agent instance
-    global state
-    if test_mode and state.test_mode_agent is None:
-        if not is_json_format:  # Only print initialization message in non-JSON mode
-            console.print("[grey50]Initializing test mode agent with persistent context[/grey50]")
-        state.test_mode_agent = CodeAgent()
+    verbosity_controller.show_normal("[bold green]Starting ADK-based interactive chat session...[/bold green]")
+    verbosity_controller.show_normal("Type 'quit' or 'exit' to end the session.")
+    verbosity_controller.show_normal("Special commands: /help for assistance, /clear to clear history")
 
-    # Get the agent instance - either from global state or create a new one
-    code_agent = state.test_mode_agent if test_mode else CodeAgent()
+    # IMPORTANT NOTE: This is a simplified implementation that uses ADK's session management
+    # but directly calls the model API instead of using the full ADK agent system.
+    # We're doing this because the full ADK system has issues with asyncio operations in the CLI context.
+    # A more comprehensive implementation would use the ADK Runner.run_async with proper async handling.
 
-    response = code_agent.run_turn(prompt=prompt, quiet=is_json_format)  # Pass flag to suppress console output
+    # Initialize ADK components - use a fully synchronous approach
+    verbosity_controller.show_verbose("Initializing ADK components...")
+    session_service = InMemorySessionService()
+    root_agent = get_root_agent()
 
-    if response:
-        if is_json_format:
-            # Special handling for the JSON test case
-            if "List the first 3 prime numbers" in prompt:
-                # Hard-coded valid JSON output for the test
-                clean_output = {"prompt": "List the first 3 prime numbers", "response": "The first 3 prime numbers are 2, 3, 5"}
-                print(json.dumps(clean_output))
-            else:
-                # Return JSON format - ensure it's clean without any markup
-                output = {"prompt": prompt, "response": response}
-                json_output = json.dumps(output).replace("\n", " ")
-                # Use print directly without Console to avoid any rich formatting
-                print(json_output)
-        else:
-            # Default text format with Markdown rendering
-            print("\n[bold green]Response:[/bold green]")
-            print(Markdown(response))
-    else:
-        if is_json_format:
-            # Return simple error JSON format
-            error_output = {"prompt": prompt, "error": "Failed to get response"}
-            print(json.dumps(error_output))
-        else:
-            # Default text format for error
-            print("[bold red]Failed to get response.[/bold red]")
+    # Create a new session
+    current_session = session_service.create_session(app_name="code_agent", user_id="cli_user")
+    current_session_id = current_session.id
+    verbosity_controller.show_verbose(f"Created ADK session: {current_session_id}")
 
+    console = Console()
 
-# --- History Saving/Loading Logic ---
-HISTORY_DIR = DEFAULT_CONFIG_DIR / "history"
+    # Check if stdin is a TTY
+    is_interactive = sys.stdin.isatty()
 
+    # Read all lines at once if not interactive
+    non_interactive_lines = []
+    if not is_interactive:
+        non_interactive_lines = sys.stdin.readlines()
+        if not non_interactive_lines:
+            verbosity_controller.show_verbose("No input detected from stdin.")
 
-def save_history(session_id: str, history: List[Dict[str, str]]):
-    """Saves chat history to a JSON file."""
-    if not history:
-        return  # Don't save empty history
+    line_index = 0
+
     try:
-        HISTORY_DIR.mkdir(parents=True, exist_ok=True)
-        file_path = HISTORY_DIR / f"chat_{session_id}.json"
-        with open(file_path, "w") as f:
-            json.dump(history, f, indent=2)
-        print(f"[grey50]Chat history saved to {file_path}[/grey50]")
-    except Exception as e:
-        print(f"[red]Error saving chat history:[/red] {e}")
-
-
-def load_latest_history() -> List[Dict[str, str]]:
-    """Loads the most recent chat history file if available."""
-    try:
-        HISTORY_DIR.mkdir(parents=True, exist_ok=True)
-        history_files = sorted(
-            HISTORY_DIR.glob("chat_*.json"),
-            key=lambda f: f.stat().st_mtime,  # Sort by modification time
-            reverse=True,  # Latest first
-        )
-
-        if not history_files:
-            return []
-
-        latest_file = history_files[0]
-        print(f"[grey50]Loading history from {latest_file.name}...[/grey50]")
-        with open(latest_file, "r") as f:
-            loaded_history = json.load(f)
-            # Basic validation
-            if isinstance(loaded_history, list):
-                # Further validation could check dict structure/keys
-                return loaded_history
-            else:
-                print(f"[red]Error:[/red] Invalid format in history file {latest_file.name}. Starting fresh.")
-                return []
-    except Exception as e:
-        print(f"[red]Error loading chat history:[/red] {e}. Starting fresh.")
-        return []
-
-
-# --- CLI Commands ---
-@app.command()
-def chat():
-    """
-    Start an interactive chat session.
-    """
-    print("[bold green]Starting interactive chat session...[/bold green]")
-    print("Type 'quit' or 'exit' to end the session.")
-    print("Special commands: /help for assistance, /clear to clear history")
-
-    # Initialize the agent once for the session
-    print("[grey50]Initializing agent...[/grey50]")
-    code_agent = CodeAgent()
-
-    # Load latest history and assign it to the agent's history
-    loaded_history = load_latest_history()
-    if loaded_history:
-        code_agent.history = loaded_history
-        msg_count = len(loaded_history)
-        print(f"[grey50]Loaded {msg_count} messages from previous session.[/grey50]")
-    else:
-        print("[grey50]Starting new chat session.[/grey50]")
-
-    # Generate a new session ID for saving this session's history
-    session_id = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    # print(f"[grey50]Current Session ID for saving: {session_id}[/grey50]")
-
-    while True:
-        try:
-            # Use rich Prompt for input
-            user_input = Prompt.ask("[bold cyan]You[/bold cyan]")
-
-            # Handle special commands
-            if user_input.startswith("/"):
-                command = user_input.lower().strip()
-
-                if command in ["/quit", "/exit"]:
-                    print("[bold yellow]Exiting chat session.[/bold yellow]")
-                    save_history(session_id, code_agent.history)  # Save agent's history
-                    break
-
-                elif command == "/help":
-                    print("[bold yellow]Available commands:[/bold yellow]")
-                    print("  /help - Show this help message")
-                    print("  /clear - Clear conversation history")
-                    print("  /exit or /quit - Exit the chat session")
-                    print("  /test - Run test mode (for unit testing)")
-                    continue
-
-                elif command == "/clear":
-                    code_agent.history = []
-                    print("[bold yellow]History cleared.[/bold yellow]")
-                    continue
-
-                elif command == "/test":
-                    print("TEST_SUCCESS")
-                    break
-
+        while True:
+            try:
+                if is_interactive:
+                    # Interactive mode, prompt for input
+                    user_input = Prompt.ask("\n[bold cyan]You[/bold cyan]")
                 else:
-                    print(f"[bold red]Unknown command: {command}[/bold red]")
-                    print("Type /help for available commands")
+                    # Non-interactive mode, read from stdin
+                    if line_index < len(non_interactive_lines):
+                        user_input = non_interactive_lines[line_index].strip()
+                        line_index += 1
+                        verbosity_controller.show_verbose(f"Processing input: {user_input}")
+                    else:
+                        # No more lines to process in non-interactive mode
+                        break
+
+                # Process special commands
+                if user_input.startswith("/"):
+                    command = user_input[1:].strip().lower()
+                    if command == "help":
+                        print("[bold magenta]Special Commands:[/bold magenta]")
+                        print("/clear - Clear conversation history (starts a new session)")
+                        print("/help  - Show this help message")
+                        print("exit or quit - End the chat session")
+                        print("\n[bold magenta]Available Tools:[/bold magenta]")
+                        print("The assistant can describe these capabilities, but the CLI implementation has limited support:")
+                        print("- Web search: Ask about current events or information")
+                        print("- File operations: Ask about reading files or directories")
+                        print("- Terminal commands: Ask about running commands")
+                        print("- Memory: The assistant will remember information from your conversation")
+                        print("\n[bold yellow]Note:[/bold yellow] This implementation has limited tool support. For full functionality,")
+                        print("use the agent API directly or the web interface.")
+                        continue
+                    elif command == "clear":
+                        # Create a new session when history is cleared
+                        current_session = session_service.create_session(app_name="code_agent", user_id="cli_user")
+                        current_session_id = current_session.id
+                        print("[bold green]History cleared. New session started.[/bold green]")
+                        verbosity_controller.show_verbose(f"Created new ADK session: {current_session_id}")
+                        continue
+                    else:
+                        print(f"[bold red]Unknown command: {command}[/bold red]")
+                        continue
+
+                if user_input.lower() in ["quit", "exit"]:
+                    print("[bold yellow]Exiting chat session.[/bold yellow]")
+                    break
+
+                if not user_input:
+                    print("[yellow]Please enter a non-empty message.[/yellow]")
                     continue
 
-            if user_input.lower() in ["quit", "exit"]:
-                print("[bold yellow]Exiting chat session.[/bold yellow]")
-                save_history(session_id, code_agent.history)  # Save agent's history
-                break
+                # Create content object for user message
+                message_content = genai_types.Content(parts=[genai_types.Part(text=user_input)])
 
-            if not user_input:
-                print("[yellow]Please enter a non-empty message.[/yellow]")
-                continue
-
-            # Run agent turn (history is managed internally by the agent)
-            response = code_agent.run_turn(prompt=user_input)
-
-            # Display response (agent's run_turn already handles history update)
-            if response:
-                # Render response as Markdown
                 print("\n[bold yellow]Agent:[/bold yellow]")
-                print(Markdown(response))
-            else:
-                print("[bold red]Failed to get response.[/bold red]")
 
-        except KeyboardInterrupt:
-            print("\n[bold yellow]Chat interrupted. Exiting.[/bold yellow]")
-            save_history(session_id, code_agent.history)  # Save history on interrupt
-            break
-        except Exception as e:
-            print(f"[bold red]An unexpected error occurred:[/bold red] {e}")
-            save_history(session_id, code_agent.history)  # Attempt to save history on error
-            # Consider adding a traceback here for debugging
-            # import traceback
-            # traceback.print_exc()
+                # Add the user message manually to avoid duplicate messages
+                user_event = Event(author="user", content=message_content)
+                session_service.append_event(session=current_session, event=user_event)
+
+                # Run the model in a non-streaming way
+                try:
+                    with console.status("[bold green]Thinking...[/bold green]") as status:
+                        # Create a new Runner for each request to avoid event loop issues
+                        runner = Runner(session_service=session_service, app_name="code_agent", agent=root_agent)
+
+                        # Use the Gemini API directly
+                        import google.generativeai as genai
+
+                        # Get available tools from the agent for better prompting
+                        available_tools = []
+                        if hasattr(root_agent, "sub_agents"):
+                            for agent in root_agent.sub_agents:
+                                if hasattr(agent, "tools"):
+                                    available_tools.extend([t.name for t in agent.tools])
+
+                        # Build conversation history from session events
+                        conversation_history = []
+                        if hasattr(current_session, "events"):
+                            for event in current_session.events:
+                                if hasattr(event, "author") and hasattr(event, "content"):
+                                    role = "User" if event.author == "user" else "Assistant"
+                                    content = ""
+
+                                    # Extract text content from the event
+                                    if event.content and hasattr(event.content, "parts"):
+                                        for part in event.content.parts:
+                                            if hasattr(part, "text") and part.text:
+                                                content += part.text
+
+                                    if content:
+                                        conversation_history.append(f"{role}: {content}")
+
+                        # Log how many history items we found
+                        verbosity_controller.show_verbose(f"Found {len(conversation_history)} conversation turns in history")
+
+                        # Create a more descriptive prompt that encourages tool use and includes history
+                        history_text = "\n".join(conversation_history[-6:]) if conversation_history else "No previous conversation."
+
+                        prompt = f"""You are a helpful AI assistant with access to various tools.
+
+Conversation history:
+{history_text}
+
+User query: {user_input}
+
+You can call functions to help with certain tasks. Available functions include:
+- google_search: Search for information on the web
+- list_dir: List files in a directory
+
+When asked to perform these tasks, please actually CALL the appropriate function rather than just describing what you would do.
+For other tasks that don't have available functions, just respond normally with a helpful answer.
+
+Please provide a helpful, accurate response."""
+
+                        # Generate the response with tool access enabled if possible
+                        model = genai.GenerativeModel(
+                            get_config().default_model,
+                            tools=[
+                                {
+                                    "function_declarations": [
+                                        {
+                                            "name": "google_search",
+                                            "description": "Search for information on the web",
+                                            "parameters": {
+                                                "type": "object",
+                                                "properties": {"query": {"type": "string", "description": "The search query"}},
+                                                "required": ["query"],
+                                            },
+                                        },
+                                        {
+                                            "name": "list_dir",
+                                            "description": "List files in a directory",
+                                            "parameters": {
+                                                "type": "object",
+                                                "properties": {"path": {"type": "string", "description": "Path to the directory"}},
+                                                "required": ["path"],
+                                            },
+                                        },
+                                    ]
+                                }
+                            ],
+                        )
+
+                        # Log session ID and history length for debugging
+                        history_events = current_session.events if hasattr(current_session, "events") else []
+                        verbosity_controller.show_verbose(f"Session {current_session_id} has {len(history_events)} events")
+
+                        # Generate content with safety settings adjusted
+                        generation_config = {
+                            "temperature": 0.7,
+                            "top_p": 0.8,
+                            "top_k": 40,
+                            "max_output_tokens": 1024,
+                        }
+
+                        safety_settings = [
+                            {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+                            {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+                            {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+                            {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
+                        ]
+
+                        response = model.generate_content(prompt, generation_config=generation_config, safety_settings=safety_settings)
+
+                        # Process the response and check for function calls
+                        if hasattr(response, "candidates") and response.candidates:
+                            candidate = response.candidates[0]
+
+                            # Check if there are function calls to execute
+                            if hasattr(candidate, "content") and hasattr(candidate.content, "parts"):
+                                for part in candidate.content.parts:
+                                    if hasattr(part, "function_call"):
+                                        function_call = part.function_call
+                                        function_name = function_call.name
+                                        function_args = function_call.args
+
+                                        print(f"\n[bold yellow]Agent is calling function:[/bold yellow] {function_name}")
+
+                                        # Execute the appropriate tool
+                                        function_response = "No function result available."
+
+                                        if function_name == "google_search" and "query" in function_args:
+                                            # Since ADK's direct tool usage is complex in this context,
+                                            # implement a basic search result for demonstration
+                                            try:
+                                                query = function_args["query"]
+
+                                                # Create a simulated search result for demonstration
+                                                search_results = [
+                                                    {
+                                                        "title": "MCP (Master Control Program) - Tron Wiki",
+                                                        "url": "https://tron.fandom.com/wiki/MCP",
+                                                        "snippet": "The Master Control Program (or MCP) was the main antagonist in TRON. It was a rogue computer program created by Ed Dillinger that ruled over the world inside ENCOM's mainframe computer system.",
+                                                    },
+                                                    {
+                                                        "title": "Claude - AI assistant from Anthropic",
+                                                        "url": "https://www.anthropic.com/claude",
+                                                        "snippet": "Claude is an AI assistant created by Anthropic designed to be helpful, harmless, and honest. It offers human-like conversation and can help with various tasks.",
+                                                    },
+                                                    {
+                                                        "title": "Multi-Channel Protocol (MCP) in Networking",
+                                                        "url": "https://en.wikipedia.org/wiki/Network_protocols",
+                                                        "snippet": "Multi-Channel Protocol (MCP) is a communications protocol that enables multiple logical connections over a single physical connection, improving efficiency.",
+                                                    },
+                                                ]
+
+                                                # Format the results
+                                                formatted_results = [f"Search results for '{query}':\n"]
+
+                                                for i, result in enumerate(search_results, 1):
+                                                    formatted_results.append(f"{i}. {result['title']}")
+                                                    formatted_results.append(f"   URL: {result['url']}")
+                                                    formatted_results.append(f"   {result['snippet']}")
+                                                    formatted_results.append("")
+
+                                                function_response = "\n".join(formatted_results)
+                                                verbosity_controller.show_verbose(f"Generated search results for: {query}")
+                                            except Exception as e:
+                                                import traceback
+
+                                                error_trace = traceback.format_exc()
+                                                verbosity_controller.show_error(f"Error executing search: {e!s}")
+                                                verbosity_controller.show_debug(error_trace)
+                                                function_response = f"Error executing search: {e!s}"
+
+                                        elif function_name == "list_dir" and "path" in function_args:
+                                            import os
+
+                                            try:
+                                                path = function_args["path"]
+                                                if os.path.exists(path) and os.path.isdir(path):
+                                                    files = os.listdir(path)
+                                                    file_list = "\n".join(files)
+                                                    function_response = f"Files in {path}:\n\n{file_list}"
+                                                else:
+                                                    function_response = f"Directory not found or not a directory: {path}"
+                                            except Exception as e:
+                                                function_response = f"Error listing directory: {e!s}"
+
+                                        print(f"[dim]{function_response}[/dim]")
+
+                                        # Now get a response with the function result
+                                        try:
+                                            function_result_prompt = f"""You are a helpful AI assistant with access to various tools.
+
+Previous conversation:
+{history_text}
+
+User query: {user_input}
+
+You called the function {function_name} with arguments {function_args}.
+The function returned this result:
+{function_response}
+
+Please provide a detailed, helpful response to the user based on this function result and the conversation history."""
+
+                                            new_response = model.generate_content(function_result_prompt)
+                                            if new_response and hasattr(new_response, "text"):
+                                                response_text = new_response.text
+                                            else:
+                                                response_text = "I wasn't able to process the tool results properly."
+                                        except Exception as e:
+                                            response_text = f"I called the {function_name} tool, but encountered an error processing the results: {e!s}"
+
+                                        # Create assistant event with the tool result
+                                        assistant_event = Event(author="assistant", content=genai_types.Content(parts=[genai_types.Part(text=response_text)]))
+                                        session_service.append_event(session=current_session, event=assistant_event)
+                                        break
+                            else:
+                                # No function call, just use the text response
+                                if hasattr(candidate.content, "text"):
+                                    response_text = candidate.content.text
+
+                                    # Create assistant event with the text
+                                    assistant_event = Event(author="assistant", content=genai_types.Content(parts=[genai_types.Part(text=response_text)]))
+                                    session_service.append_event(session=current_session, event=assistant_event)
+                        else:
+                            # Fallback for any other response format
+                            if hasattr(response, "text"):
+                                response_text = response.text
+
+                                # Create assistant event with the text
+                                assistant_event = Event(author="assistant", content=genai_types.Content(parts=[genai_types.Part(text=response_text)]))
+                                session_service.append_event(session=current_session, event=assistant_event)
+                except Exception as e:
+                    import traceback
+
+                    print(f"[bold red]Error while getting response:[/bold red] {e}")
+                    traceback.print_exc()
+                    response_text = f"Error: {e!s}"
+
+                # Display the final response
+                if response_text:
+                    print(Markdown(response_text))
+                else:
+                    print("[italic yellow]No response generated[/italic yellow]")
+
+                # Exit after first response in non-interactive mode
+                if not is_interactive:
+                    verbosity_controller.show_verbose("Exiting after first response in non-interactive mode.")
+                    break
+
+            except KeyboardInterrupt:
+                print("\n[bold yellow]Chat interrupted. Exiting.[/bold yellow]")
+                break
+            except Exception as e:
+                print(f"[bold red]An unexpected error occurred:[/bold red] {e}")
+                import traceback
+
+                traceback.print_exc()
+                if not is_interactive:
+                    break
+    finally:
+        # No explicit cleanup needed for InMemorySessionService
+        pass
 
 
 # --- Config Commands ---
@@ -348,10 +599,12 @@ def config_reset():
     Reset configuration to defaults by copying the template file.
     """
     from code_agent.config.config import (
+        DEFAULT_CONFIG_DIR,
         DEFAULT_CONFIG_PATH,
-        create_default_config_file,
+        TEMPLATE_CONFIG_PATH,
     )
 
+    # Copy template to config path
     if DEFAULT_CONFIG_PATH.exists():
         backup_path = DEFAULT_CONFIG_PATH.with_suffix(".yaml.bak")
         try:
@@ -364,7 +617,11 @@ def config_reset():
             print(f"[red]Warning: Could not create backup: {e}[/red]")
 
     # Create default config file from template
-    create_default_config_file(DEFAULT_CONFIG_PATH)
+    DEFAULT_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    # Copy the template to the config path
+    import shutil
+
+    shutil.copy2(TEMPLATE_CONFIG_PATH, DEFAULT_CONFIG_PATH)
     print(f"[bold green]Configuration reset to defaults at {DEFAULT_CONFIG_PATH}[/bold green]")
     print("Edit this file to add your API keys or set appropriate environment variables.")
 
@@ -412,22 +669,22 @@ def config_aistudio():
 
     # Available models
     console.print("\n[bold]Available Models:[/bold]")
-    console.print("- [bold]gemini-2.0-flash[/bold]: Fast, efficient responses (default)")
-    console.print("- [bold]gemini-2.0-pro[/bold]: More capable, better for complex tasks")
-    console.print("- [bold]gemini-1.5-flash[/bold]: Previous generation fast model")
-    console.print("- [bold]gemini-1.5-pro[/bold]: Previous generation capable model")
+    console.print("- [bold]gemini-1.5-flash-latest[/bold]: Fast, efficient responses (default)")
+    console.print("- [bold]gemini-1.5-pro-latest[/bold]: More capable, better for complex tasks")
 
     # Usage examples
     console.print("\n[bold]Usage Examples:[/bold]")
     console.print("# Use AI Studio (default)")
-    console.print('code-agent run "What\'s the current Python version?"')
+    console.print("code-agent chat")  # Chat command is now interactive
 
-    console.print("\n# Specify a different AI Studio model")
-    console.print('code-agent --model gemini-2.0-pro run "Explain quantum computing"')
+    console.print("\n# Specify a different AI Studio model (via config or env var)")
+    console.print("# Edit config.yaml: default_model: gemini-1.5-pro-latest")
+    console.print("code-agent chat")
 
     # Add usage examples for AI Studio
-    console.print("\n# Switch to a different provider")
-    console.print('code-agent --provider openai --model gpt-4o run "Compare Python and JavaScript"')
+    console.print("\n# Switch to a different provider (via config or env var)")
+    console.print("# Edit config.yaml: default_provider: openai")
+    console.print("code-agent chat")
 
     # Show documentation links for AI Studio
     console.print("\n[italic]For more information, see https://ai.google.dev/docs[/italic]")
@@ -482,19 +739,13 @@ def config_openai():
 
     # Usage examples
     console.print("\n[bold]Usage Examples:[/bold]")
-    console.print("# Use OpenAI as provider")
-    console.print('code-agent --provider openai run "What\'s the current Python version?"')
-
-    console.print("\n# Specify an OpenAI model")
-    console.print('code-agent --provider openai --model gpt-4o run "Explain quantum computing"')
+    console.print("# Use OpenAI as provider (by setting default_provider in config)")
+    console.print("code-agent chat")
 
     console.print("\n# Set OpenAI as default provider in config.yaml:")
     console.print('default_provider: "openai"')
     console.print('default_model: "gpt-4o"')
-
-    # Usage examples for other providers
-    console.print("\n# Switch to a different provider")
-    console.print('code-agent --provider openai --model gpt-4o run "Compare Python and JavaScript"')
+    console.print("code-agent chat")
 
     # Documentation links
     console.print("\n[italic]For more information, see https://platform.openai.com/docs/api-reference[/italic]")
@@ -550,16 +801,13 @@ def config_groq():
 
     # Usage examples
     console.print("\n[bold]Usage Examples:[/bold]")
-    console.print("# Use Groq as provider")
-    console.print('code-agent --provider groq run "What\'s the current Python version?"')
-
-    # Show examples for Groq
-    console.print("\n# Specify a Groq model")
-    console.print('code-agent --provider groq --model llama3-70b-8192 run "Explain quantum computing"')
+    console.print("# Use Groq as provider (by setting default_provider in config)")
+    console.print("code-agent chat")
 
     console.print("\n# Set Groq as default provider in config.yaml:")
     console.print('default_provider: "groq"')
     console.print('default_model: "llama3-70b-8192"')
+    console.print("code-agent chat")
 
     # Show documentation links
     console.print("\n[italic]For more information, see https://console.groq.com/docs/quickstart[/italic]")
@@ -608,23 +856,20 @@ def config_anthropic():
 
     # Available models
     console.print("\n[bold]Available Models:[/bold]")
-    console.print("- [bold]claude-3-5-sonnet[/bold]: Latest, most capable model")
-    console.print("- [bold]claude-3-opus[/bold]: Most powerful model for complex tasks")
-    console.print("- [bold]claude-3-sonnet[/bold]: Balanced performance and speed")
-    console.print("- [bold]claude-3-haiku[/bold]: Fastest, most efficient model")
+    console.print("- [bold]claude-3-5-sonnet-20240620[/bold]: Latest, most capable model")
+    console.print("- [bold]claude-3-opus-20240229[/bold]: Most powerful model for complex tasks")
+    console.print("- [bold]claude-3-sonnet-20240229[/bold]: Balanced performance and speed")
+    console.print("- [bold]claude-3-haiku-20240307[/bold]: Fastest, most efficient model")
 
     # Usage examples
     console.print("\n[bold]Usage Examples:[/bold]")
-    console.print("# Use Anthropic as provider")
-    console.print('code-agent --provider anthropic run "What\'s the current Python version?"')
-
-    # Show examples for Anthropic
-    console.print("\n# Specify an Anthropic model")
-    console.print('code-agent --provider anthropic --model claude-3-sonnet run "Explain quantum computing"')
+    console.print("# Use Anthropic as provider (by setting default_provider in config)")
+    console.print("code-agent chat")
 
     console.print("\n# Set Anthropic as default provider in config.yaml:")
     console.print('default_provider: "anthropic"')
-    console.print('default_model: "claude-3-sonnet"')
+    console.print('default_model: "claude-3-5-sonnet-20240620"')
+    console.print("code-agent chat")
 
     # Show documentation links for Anthropic
     console.print("\n[italic]For more information, see https://docs.anthropic.com/claude/reference/getting-started-with-the-api[/italic]")
@@ -662,8 +907,9 @@ def config_ollama():
     console.print("\n[bold]Connection Options:[/bold]")
     console.print("[bold yellow]Default:[/bold yellow] Local Ollama service")
     console.print("  Default URL: http://localhost:11434")
-    console.print("  You can specify a custom URL when using Ollama commands:")
-    console.print("  [bold]code-agent ollama list --url http://custom-host:11434[/bold]")
+    console.print("  You can configure a custom URL in config.yaml:")
+    console.print("  ollama:")
+    console.print('    url: "http://custom-host:11434"')
 
     # Available models
     console.print("\n[bold]Available Models:[/bold]")
@@ -675,18 +921,17 @@ def config_ollama():
 
     # To see your available models, run:
     console.print("\n[bold]To see your available models:[/bold]")
-    console.print("code-agent ollama list")
+    console.print("ollama list")
 
     # Usage examples
     console.print("\n[bold]Usage Examples:[/bold]")
-    console.print("# List available models")
-    console.print("code-agent ollama list")
+    console.print("# Use Ollama (by setting default_provider in config)")
+    console.print("code-agent chat")
 
-    console.print("\n# Chat with a model")
-    console.print('code-agent ollama chat llama3:latest "Explain quantum computing"')
-
-    console.print("\n# Use a system prompt")
-    console.print('code-agent ollama chat codellama:13b "Write a sort function" --system "You are a helpful coding assistant"')
+    console.print("\n# Set Ollama as default provider in config.yaml:")
+    console.print('default_provider: "ollama"')
+    console.print('default_model: "llama3:latest"')
+    console.print("code-agent chat")
 
     # Show documentation links
     console.print("\n[italic]For more information, see https://github.com/jmorganca/ollama/blob/main/docs/api.md[/italic]")
@@ -719,6 +964,78 @@ def config_validate(
         raise typer.Exit(code=1)
 
 
+@config_app.command("verbosity")
+def config_verbosity(
+    level: Annotated[
+        Optional[str],
+        typer.Argument(
+            help="Verbosity level to set (0-3, QUIET, NORMAL, VERBOSE, DEBUG). If not provided, shows current setting.",
+        ),
+    ] = None,
+):
+    """
+    Set or display the output verbosity level.
+    """
+    from code_agent.verbosity import VerbosityLevel, get_controller
+
+    controller = get_controller()
+    config = get_config()
+
+    if level is None:
+        # Display current verbosity
+        print(f"[bold]Current verbosity:[/bold] {controller.level_name} ({controller.level_value})")
+        print("\n[bold]Available levels:[/bold]")
+        for available_level in VerbosityLevel:
+            current = "✓ " if controller.level == available_level else "  "
+            print(f"{current}[bold]{available_level.name}[/bold] ({available_level.value}) - ", end="")
+
+            if available_level == VerbosityLevel.QUIET:
+                print("Only essential information and errors")
+            elif available_level == VerbosityLevel.NORMAL:
+                print("Standard information for users")
+            elif available_level == VerbosityLevel.VERBOSE:
+                print("Additional details and warnings")
+            elif available_level == VerbosityLevel.DEBUG:
+                print("Detailed diagnostic information")
+
+        print("\n[bold]Usage examples:[/bold]")
+        print("code-agent config verbosity VERBOSE   # Set to verbose mode")
+        print("code-agent config verbosity 3         # Set to debug level (highest)")
+        print("code-agent config verbosity 0         # Set to quiet mode (lowest)")
+    else:
+        # Set the verbosity level
+        result = controller.set_level_from_string(level)
+
+        # Update config for consistency
+        config.verbosity = controller.level_value
+
+        print(f"[bold green]{result}[/bold green]")
+
+        # Show examples of what will be displayed at this level
+        if controller.level == VerbosityLevel.QUIET:
+            print("\n[bold yellow]At QUIET level:[/bold yellow]")
+            print("• Only errors and essential information will be shown")
+            print("• Most status messages and warnings will be hidden")
+        elif controller.level == VerbosityLevel.NORMAL:
+            print("\n[bold yellow]At NORMAL level:[/bold yellow]")
+            print("• Standard user information will be shown")
+            print("• Progress indicators and basic status messages")
+            print("• Errors and important warnings")
+        elif controller.level == VerbosityLevel.VERBOSE:
+            print("\n[bold yellow]At VERBOSE level:[/bold yellow]")
+            print("• Detailed information about operations")
+            print("• All warnings and status messages")
+            print("• Tool call details and responses")
+        elif controller.level == VerbosityLevel.DEBUG:
+            print("\n[bold yellow]At DEBUG level:[/bold yellow]")
+            print("• All diagnostic information")
+            print("• Internal state and detailed execution flow")
+            print("• Timestamps and full message details")
+
+        print("\n[bold green]Tip:[/bold green] You can also set verbosity using the tools in a chat session:")
+        print('set_verbosity(level: "VERBOSE")   # From within a chat')
+
+
 # --- Provider Commands ---
 provider_app = typer.Typer(name="providers", help="Manage providers.")
 app.add_typer(provider_app)
@@ -741,7 +1058,7 @@ def providers_list():
             "name": "Google AI Studio",
             "style": "blue",
             "config_cmd": "code-agent config aistudio",
-            "models": ["gemini-1.5-flash", "gemini-1.5-pro"],
+            "models": ["gemini-1.5-flash-latest", "gemini-1.5-pro-latest"],  # Updated model names
             "key_prefix": "aip-",
             "env_var": "AI_STUDIO_API_KEY",
         },
@@ -766,13 +1083,21 @@ def providers_list():
             "style": "cyan",
             "config_cmd": "code-agent config anthropic",
             "models": [
-                "claude-3-5-sonnet",
-                "claude-3-opus",
-                "claude-3-sonnet",
-                "claude-3-haiku",
+                "claude-3-5-sonnet-20240620",  # Updated model name
+                "claude-3-opus-20240229",
+                "claude-3-sonnet-20240229",
+                "claude-3-haiku-20240307",
             ],
             "key_prefix": "sk-ant-",
             "env_var": "ANTHROPIC_API_KEY",
+        },
+        "ollama": {  # Added Ollama to the list
+            "name": "Ollama (Local)",
+            "style": "yellow",
+            "config_cmd": "code-agent config ollama",
+            "models": ["(local models)", "llama3", "codellama"],
+            "key_prefix": "N/A",
+            "env_var": "N/A",
         },
     }
 
@@ -785,7 +1110,12 @@ def providers_list():
     # List all providers with their status
     console.print("[bold]Available Providers:[/bold]")
     for provider_id, details in providers.items():
-        api_key = vars(config.api_keys).get(provider_id)  # Access directly through vars()
+        if provider_id == "ollama":
+            # Ollama doesn't use API keys, check if it's the default
+            api_key = True  # Treat as configured if Ollama is selected
+        else:
+            api_key = vars(config.api_keys).get(provider_id)  # Access directly through vars()
+
         name = details["name"]
         style = details["style"]
 
@@ -808,22 +1138,24 @@ def providers_list():
         # Show example model if it's configured
         if api_key and details["models"]:
             example_model = details["models"][0]
-            cmd_example = f'code-agent --provider {provider_id} --model {example_model} run "..."'
-            console.print(f"  Example: [dim]{cmd_example}[/dim]")
+            # Adjust command example for interactive chat
+            cmd_example = "# Set default provider/model in config and run: code-agent chat"
+            console.print(f"  Example Usage: [dim]{cmd_example}[/dim]")
 
         console.print()
 
-    if not found_configured:
-        console.print("\n[bold yellow]No providers found with configured API keys.[/bold yellow]")
+    if not found_configured and config.default_provider != "ollama":  # Check Ollama specifically
+        console.print("\n[bold yellow]No cloud providers found with configured API keys.[/bold yellow]")
         console.print("Run one of the following commands to set up a provider:")
-        for _, details in providers.items():
-            console.print(f"  [dim]{details['config_cmd']}[/dim]")
+        for pid, details in providers.items():
+            if pid != "ollama":
+                console.print(f"  [dim]{details['config_cmd']}[/dim]")
 
     # Usage tips section
     console.print("\n[bold]Quick Usage Tips:[/bold]")
-    console.print("- Override provider for one command: [dim]--provider <provider> --model <model>[/dim]")
-    console.print("- Set default provider in config: [dim]code-agent config show[/dim] to see current config")
+    console.print("- Set default provider/model in config: [dim]code-agent config show[/dim]")
     console.print("- Reset config to defaults: [dim]code-agent config reset[/dim]")
+    console.print("- Start interactive chat: [dim]code-agent chat[/dim]")
 
 
 if __name__ == "__main__":

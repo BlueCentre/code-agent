@@ -89,7 +89,7 @@ def validate_model_compatibility(provider: str, model: str, result: ValidationRe
         result.add_error(f"Model '{model}' is not recognized for provider '{provider}'. Supported models include: {supported_models}.")
 
 
-def validate_api_keys(api_keys: Union[Dict[str, str], Any], result: ValidationResult) -> None:
+def validate_api_keys(api_keys: Union[Dict[str, str], Any], default_provider: str, result: ValidationResult) -> None:
     """Validate API keys for format and presence.
 
     Checks:
@@ -98,6 +98,7 @@ def validate_api_keys(api_keys: Union[Dict[str, str], Any], result: ValidationRe
 
     Args:
         api_keys: Either an ApiKeys object or a dictionary of keys
+        default_provider: The configured default provider
         result: ValidationResult to update
     """
     # Get all API keys as a dictionary
@@ -106,20 +107,30 @@ def validate_api_keys(api_keys: Union[Dict[str, str], Any], result: ValidationRe
     else:
         # Get the dict representation of the ApiKeys object
         try:
-            keys_dict = api_keys.model_dump()
+            # Use model_dump for Pydantic v2+, prefer exclude_none
+            keys_dict = api_keys.model_dump(exclude_none=True)
         except AttributeError:
-            keys_dict = vars(api_keys)
+            # Fallback for older Pydantic or non-model objects
+            keys_dict = {k: v for k, v in vars(api_keys).items() if v is not None}
 
-    # Check if any keys were provided
-    if not any(v for v in keys_dict.values() if v is not None):
+    # Check if any keys were provided at all
+    if not keys_dict:
         result.add_warning("No API keys found in configuration. You will need to set them via environment variables.")
+        # If no keys provided at all, the default provider key is definitely missing
+        result.add_error(f"API key for default provider '{default_provider}' is missing.")
+        return  # Stop further checks if no keys exist
+
+    # --- Critical Check: Default provider key presence ---
+    default_key = keys_dict.get(default_provider)
+    if not default_key:
+        result.add_error(f"API key for default provider '{default_provider}' is missing or empty.")
 
     # Validate format of provided keys
     for provider, key in keys_dict.items():
-        if key is None:
+        if key is None:  # Should be excluded by model_dump(exclude_none=True), but check anyway
             continue
 
-        # Skip keys from unknown providers
+        # Skip keys from unknown providers for format checking
         if provider not in API_KEY_REGEXES:
             continue
 
@@ -194,8 +205,8 @@ def validate_config(config: Any) -> ValidationResult:
     # Validate model compatibility
     validate_model_compatibility(config.default_provider, config.default_model, result)
 
-    # Validate API keys
-    validate_api_keys(config.api_keys, result)
+    # Validate API keys (pass default_provider)
+    validate_api_keys(config.api_keys, config.default_provider, result)
 
     # Validate native command allowlist
     validate_native_command_allowlist(config.native_command_allowlist, result)

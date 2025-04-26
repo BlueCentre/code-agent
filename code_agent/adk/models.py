@@ -8,14 +8,13 @@ This module provides:
 4. Fallback behavior for handling model failures
 """
 
-import os
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import litellm
 from google.adk.models import BaseLlm
 from pydantic import BaseModel, ConfigDict, Field
 
-from code_agent.config import get_api_key, get_config
+from code_agent.config.config import get_api_key, get_config
 from code_agent.tools.error_utils import format_api_error
 
 
@@ -243,211 +242,6 @@ class OllamaLlm(LiteLlm):
         return await super().generate_content_async(prompt, **all_kwargs)
 
 
-class EnhancedGemini(BaseLlm):
-    """
-    Enhanced Gemini model with additional features.
-
-    Direct implementation using the Google Generative AI Python SDK.
-    Provides:
-    1. Better error handling
-    2. Retry logic for transient failures
-    3. Detailed metadata
-    """
-
-    model_config = ConfigDict(extra="allow")
-
-    # Add required BaseLlm field "model"
-    model: str = Field(default="gemini-1.5-flash")
-
-    def __init__(
-        self,
-        model_name: str = "gemini-1.5-flash",
-        api_key: Optional[str] = None,
-        temperature: float = 0.7,
-        max_output_tokens: Optional[int] = None,
-        timeout: Optional[int] = None,
-        retry_count: int = 2,
-        **kwargs,
-    ):
-        """
-        Initialize the Enhanced Gemini model.
-
-        Args:
-            model_name: The specific Gemini model to use
-            api_key: Google AI API key
-            temperature: Sampling temperature (0.0-1.0)
-            max_output_tokens: Maximum tokens to generate
-            timeout: Request timeout in seconds
-            retry_count: Number of retries on failure
-        """
-        # Initialize the parent BaseLlm
-        super().__init__(model=model_name, **kwargs)
-
-        # Get API key from environment if not provided
-        if not api_key:
-            api_key = os.environ.get("GOOGLE_API_KEY") or os.environ.get("AI_STUDIO_API_KEY")
-
-        if not api_key:
-            raise ValueError("API key is required for Gemini but not found. Set GOOGLE_API_KEY or AI_STUDIO_API_KEY environment variable.")
-
-        # Store parameters
-        self._model_name = model_name
-        self._api_key = api_key
-        self._temperature = temperature
-        self._max_output_tokens = max_output_tokens
-        self._timeout = timeout
-        self._retry_count = retry_count
-
-    def _configure_api(self):
-        """Configure the Google Generative AI API with the API key."""
-        import google.generativeai as genai
-
-        genai.configure(api_key=self._api_key)
-        return genai
-
-    def _create_model(self, genai):
-        """Create and return a Gemini model instance."""
-        return genai.GenerativeModel(self._model_name)
-
-    async def _process_string_prompt(self, model, prompt):
-        """Process a string prompt and return the response."""
-        response = await model.generate_content_async(prompt)
-        # Handle async generator
-        if hasattr(response, "__aiter__"):
-            parts = []
-            async for part in response:
-                parts.append(part)
-            response = parts[-1] if parts else None
-        return response
-
-    async def _process_message_list(self, model, messages):
-        """Process a list of messages and return the chat response."""
-        # Convert list of message dicts to chat format
-        chat = model.start_chat()
-        for message in messages:
-            if message["role"] == "user":
-                response = await chat.send_message_async(message["content"])
-                # Handle async generator
-                if hasattr(response, "__aiter__"):
-                    parts = []
-                    async for part in response:
-                        parts.append(part)
-                    response = parts[-1] if parts else None
-            # For simplicity, we ignore assistant messages as they're already part of the history
-
-        # Get the last response from the chat
-        return chat.last
-
-    def _extract_text(self, response):
-        """Extract text from a response object."""
-        # Handle None response explicitly
-        if response is None:
-            return ""
-
-        if hasattr(response, "text"):
-            return response.text
-        else:
-            return str(response)
-
-    def _build_metadata(self, attempt):
-        """Build metadata for the response."""
-        return {
-            "provider": "ai_studio",
-            "model": self._model_name,
-            "attempt": attempt + 1,
-        }
-
-    def _handle_error(self, error, attempt):
-        """Handle errors, either by logging for retry or raising."""
-        if attempt < self._retry_count:
-            # Log the error and signal for retry
-            print(f"Gemini error (attempt {attempt + 1}/{self._retry_count + 1}): {error}")
-            return True  # Retry
-        else:
-            # Format error message and re-raise on final attempt
-            error_message = format_api_error(error, "ai_studio", self._model_name)
-            raise ValueError(f"Gemini error: {error_message}") from error
-
-    async def generate_content_async(self, prompt: Union[str, List[Dict[str, str]]], **kwargs: Any) -> Tuple[str, Dict[str, Any]]:
-        """
-        Generate content using the Google Generative AI Python SDK.
-
-        Args:
-            prompt: Either a string prompt or a list of chat messages
-            **kwargs: Additional arguments passed to the model
-
-        Returns:
-            A tuple of (generated_text, metadata)
-        """
-        # Use a retry loop for resilience
-        last_error = None
-        for attempt in range(self._retry_count + 1):
-            try:
-                # Configure the API
-                genai = self._configure_api()
-
-                # Create a model
-                model = self._create_model(genai)
-
-                # Process the prompt
-                if isinstance(prompt, str):
-                    # Simple text prompt
-                    response = await self._process_string_prompt(model, prompt)
-                else:
-                    # Chat messages
-                    response = await self._process_message_list(model, prompt)
-
-                # Extract text from response
-                result_text = self._extract_text(response)
-
-                # Build metadata
-                metadata = self._build_metadata(attempt)
-
-                # Return the result
-                return result_text, metadata
-
-            except Exception as e:
-                last_error = e
-                should_retry = self._handle_error(e, attempt)
-                if should_retry:
-                    continue
-                # If _handle_error didn't raise, we still propagate the exception
-                raise  # pragma: no cover # This line might be missed if _handle_error raises
-
-        # This should ideally never be reached due to the raise in the loop/handle_error
-        # pragma: no cover # Hard-to-hit safeguard, assumes loop finishes without error/return
-        if "last_error" in locals() and last_error is not None:
-            # If last_error is somehow set but we didn't raise, raise it now.
-            raise ValueError(f"Gemini error: {last_error}") from last_error
-        # pragma: no cover # Even less likely path
-        raise ValueError("Unknown error in Gemini")
-
-    async def generate_content(self, prompt: Union[str, List[Dict[str, str]]], **kwargs: Any) -> Tuple[str, Dict[str, Any]]:
-        """
-        Generate content with the Gemini model.
-
-        This is a convenience method that calls generate_content_async.
-
-        Args:
-            prompt: Either a string prompt or a list of chat messages
-            **kwargs: Additional arguments passed to the model
-
-        Returns:
-            A tuple of (generated_text, metadata)
-        """
-        return await self.generate_content_async(prompt, **kwargs)
-
-    @property
-    def model_name(self) -> str:
-        """Get the model name."""
-        return self._model_name
-
-    @property
-    def retry_count(self) -> int:
-        """Get the retry count."""
-        return self._retry_count
-
-
 class ModelConfig(BaseModel):
     """Configuration for model creation."""
 
@@ -517,7 +311,17 @@ def create_model(
             # If initial provider is unknown and no valid fallback is available, raise error
             raise ValueError(f"Unsupported provider: '{target_provider}'. Known providers: {known_providers}")
 
-    # Get API key for the provider
+    # Import Gemini here to avoid potential top-level import issues if ADK not fully available
+    try:
+        from google.adk.models import Gemini
+    except ImportError:
+        # Handle case where Gemini might not be importable even if aiplatform is installed
+        # This is unlikely but good practice
+        Gemini = None  # Set to None to indicate it's unavailable
+        if target_provider == "ai_studio":
+            raise ValueError("Google ADK Gemini model could not be imported, cannot use ai_studio provider.")
+
+    # Get API key based on provider
     api_key = get_api_key(target_provider)
 
     # Configure fallbacks if not explicitly provided
@@ -535,33 +339,43 @@ def create_model(
     # Create model based on provider
     try:
         if target_provider == "ai_studio":
-            # Use enhanced Gemini implementation
-            return EnhancedGemini(
-                model_name=target_model,
-                api_key=api_key,
-                temperature=temperature if temperature is not None else 0.7,  # Use default if None
-                max_output_tokens=max_tokens,
-                timeout=timeout,
-                retry_count=retry_count if retry_count is not None else 2,  # Use default if None
+            # MODIFIED: Use ADK's built-in Gemini model
+            if Gemini is None:  # Check if import failed
+                raise ValueError("Google ADK Gemini model is unavailable.")
+            return Gemini(
+                model_name=target_model
+                # API key should be handled by ADK environment/ADC
+                # Temperature etc. might be set via GenerateContentConfig later by the framework
             )
         elif target_provider == "ollama":
             # Use specialized Ollama wrapper
+            ollama_config = config.ollama or {}
+            ollama_url = ollama_config.get("url", "http://localhost:11434")
             return OllamaLlm(
                 model_name=target_model,
+                base_url=ollama_url,  # Pass correct URL
                 temperature=temperature if temperature is not None else 0.7,  # Use default if None
                 max_tokens=max_tokens,
                 timeout=timeout,
-                retry_count=retry_count if retry_count is not None else 2,  # Use default if None
+                retry_count=retry_count if retry_count is not None else 1,  # Ollama default retry 1
             )
         else:
             # Use general LiteLlm wrapper for other providers
             if target_provider in ["openai", "anthropic", "groq"] and not api_key:
                 raise ValueError(f"API key required for {target_provider} but not found")
 
+            litellm_base_url = None
+            if target_provider == "openai":
+                litellm_base_url = "https://api.openai.com/v1"
+            elif target_provider == "groq":
+                litellm_base_url = "https://api.groq.com/openai/v1"
+            # Add other bases if needed
+
             return LiteLlm(
                 provider=target_provider,
                 model_name=target_model,
                 api_key=api_key,
+                api_base=litellm_base_url,  # Pass base URL if needed
                 temperature=temperature if temperature is not None else 0.7,  # Use default if None
                 max_tokens=max_tokens,
                 timeout=timeout,

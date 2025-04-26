@@ -33,7 +33,7 @@ uv pip install --quiet -e '.[dev]' pytest pytest-cov pytest-mock tomli
 
 # Run tests with coverage
 echo "Running tests with coverage..."
-pytest tests/ --cov=code_agent --cov=cli_agent --cov-report=term --cov-report=xml --cov-report=html --cov-fail-under=80
+pytest tests/ --cov=code_agent --cov-report=term --cov-report=xml --cov-report=html --cov-fail-under=80
 
 # Extract project version
 echo "Extracting project version..."

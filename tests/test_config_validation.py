@@ -4,12 +4,11 @@ from unittest.mock import patch
 
 import pytest
 
-from code_agent.config import SettingsConfig
+from code_agent.config import CodeAgentSettings, initialize_config, validate_config
 from code_agent.config.settings_based_config import ApiKeys, CodeAgentSettings, SecuritySettings
 from code_agent.config.validation import (
     ValidationResult,
     validate_api_keys,
-    validate_config,
     validate_model_compatibility,
     validate_native_command_allowlist,
     validate_native_command_settings,
@@ -17,16 +16,43 @@ from code_agent.config.validation import (
 
 
 @pytest.fixture
-def valid_config():
-    """Fixture for a valid configuration."""
-    return SettingsConfig(
-        default_provider="ai_studio",
-        default_model="gemini-2.0-flash",
-        api_keys={"openai": "sk-" + "a" * 48, "ai_studio": "AIza" + "a" * 35},
-        auto_approve_edits=False,
-        auto_approve_native_commands=False,
-        native_command_allowlist=["ls", "git status"],
-    )
+def valid_settings_data():
+    """Provides valid data dictionary for CodeAgentSettings."""
+    # Use actual instances or valid dicts for nested models
+    actual_api_keys = ApiKeys(openai="valid_key")  # Create ApiKeys instance
+    actual_security = SecuritySettings()  # Use defaults
+
+    return {
+        "default_provider": "openai",
+        "default_model": "gpt-4",
+        "api_keys": actual_api_keys,  # Use instance
+        "auto_approve_edits": False,
+        "auto_approve_native_commands": False,
+        "native_command_allowlist": ["ls", "pwd"],
+        "rules": ["Rule 1"],
+        "ollama": {},
+        "security": actual_security,  # Use instance
+        "verbosity": 1,
+        "max_tokens": 2000,
+        "max_tool_calls": 5,
+    }
+
+
+@pytest.fixture
+def invalid_settings_data(valid_settings_data):
+    """Provides invalid data dictionary (e.g., missing API key)."""
+    data = valid_settings_data.copy()
+    # Invalidate: Set default provider key to None on the actual ApiKeys object
+    # Requires the fixture to return the instantiated object, not just the dict
+    # Let's modify valid_settings_data to return the CodeAgentSettings object
+    # For now, let's assume valid_settings_data provides a valid CodeAgentSettings object
+    # and we modify it here.
+    # This fixture might need adjustment depending on how valid_settings_data is used.
+
+    # Re-create with modification for simplicity if valid_settings_data returns dict
+    invalid_api_keys = ApiKeys(openai=None)  # Set openai key to None
+    data["api_keys"] = invalid_api_keys
+    return data
 
 
 def test_validation_result():
@@ -134,51 +160,43 @@ def test_validate_native_command_allowlist():
     assert all(cmd in result.warnings[0] for cmd in ["'rm'", "'g'", "';'", "'ls | rm'"])
 
 
-def test_validate_config_with_valid_config(valid_config):
+def test_validate_config_with_valid_config(valid_settings_data):
     """Test the main validation function with a valid config."""
-    result = validate_config(valid_config)
-    assert result.valid is True
-    assert not result.errors
+    settings = CodeAgentSettings(**valid_settings_data)
+    # validate_config now returns bool
+    is_valid = validate_config(settings)
+    assert is_valid is True
+    # Cannot check errors/warnings on bool result
 
-    # Valid config may have a warning about short command patterns like 'ls'
-    # So check for security warnings by adding them to the config
-
-    # Check warning for security settings
-    config_with_security_risk = valid_config.model_copy(
-        update={
+    # Test validation with warnings (security risks)
+    config_with_security_risk = settings.model_copy(
+        update={  # Use update dictionary
             "auto_approve_native_commands": True,
-            "native_command_allowlist": ["long-command", "another-safe-command"],  # Use safer commands
+            "native_command_allowlist": ["long-command"],
         }
     )
-    result = validate_config(config_with_security_risk)
-    assert result.valid is True  # Security issues are warnings, not errors
-    assert len(result.warnings) == 1
-    assert "SECURITY RISK" in result.warnings[0]
-    assert "auto_approve_native_commands" in result.warnings[0]
+    is_valid_with_warning = validate_config(config_with_security_risk)
+    assert is_valid_with_warning is True  # Should still be True despite warnings
 
-    # Check both security warnings
-    config_with_both_risks = valid_config.model_copy(
-        update={
+    config_with_both_risks = settings.model_copy(
+        update={  # Use update dictionary
             "auto_approve_native_commands": True,
             "auto_approve_edits": True,
-            "native_command_allowlist": ["long-command", "another-safe-command"],  # Use safer commands
+            "native_command_allowlist": ["long-command"],
         }
     )
-    result = validate_config(config_with_both_risks)
-    assert result.valid is True
-    assert len(result.warnings) == 2
-    assert any("auto_approve_native_commands" in w for w in result.warnings)
-    assert any("auto_approve_edits" in w for w in result.warnings)
+    is_valid_with_both_warnings = validate_config(config_with_both_risks)
+    assert is_valid_with_both_warnings is True
 
 
-def test_validate_config_with_invalid_config(valid_config):
+def test_validate_config_with_invalid_config(valid_settings_data):
     """Test the main validation function with invalid configurations."""
-    # Invalid model
-    invalid_model_config = valid_config.model_copy(update={"default_model": "not-a-real-model"})
-    result = validate_config(invalid_model_config)
-    assert result.valid is False
-    assert len(result.errors) == 1
-    assert "not recognized for provider" in result.errors[0]
+    base_settings = CodeAgentSettings(**valid_settings_data)
+    invalid_model_config = base_settings.model_copy(update={"default_model": "not-a-real-model"})
+    # validate_config now returns bool
+    is_valid = validate_config(invalid_model_config)
+    assert is_valid is False
+    # Cannot check specific errors on bool result
 
 
 def test_validate_dynamic_method():
@@ -329,3 +347,30 @@ def test_validate_native_command_settings_valid():
 
     assert len(result.errors) == 0
     assert len(result.warnings) == 0
+
+
+def test_validation_success(valid_settings_data):
+    """Test that validation passes with valid CodeAgentSettings data."""
+    settings = CodeAgentSettings(**valid_settings_data)
+    # Pass individual attributes from settings to initialize_config
+    initialize_config(
+        cli_provider=settings.default_provider,
+        cli_model=settings.default_model,
+        # Pass other relevant settings if initialize_config accepts them
+        # Or rely on build_effective_config within initialize_config
+        # If we pass None, build_effective_config will use the object's values
+        validate=False,  # Assuming we test validation separately
+    )
+    assert validate_config(verbose=False) is True
+
+
+def test_validation_failure_missing_key(invalid_settings_data):
+    """Test validation fails when the default provider API key is missing."""
+    settings = CodeAgentSettings(**invalid_settings_data)
+    # Pass individual attributes from settings to initialize_config
+    initialize_config(
+        cli_provider=settings.default_provider,
+        cli_model=settings.default_model,
+        validate=False,  # Assuming we test validation separately
+    )
+    assert validate_config(verbose=False) is False

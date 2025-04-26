@@ -17,43 +17,19 @@ jobs:
       with:
         fetch-depth: 0  # Needed for PR comments
 
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+    - name: Install UV and setup Python ${{ matrix.python-version }}
+      uses: astral-sh/setup-uv@v5
       with:
         python-version: ${{ matrix.python-version }}
-        # Remove pip caching since we're using uv
-
-    # Install uv
-    - name: Install uv
-      run: curl -LsSf https://astral.sh/uv/install.sh | sh
-      env:
-        # Prevent the installer from modifying GitHub Actions environment files
-        UV_BOOTSTRAP_SKIP_MODIFY_PATH: 1
-        
-    # Cache uv cache directory to speed up dependency installation
-    - name: Cache uv dependencies
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/.cache/uv
-          ~/.uv
-        key: ${{ runner.os }}-uv-${{ hashFiles('pyproject.toml') }}
-        restore-keys: |
-          ${{ runner.os }}-uv-
+        enable-cache: true
+        cache-dependency-glob: "pyproject.toml uv.toml"
 
     # Install dependencies using uv
     - name: Install dependencies
-      run: |
-        # Add uv to the PATH
-        export PATH="$HOME/.cargo/bin:$PATH"
-        # Install project, dev dependencies, AND explicitly list test requirements into the system environment
-        uv pip install --system -e '.[dev]' pytest pytest-cov pytest-mock tomli
+      run: uv sync --all-extras --dev
 
     - name: Run tests with coverage
-      run: |
-        # Add uv to the PATH (optional but safe)
-        export PATH="$HOME/.cargo/bin:$PATH"
-        python -m pytest tests/ --cov=code_agent --cov=cli_agent --cov-report=xml --cov-report=term --cov-fail-under=80 --junitxml=test-results.xml
+      run: uv run pytest tests/ --cov=code_agent --cov-report=xml --cov-report=term --cov-fail-under=80 --junitxml=test-results.xml
 
     - name: Upload test results
       uses: actions/upload-artifact@v4
@@ -66,8 +42,6 @@ jobs:
           
     - name: Generate Coverage Report
       run: |
-        # Add uv to the PATH (optional but safe)
-        export PATH="$HOME/.cargo/bin:$PATH"
         # Use a multi-line Python script instead of one-liners to avoid f-string backslash issues
         cat > generate_coverage.py << 'EOF'
         import xml.etree.ElementTree as ET
@@ -94,10 +68,10 @@ jobs:
         EOF
 
         # Run the script
-        python generate_coverage.py
+        uv run python generate_coverage.py
         
         # Generate HTML coverage for artifact
-        python -m pytest tests/ --cov=code_agent --cov=cli_agent --cov-report=html
+        uv run pytest tests/ --cov=code_agent --cov-report=html
 
     - name: Upload coverage HTML report
       uses: actions/upload-artifact@v4
@@ -127,34 +101,15 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: Set up Python
-      uses: actions/setup-python@v5
+    - name: Install UV and setup Python
+      uses: astral-sh/setup-uv@v5
       with:
         python-version: '3.11'
-        # Remove pip caching since we're using uv
-
-    # Install uv
-    - name: Install uv
-      run: curl -LsSf https://astral.sh/uv/install.sh | sh
-      env:
-        UV_BOOTSTRAP_SKIP_MODIFY_PATH: 1
+        enable-cache: true
+        cache-dependency-glob: "pyproject.toml"
         
-    # Cache uv cache directory
-    - name: Cache uv dependencies
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/.cache/uv
-          ~/.uv
-        key: ${{ runner.os }}-uv-lint-${{ hashFiles('pyproject.toml') }}
-        restore-keys: |
-          ${{ runner.os }}-uv-lint-
-
     - name: Install ruff
-      run: |
-        export PATH="$HOME/.cargo/bin:$PATH"
-        uv pip install --system ruff
+      run: uv pip install --system ruff
         
     - name: Run linting
-      run: |
-        python -m ruff check . --output-format=github
+      run: uv run ruff check . --output-format=github

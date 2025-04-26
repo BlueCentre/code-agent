@@ -48,11 +48,7 @@ class SecuritySettings(BaseModel):
         description="Enable command validation to prevent execution of dangerous commands",
     )
 
-    # Web search settings
-    enable_web_search: bool = Field(
-        default=True,
-        description="Enable web search functionality to retrieve information from the internet",
-    )
+    # Web search setting removed - using ADK's google_search instead
 
 
 class FileOperationsSettings(BaseModel):
@@ -112,6 +108,12 @@ class CodeAgentSettings(BaseModel):
         description="API keys for different LLM providers",
     )
 
+    # Verbosity setting
+    verbosity: int = Field(
+        default=1,
+        description="Output verbosity level (0=quiet, 1=normal, 2=verbose, 3=debug)",
+    )
+
     # Auto-approve settings
     auto_approve_edits: bool = Field(
         default=False,
@@ -150,6 +152,21 @@ class CodeAgentSettings(BaseModel):
     rules: List[str] = Field(
         default_factory=list,
         description="Custom rules to influence the agent's behavior",
+    )
+
+    # Add max_tokens setting
+    max_tokens: int = Field(
+        default=1000,
+        description="Maximum number of tokens for the LLM response",
+    )
+
+    # Add max_tool_calls setting
+    max_tool_calls: int = Field(default=10, description="Maximum number of consecutive tool calls allowed before stopping.")
+
+    # Temperature setting
+    temperature: float | None = Field(
+        default=0.7,
+        description="Temperature for the LLM model",
     )
 
     # Other fields from config can be added as needed
@@ -203,6 +220,13 @@ class SettingsConfig(BaseSettings):
     default_provider: str = "ai_studio"
     default_model: str = "gemini-2.0-flash"
     api_keys: ApiKeys = Field(default_factory=ApiKeys)
+
+    # Verbosity setting
+    verbosity: int = Field(
+        default=1,
+        description="Output verbosity level (0=quiet, 1=normal, 2=verbose, 3=debug)",
+    )
+
     auto_approve_edits: bool = False
     auto_approve_native_commands: bool = False
     native_command_allowlist: List[str] = Field(default_factory=list)
@@ -213,6 +237,15 @@ class SettingsConfig(BaseSettings):
 
     # Add native command settings
     native_commands: NativeCommandSettings = Field(default_factory=NativeCommandSettings)
+
+    # Add max_tool_calls setting here as well
+    max_tool_calls: int = Field(default=10, description="Maximum number of consecutive tool calls allowed before stopping.")
+
+    # Temperature setting
+    temperature: float | None = Field(
+        default=0.7,
+        description="Temperature for the LLM model",
+    )
 
     # Environment variable mapping configuration
     model_config = SettingsConfigDict(
@@ -303,55 +336,72 @@ def build_effective_config(
     cli_model: Optional[str] = None,
     cli_auto_approve_edits: Optional[bool] = None,
     cli_auto_approve_native_commands: Optional[bool] = None,
-) -> SettingsConfig:
-    """Builds the effective config by layering File > Env > CLI > Defaults.
-
-    Using pydantic-settings for robust environment variable handling.
-
-    Args:
-        config_file_path: Path to the config file
-        cli_provider: Provider override from CLI
-        cli_model: Model override from CLI
-        cli_auto_approve_edits: Auto-approve edits override from CLI
-        cli_auto_approve_native_commands: Auto-approve commands override from CLI
-
-    Returns:
-        SettingsConfig instance with all settings applied
+) -> CodeAgentSettings:
+    """Builds the effective configuration by layering sources:
+    Defaults < Config File < Environment Variables < CLI Arguments.
     """
+
+    # Helper for deep merging dictionaries (remains the same)
+    def deep_update(target: Dict, source: Dict) -> Dict:
+        for key, value in source.items():
+            # Filter out None values from source unless the key doesn't exist in target
+            if value is not None or key not in target:
+                if isinstance(value, dict) and key in target and isinstance(target[key], dict):
+                    deep_update(target[key], value)
+                else:
+                    target[key] = value
+        return target
+
+    # 1. Load defaults from CodeAgentSettings
+    effective_data = CodeAgentSettings().model_dump()
+
+    # 2. Load config file data and merge
+    settings_file_data = load_config_from_file(config_file_path)
+    effective_data = deep_update(effective_data, settings_file_data)
+
+    # 3. Load environment variables using SettingsConfig and merge
     try:
-        # 1. Load file settings as base values
-        file_config_data = load_config_from_file(config_file_path)
-
-        # 2. Preprocess file data to handle potential None values in lists
-        if "native_command_allowlist" in file_config_data and file_config_data["native_command_allowlist"] is None:
-            file_config_data["native_command_allowlist"] = []
-        if "rules" in file_config_data and file_config_data["rules"] is None:
-            file_config_data["rules"] = []
-
-        # 3. Create settings - this will automatically load values from environment variables
-        # based on the model_config settings
-        settings = SettingsConfig(**file_config_data)
-
-        # 4. Apply CLI overrides (highest priority)
-        if cli_provider is not None:
-            settings.default_provider = cli_provider
-        if cli_model is not None:
-            settings.default_model = cli_model
-        if cli_auto_approve_edits is not None:
-            settings.auto_approve_edits = cli_auto_approve_edits
-        if cli_auto_approve_native_commands is not None:
-            settings.auto_approve_native_commands = cli_auto_approve_native_commands
-
-        return settings
+        env_settings = SettingsConfig()  # Loads from .env and env vars
+        # Get only values explicitly set by env vars (not defaults from SettingsConfig)
+        env_data = env_settings.model_dump(exclude_unset=True)
+        # Special handling for potentially empty nested dicts like api_keys
+        if "api_keys" in env_data and not env_data["api_keys"]:
+            del env_data["api_keys"]  # Don't merge empty dict over existing keys
+        # Remove other potentially empty nested structures if needed
 
     except ValidationError as e:
-        print(f"Error: Invalid configuration:\n{e}")
-        print("Falling back to default configuration.")
-        return SettingsConfig()
-    except Exception as e:
-        print(f"Error creating configuration: {e}")
-        print("Falling back to default configuration.")
-        return SettingsConfig()
+        print(f"Warning: Error loading environment configuration: {e}")
+        env_data = {}
+    effective_data = deep_update(effective_data, env_data)
+
+    # 4. Prepare CLI overrides (only non-None values)
+    cli_overrides = {
+        "default_provider": cli_provider,
+        "default_model": cli_model,
+        "auto_approve_edits": cli_auto_approve_edits,
+        "auto_approve_native_commands": cli_auto_approve_native_commands,
+    }
+    cli_overrides = {k: v for k, v in cli_overrides.items() if v is not None}
+
+    # 5. Merge CLI overrides
+    effective_data = deep_update(effective_data, cli_overrides)
+
+    # 6. Create the final CodeAgentSettings object
+    try:
+        final_settings = create_settings_model(effective_data)
+    except ValidationError as e:
+        print(f"Validation Error creating final CodeAgentSettings from merged config: {e}")
+        print("Merged data passed to create_settings_model:")
+        try:
+            import json
+
+            print(json.dumps(effective_data, indent=2, default=str))
+        except Exception:
+            print("Could not serialize merged data to JSON.")  # Fallback
+            print(effective_data)
+        raise
+
+    return final_settings
 
 
 def initialize_config(

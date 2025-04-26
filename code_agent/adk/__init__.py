@@ -6,6 +6,9 @@ with the Code Agent framework. It provides adapters, configurations, and utiliti
 using ADK in the Code Agent ecosystem.
 """
 
+import logging
+from typing import Optional
+
 import google.adk
 
 # Export version for convenience
@@ -30,3 +33,22 @@ from code_agent.adk.models import (  # noqa
     get_model_providers,
     get_default_models_by_provider,
 )
+
+from .services import CodeAgentADKSessionManager, get_adk_session_service, get_memory_service
+from .session_config import CodeAgentSessionConfig, IN_MEMORY_SESSION_CONFIG
+from .memory import InMemoryMemoryService, BaseMemoryService, MemoryType, MemoryResult, SearchMemoryResponse
+
+logger = logging.getLogger(__name__)
+
+__all__ = [
+    "IN_MEMORY_SESSION_CONFIG",
+    "BaseMemoryService",
+    "CodeAgentADKSessionManager",
+    "CodeAgentSessionConfig",
+    "InMemoryMemoryService",
+    "MemoryResult",
+    "MemoryType",
+    "SearchMemoryResponse",
+    "get_adk_session_service",
+    "get_memory_service",
+]

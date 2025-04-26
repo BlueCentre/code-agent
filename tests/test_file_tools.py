@@ -4,9 +4,8 @@ from unittest.mock import patch
 
 import pytest
 
-from code_agent.config import (  # Changed Config -> SettingsConfig
-    SettingsConfig,
-)
+from code_agent.config import CodeAgentSettings
+from code_agent.config.settings_based_config import SecuritySettings
 from code_agent.tools.file_tools import (
     apply_edit,
     read_file,
@@ -20,6 +19,31 @@ def mock_path_validation():
     """Mock the is_path_safe function to always return True for tests."""
     with patch("code_agent.tools.file_tools.is_path_safe", return_value=(True, None)):
         yield
+
+
+@pytest.fixture(autouse=True)
+def mock_settings(monkeypatch):
+    """Automatically mocks settings for all tests in this file."""
+    # Create an actual SecuritySettings instance
+    actual_security_settings = SecuritySettings(
+        path_validation=True,
+        workspace_restriction=True,  # Assume restricted for most tests
+        command_validation=True,  # Assume enabled for safety
+    )
+
+    # Mock the CodeAgentSettings object
+    mock_config = CodeAgentSettings(
+        # Add necessary defaults
+        default_provider="mock",
+        default_model="mock",
+        api_keys={},  # Can be empty if not used by file tools
+        security=actual_security_settings,  # Use the actual instance
+        auto_approve_edits=False,  # Default to requiring confirmation
+        # Add other fields if needed by tested functions
+    )
+    # Patch get_config to return the mocked object
+    monkeypatch.setattr("code_agent.tools.simple_tools.get_config", lambda: mock_config)
+    return mock_config  # Return it in case a test needs to modify it
 
 
 # --- Fixtures ---
@@ -215,7 +239,7 @@ def test_read_file_invalid_pagination_params(tmp_path: Path):
 def test_apply_edit_modify_confirmed(temp_file: Path):
     """Test applying an edit with user confirmation."""
     # Setup mock config (no auto-approve)
-    mock_config = SettingsConfig(auto_approve_edits=False)
+    mock_config = CodeAgentSettings(auto_approve_edits=False)
 
     # Use the correct import path for get_config and patch it
     with patch("code_agent.config.config.get_config", return_value=mock_config):
@@ -230,7 +254,7 @@ def test_apply_edit_modify_confirmed(temp_file: Path):
 def test_apply_edit_modify_cancelled(temp_file: Path):
     """Test cancelling an edit."""
     # Setup mock config (no auto-approve)
-    mock_config = SettingsConfig(auto_approve_edits=False)
+    mock_config = CodeAgentSettings(auto_approve_edits=False)
 
     # Use the correct import path for get_config and patch it
     with patch("code_agent.config.config.get_config", return_value=mock_config):
@@ -245,7 +269,7 @@ def test_apply_edit_modify_cancelled(temp_file: Path):
 def test_apply_edit_auto_approved(temp_file: Path):
     """Test applying an edit with auto_approve_edits=True."""
     # Setup mock config (auto-approve)
-    mock_config = SettingsConfig(auto_approve_edits=True)
+    mock_config = CodeAgentSettings(auto_approve_edits=True)
 
     # Use the correct import path for get_config and patch it
     with patch("code_agent.config.config.get_config", return_value=mock_config):
@@ -261,7 +285,7 @@ def test_apply_edit_auto_approved(temp_file: Path):
 def test_apply_edit_create_file(tmp_path: Path):
     """Test creating a new file."""
     # Setup mock config (no auto-approve)
-    mock_config = SettingsConfig(auto_approve_edits=False)
+    mock_config = CodeAgentSettings(auto_approve_edits=False)
 
     # Use the correct import path for get_config and patch it
     with patch("code_agent.config.config.get_config", return_value=mock_config):
@@ -277,7 +301,7 @@ def test_apply_edit_create_file(tmp_path: Path):
 def test_apply_edit_no_changes(temp_file: Path):
     """Test apply_edit when proposed content is the same as existing."""
     # Setup mock config (no auto-approve)
-    mock_config = SettingsConfig(auto_approve_edits=False)
+    mock_config = CodeAgentSettings(auto_approve_edits=False)
 
     # Use the correct import path for get_config and patch it
     with patch("code_agent.config.config.get_config", return_value=mock_config):
@@ -296,7 +320,7 @@ def test_apply_edit_no_changes(temp_file: Path):
 def test_apply_edit_is_directory(temp_dir: Path):
     """Test applying an edit to a path that is a directory."""
     # Setup mock config (no auto-approve)
-    mock_config = SettingsConfig(auto_approve_edits=False)
+    mock_config = CodeAgentSettings(auto_approve_edits=False)
 
     # Use the correct import path for get_config and patch it
     with patch("code_agent.config.config.get_config", return_value=mock_config):
@@ -307,7 +331,7 @@ def test_apply_edit_is_directory(temp_dir: Path):
 def test_apply_edit_outside_cwd(temp_file: Path):
     """Test editing a file outside of the current working directory."""
     # Setup mock config (no auto-approve)
-    mock_config = SettingsConfig(auto_approve_edits=False)
+    mock_config = CodeAgentSettings(auto_approve_edits=False)
 
     # Use the correct import path for get_config and patch it
     with patch("code_agent.config.config.get_config", return_value=mock_config):
@@ -320,7 +344,7 @@ def test_apply_edit_outside_cwd(temp_file: Path):
 def test_apply_edit_write_permission_error(temp_file: Path):
     """Test handling permission error during write."""
     # Setup mock config (no auto-approve)
-    mock_config = SettingsConfig(auto_approve_edits=False)
+    mock_config = CodeAgentSettings(auto_approve_edits=False)
 
     # Use the correct import path for get_config and patch it
     with patch("code_agent.config.config.get_config", return_value=mock_config):
@@ -336,7 +360,7 @@ def test_apply_edit_write_permission_error(temp_file: Path):
 def test_apply_edit_generic_error(temp_file: Path):
     """Test handling unknown errors during apply_edit."""
     # Setup mock config (no auto-approve)
-    mock_config = SettingsConfig(auto_approve_edits=False)
+    mock_config = CodeAgentSettings(auto_approve_edits=False)
 
     # Use the correct import path for get_config and patch it
     with patch("code_agent.config.config.get_config", return_value=mock_config):

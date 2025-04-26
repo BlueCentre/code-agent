@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, mock_open, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 import yaml
@@ -6,10 +6,11 @@ from typer.testing import CliRunner
 
 from code_agent.cli.main import app
 from code_agent.config import (
-    ApiKeys,
-    SettingsConfig,
+    CodeAgentSettings,
+    build_effective_config,
     get_config,
 )
+from code_agent.config.settings_based_config import ApiKeys, SecuritySettings
 
 # Default config used in tests
 DEFAULT_CONFIG = {
@@ -64,26 +65,6 @@ def mock_env_vars():
 
 
 @pytest.fixture
-def mock_config_file():
-    """Mock the config file with test configuration."""
-    config_content = {
-        "default_provider": "file_provider",
-        "default_model": "file_model",
-        "api_keys": {"openai": "file_openai_key", "groq": "file_groq_key"},
-        "auto_approve_edits": False,
-        "auto_approve_native_commands": True,
-        "native_command_allowlist": ["ls", "cat", "pwd"],
-        "rules": ["Be concise", "Explain code"],
-    }
-
-    with (
-        patch("builtins.open", mock_open(read_data=yaml.dump(config_content))),
-        patch("os.path.exists", return_value=True),
-    ):
-        yield config_content
-
-
-@pytest.fixture
 def reset_config_cache():
     """Clear any cached config."""
     # If get_config uses caching, this would reset it
@@ -104,15 +85,15 @@ def cli_runner():
 
 def test_config_defaults_only():
     """Test default configuration when no file or env vars present."""
-    # Create a SettingsConfig instance directly to test the default values
-    from code_agent.config import SettingsConfig
+    # Use CodeAgentSettings
+    config = CodeAgentSettings()
 
-    config = SettingsConfig()
-
-    # Should match defaults
+    # Check defaults, including nested models
     assert config.default_provider == DEFAULT_CONFIG["default_provider"]
-    assert config.default_model == "gemini-2.0-flash"  # Matches the actual default
+    assert config.default_model == "gemini-2.0-flash"
     assert isinstance(config.api_keys, ApiKeys)
+    assert isinstance(config.security, SecuritySettings)
+    assert getattr(config.security, "path_validation", None) is True
     assert config.auto_approve_edits is False  # Updated to match actual default
     assert config.auto_approve_native_commands is False  # Updated to match actual default
     assert isinstance(config.native_command_allowlist, list)
@@ -123,6 +104,10 @@ def test_config_defaults_only():
 
 def test_config_file_only(mock_config_file, reset_config_cache):
     """Test configuration from file only (no env vars)."""
+    # Load expected data from the mock file
+    with open(mock_config_file, "r") as f:
+        file_config_data = yaml.safe_load(f)
+
     # Clear environment variables that might be set
     with (
         patch("os.environ", {}),
@@ -135,16 +120,16 @@ def test_config_file_only(mock_config_file, reset_config_cache):
         config = get_config()
 
     # Should match file values (check basic values)
-    assert config.default_provider == mock_config_file["default_provider"]
-    assert config.default_model == mock_config_file["default_model"]
-    assert config.auto_approve_edits == mock_config_file["auto_approve_edits"]
-    assert config.auto_approve_native_commands == mock_config_file["auto_approve_native_commands"]
-    assert sorted(config.native_command_allowlist) == sorted(mock_config_file["native_command_allowlist"])
-    assert config.rules == mock_config_file["rules"]
+    assert config.default_provider == file_config_data["default_provider"]
+    assert config.default_model == file_config_data["default_model"]
+    assert config.auto_approve_edits == file_config_data["auto_approve_edits"]
+    assert config.auto_approve_native_commands == file_config_data["auto_approve_native_commands"]
+    assert sorted(config.native_command_allowlist) == sorted(file_config_data["native_command_allowlist"])
+    assert config.rules == file_config_data["rules"]
 
     # API keys should match file (ignoring keys not in file)
-    assert vars(config.api_keys)["openai"] == mock_config_file["api_keys"]["openai"]
-    assert vars(config.api_keys)["groq"] == mock_config_file["api_keys"]["groq"]
+    assert vars(config.api_keys)["openai"] == file_config_data["api_keys"]["openai"]
+    assert vars(config.api_keys)["groq"] == file_config_data["api_keys"]["groq"]
     assert vars(config.api_keys)["anthropic"] is None  # Not in file
     assert vars(config.api_keys)["ai_studio"] is None  # Not in file
 
@@ -184,6 +169,10 @@ def test_config_env_vars_only(mock_env_vars, monkeypatch, reset_config_cache):
 
 def test_config_env_overrides_file(mock_config_file, mock_env_vars, monkeypatch, reset_config_cache):
     """Test environment variables override file config."""
+    # Load expected data from the mock file
+    with open(mock_config_file, "r") as f:
+        file_config_data = yaml.safe_load(f)
+
     # Apply the mock environment variables
     mock_env_vars(monkeypatch)
 
@@ -210,8 +199,8 @@ def test_config_env_overrides_file(mock_config_file, mock_env_vars, monkeypatch,
     assert vars(config.api_keys)["groq"] == "file_groq_key"  # From file
 
     # Other settings should come from file if not in env
-    assert sorted(config.native_command_allowlist) == sorted(mock_config_file["native_command_allowlist"])
-    assert config.rules == mock_config_file["rules"]
+    assert sorted(config.native_command_allowlist) == sorted(file_config_data["native_command_allowlist"])
+    assert config.rules == file_config_data["rules"]
 
 
 # --- Test CLI overrides ---
@@ -266,119 +255,57 @@ def test_cli_specific_options(cli_runner):
     assert "Verbose mode enabled" in result.stdout
 
 
-@pytest.mark.skip(reason="Configuration hierarchy has changed")
-def test_config_inheritance_for_api_keys(reset_config_cache):
-    """Test proper inheritance of API keys from different sources."""
-    # Create a partial config file
-    file_config = {
-        "api_keys": {
-            "openai": "file_openai_key",
-            "groq": "file_groq_key",
-            # anthropic missing from file
-        }
+def test_config_hierarchy(tmp_path, monkeypatch):
+    """Comprehensive test of config loading hierarchy: Env < File < CLI."""
+
+    # 1. Base Config File (Simulating ~/.config/code-agent/config.yaml or specified file)
+    #    This represents the lowest priority settings.
+    config_content = {
+        "default_provider": "file_provider",
+        "default_model": "file_model",
+        "api_keys": {"anthropic": "file_anthropic_key", "openai": "file_openai_key"},
+        "auto_approve_edits": False,
+        "auto_approve_native_commands": False,
+        "rules": ["File rule 1"],
     }
+    mock_config_file = tmp_path / "test_config.yaml"
+    mock_config_file.write_text(yaml.dump(config_content))
 
-    # Override with some environment variables
-    env_vars = {
-        "ANTHROPIC_API_KEY": "env_anthropic_key",
-        # openai present in file but not env
-        # groq present in both
-        "GROQ_API_KEY": "env_groq_key",
-    }
+    # 2. Environment Variable Overrides (Overrides File)
+    monkeypatch.setenv("CODE_AGENT_DEFAULT_MODEL", "env_model")  # Overrides file
+    monkeypatch.setenv("OPENAI_API_KEY", "env_openai_key")  # Overrides file
+    monkeypatch.setenv("CODE_AGENT_AUTO_APPROVE_EDITS", "True")  # Overrides file
+    # Set an env var for a key not in the file
+    monkeypatch.setenv("GROQ_API_KEY", "env_groq_key")
 
-    with (
-        patch("builtins.open", mock_open(read_data=yaml.dump(file_config))),
-        patch("os.path.exists", return_value=True),
-        patch("os.environ", env_vars),
-    ):
-        config = get_config()
+    # 3. CLI Argument Overrides (Overrides Env/File)
+    cli_provider = "cli_provider"  # Overrides file
+    cli_model = "cli_model"  # Overrides env/file
+    cli_auto_approve_native = True  # Overrides file default
 
-    # Check proper precedence
-    assert vars(config.api_keys)["openai"] == "file_openai_key"  # From file only
-    assert vars(config.api_keys)["anthropic"] == "env_anthropic_key"  # From env only
-    assert vars(config.api_keys)["groq"] == "env_groq_key"  # Env overrides file
+    # Build effective config using the updated signature
+    # Pass the path to our mock config file directly
+    effective_config = build_effective_config(
+        config_file_path=mock_config_file,  # Pass the Path object for the mock file
+        cli_provider=cli_provider,
+        cli_model=cli_model,
+        cli_auto_approve_native_commands=cli_auto_approve_native,
+        cli_auto_approve_edits=None,  # Not overridden by CLI here, env takes precedence
+    )
 
-
-@pytest.mark.skip(reason="CLI interface has changed")
-def test_config_autoload_on_cli_command(cli_runner):
-    """Test that config is automatically loaded for each CLI command."""
-    with patch("code_agent.config.get_config") as mock_get_config:
-        mock_config = SettingsConfig(
-            default_provider="test_provider",
-            default_model="test_model",
-            api_keys=ApiKeys(openai="test_key"),
-        )
-        mock_get_config.return_value = mock_config
-
-        # Run a command
-        result = cli_runner.invoke(app, ["config", "show"])
-
-    # Check command executed successfully
-    assert result.exit_code == 0
-
-    # Check that get_config was called
-    mock_get_config.assert_called_once()
-
-
-@pytest.mark.skip(reason="Environment variable handling has changed")
-def test_config_boolean_conversion_from_env(reset_config_cache):
-    """Test correct conversion of string env vars to boolean config values."""
-    # Test various string representations of boolean values
-    env_cases = {
-        "true": True,
-        "True": True,
-        "TRUE": True,
-        "1": True,
-        "yes": True,
-        "false": False,
-        "False": False,
-        "FALSE": False,
-        "0": False,
-        "no": False,
-    }
-
-    for env_str, expected_bool in env_cases.items():
-        # Create environment with this boolean string
-        env_vars = {"CODE_AGENT_AUTO_APPROVE_EDITS": env_str}
-
-        with patch("os.path.exists", return_value=False), patch("os.environ", env_vars):
-            config = get_config()
-
-            # Check correct conversion
-            assert config.auto_approve_edits is expected_bool, f"Failed to convert '{env_str}' to {expected_bool}"
-
-
-@pytest.mark.skip(reason="Validation rules have changed")
-def test_config_validation_rules():
-    """Test config validation rules from Pydantic."""
-    # Test invalid provider name
-    invalid_config = {
-        "default_provider": "invalid_provider",  # Not in supported providers
-        "api_keys": {},
-    }
-
-    with (
-        patch("builtins.open", mock_open(read_data=yaml.dump(invalid_config))),
-        patch("os.path.exists", return_value=True),
-        pytest.raises(ValueError) as exc_info,
-    ):
-        get_config()
-
-    # Should raise validation error about invalid provider
-    assert "default_provider" in str(exc_info.value).lower()
-
-    # Test incompatible allow list and auto approve
-    risky_config = {
-        "native_command_allowlist": ["rm", "sudo"],  # Dangerous commands
-        "auto_approve_native_commands": True,  # Auto approve is risky with these
-    }
-
-    with (
-        patch("builtins.open", mock_open(read_data=yaml.dump(risky_config))),
-        patch("os.path.exists", return_value=True),
-        pytest.raises(ValueError) as exc_info,
-    ):
-        get_config()
-
-    # Should raise validation error about dangerous commands with auto approve
-    assert "dangerous" in str(exc_info.value).lower() or "risky" in str(exc_info.value).lower()
+    # Assertions based on the final CodeAgentSettings object reflecting hierarchy
+    # CLI > Env > File > Defaults
+    assert isinstance(effective_config, CodeAgentSettings)
+    assert effective_config.default_provider == cli_provider  # CLI > File
+    assert effective_config.default_model == cli_model  # CLI > Env > File
+    # API Keys: Env > File
+    assert getattr(effective_config.api_keys, "openai", None) == "env_openai_key"  # Env > File
+    assert getattr(effective_config.api_keys, "anthropic", None) == "file_anthropic_key"  # File only
+    assert getattr(effective_config.api_keys, "groq", None) == "env_groq_key"  # Env only
+    # Auto Approve: Env > File (CLI didn't override edits)
+    assert effective_config.auto_approve_edits is True  # Env > File
+    assert effective_config.auto_approve_native_commands is True  # CLI > File
+    # Rules: File only
+    assert effective_config.rules == ["File rule 1"]  # From File config
+    # Allowlist: Default only
+    assert effective_config.native_command_allowlist == []  # Default empty list (not set elsewhere)

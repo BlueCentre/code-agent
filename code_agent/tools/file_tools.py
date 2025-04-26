@@ -12,7 +12,7 @@ from rich.syntax import Syntax
 from rich.table import Table
 from rich.text import Text
 
-from code_agent.config import get_config
+from code_agent.config import initialize_config
 from code_agent.tools.error_utils import (
     format_file_error,
     format_path_restricted_error,
@@ -112,110 +112,126 @@ def _read_file_lines(file_path: Path, offset: int = 0, limit: Optional[int] = No
 
 
 # --- Tool Implementation ---
-def read_file(path: str, offset: Optional[int] = None, limit: Optional[int] = None, enable_pagination: bool = False) -> str:
-    """Reads a file after checking security and handles pagination for large files."""
+async def read_file(args: ReadFileArgs) -> str:
+    """Reads the contents of a file, with optional offset and limit.
+    Handles security checks and pagination.
+    """
+    config = initialize_config().agent_settings
 
-    # Check config for pagination settings
-    config = get_config()
-    # If enable_pagination not explicitly set, use config value
-    if not enable_pagination and hasattr(config, "file_operations") and hasattr(config.file_operations, "read_file"):
-        enable_pagination = getattr(config.file_operations.read_file, "enable_pagination", False)
+    # Initialize offset and limit before the try block
+    offset = args.offset or 0
+    limit = args.limit
 
-    # Security check - make sure the path is safe
-    is_safe, reason = is_path_safe(path)
-    if not is_safe:
-        return format_path_restricted_error(path, reason)
-
-    # Validate parameters
-    if offset is not None and offset < 0:
-        return "Error: Failed when validating parameters. Offset must be a non-negative integer."
-
-    if limit is not None and limit <= 0:
-        return "Error: Failed when validating parameters. Limit must be a positive integer."
-
+    # Security check: Prevent reading outside the workspace
     try:
-        with file_operation_indicator("Reading", path) as status:
-            file_path = Path(path).resolve()
+        # Check config for pagination settings
+        # If enable_pagination not explicitly set, use config value
+        enable_pagination = False
+        if config.file_operations.read_file:
+            enable_pagination = config.file_operations.read_file.enable_pagination
 
-            # Special handling for permission errors and other problems that might occur when accessing the file
-            if not file_path.exists():
-                return f"Error: File not found or is not a regular file: {path}"
+        if enable_pagination:
+            max_lines = config.file_operations.read_file.max_lines if config.file_operations.read_file else 500
+            # Update offset/limit based on args if pagination enabled
+            offset = args.offset or 0
+            limit = args.limit or max_lines
 
-            if not file_path.is_file():
-                return f"Error: File not found or is not a regular file: {path}"
+        # Security check - make sure the path is safe
+        is_safe, reason = is_path_safe(args.path)
+        if not is_safe:
+            return format_path_restricted_error(args.path, reason)
 
-            try:
-                # Check file size for large file warnings
+        # Validate parameters
+        if offset is not None and offset < 0:
+            return "Error: Failed when validating parameters. Offset must be a non-negative integer."
+
+        if limit is not None and limit <= 0:
+            return "Error: Failed when validating parameters. Limit must be a positive integer."
+
+        try:
+            with file_operation_indicator("Reading", args.path) as status:
+                file_path = Path(args.path).resolve()
+
+                # Special handling for permission errors and other problems that might occur when accessing the file
+                if not file_path.exists():
+                    return f"Error: File not found or is not a regular file: {args.path}"
+
+                if not file_path.is_file():
+                    return f"Error: File not found or is not a regular file: {args.path}"
+
                 try:
-                    file_size = file_path.stat().st_size
-                    file_size_mb = file_size / (1024 * 1024)
+                    # Check file size for large file warnings
+                    try:
+                        file_size = file_path.stat().st_size
+                        file_size_mb = file_size / (1024 * 1024)
 
-                    # Check if file is too large
-                    if file_size > MAX_FILE_SIZE_BYTES:
-                        return f"Error: File '{path}' is too large ({file_size_mb:.2f} MB). Maximum allowed size is {MAX_FILE_SIZE_BYTES / 1024 / 1024:.2f} MB."
-                except Exception as stat_error:
-                    return format_file_error(stat_error, path, "checking size of")
+                        # Check if file is too large
+                        if file_size > MAX_FILE_SIZE_BYTES:
+                            return f"Error: File '{args.path}' is too large ({file_size_mb:.2f} MB). Maximum allowed size is {MAX_FILE_SIZE_BYTES / 1024 / 1024:.2f} MB."
+                    except Exception as stat_error:
+                        return format_file_error(stat_error, args.path, "checking size of")
 
-                # Add sub-steps for large files
-                if file_size_mb > 5:  # Only show detailed steps for files > 5MB
-                    step_progress("Checking file size", "blue")
-                    status.update(f"[bold blue]Reading {path} ({file_size_mb:.1f}MB)...[/bold blue]")
+                    # Add sub-steps for large files
+                    if file_size_mb > 5:  # Only show detailed steps for files > 5MB
+                        step_progress("Checking file size", "blue")
+                        status.update(f"[bold blue]Reading {args.path} ({file_size_mb:.1f}MB)...[/bold blue]")
 
-                # Read the file content and handle exceptions
-                try:
-                    # Count total lines for pagination - this can raise exceptions
-                    total_lines = _count_file_lines(file_path)
+                    # Read the file content and handle exceptions
+                    try:
+                        # Count total lines for pagination - this can raise exceptions
+                        total_lines = _count_file_lines(file_path)
 
-                    if enable_pagination and total_lines > 1000:
-                        step_progress(f"Processing large file ({total_lines:,} lines)", "blue")
+                        if enable_pagination and total_lines > 1000:
+                            step_progress(f"Processing large file ({total_lines:,} lines)", "blue")
 
-                    # Apply pagination defaults if not specified
-                    if offset is None:
-                        offset = 0
-                    if limit is None and total_lines > 1000 and enable_pagination:
-                        limit = 1000  # Default pagination
-                        operation_warning(f"File is large ({total_lines:,} lines). Limiting output to 1000 lines.")
+                        # Apply pagination defaults if not specified
+                        # Note: offset is already initialized
+                        if limit is None and total_lines > 1000 and enable_pagination:
+                            limit = 1000  # Default pagination
+                            operation_warning(f"File is large ({total_lines:,} lines). Limiting output to 1000 lines.")
 
-                    # Read the requested lines - this can also raise exceptions
-                    step_progress("Reading file content", "blue")
-                    lines, total_lines, next_offset = _read_file_lines(file_path, offset, limit)
+                        # Read the requested lines - this can also raise exceptions
+                        step_progress("Reading file content", "blue")
+                        lines, total_lines, next_offset = _read_file_lines(file_path, offset, limit)
 
-                    # Format the output with page information if paginated
-                    content = "".join(lines)
+                        # Format the output with page information if paginated
+                        content = "".join(lines)
 
-                    if enable_pagination:
-                        # Add pagination information
-                        current_range_start = offset + 1
-                        current_range_end = min(offset + len(lines), total_lines)
-                        has_more = current_range_end < total_lines
+                        if enable_pagination:
+                            # Add pagination information
+                            current_range_start = offset + 1
+                            current_range_end = min(offset + len(lines), total_lines)
+                            has_more = current_range_end < total_lines
 
-                        pagination_info = (
-                            "\n\n--- Pagination Info ---\n"
-                            f"Total Lines: {total_lines}\n"
-                            f"Current Range: Lines {current_range_start}-{current_range_end}\n"
-                            f"More content available: {'Yes' if has_more else 'No'}"
-                        )
+                            pagination_info = (
+                                "\n\n--- Pagination Info ---\n"
+                                f"Total Lines: {total_lines}\n"
+                                f"Current Range: Lines {current_range_start}-{current_range_end}\n"
+                                f"More content available: {'Yes' if has_more else 'No'}"
+                            )
 
-                        if has_more:
-                            pagination_info += f"\nTo read more, use: offset={next_offset}, limit={limit or 1000}"
+                            if has_more:
+                                pagination_info += f"\nTo read more, use: offset={next_offset}, limit={limit or 1000}"
 
-                        content += pagination_info
+                            content += pagination_info
 
-                        # Success message for large files with progress info
-                        step_progress("Formatting output", "blue", completed=True)
-                        operation_complete(f"Read lines {current_range_start}-{current_range_end} of {total_lines} from {path}")
+                            # Success message for large files with progress info
+                            step_progress("Formatting output", "blue", completed=True)
+                            operation_complete(f"Read lines {current_range_start}-{current_range_end} of {total_lines} from {args.path}")
 
-                    return content
-                except PermissionError as e:
-                    # For permission errors, use the format_file_error utility
-                    return format_file_error(e, path, "reading")
+                        return content
+                    except PermissionError as e:
+                        # For permission errors, use the format_file_error utility
+                        return format_file_error(e, args.path, "reading")
+                    except Exception as e:
+                        # For generic errors, use the format_file_error utility
+                        return format_file_error(e, args.path, "reading")
                 except Exception as e:
-                    # For generic errors, use the format_file_error utility
-                    return format_file_error(e, path, "reading")
-            except Exception as e:
-                return format_file_error(e, path, "reading")
+                    return format_file_error(e, args.path, "reading")
+        except Exception as e:
+            return format_file_error(e, args.path, "reading")
     except Exception as e:
-        return format_file_error(e, path, "reading")
+        return format_file_error(e, args.path, "reading")
 
 
 # --- Delete File Tool Function ---
@@ -279,7 +295,7 @@ def _get_file_metadata(file_path: Path) -> dict:
 
 def apply_edit(target_file: str, code_edit: str) -> str:
     """Applies proposed content changes to a file after showing a diff and requesting user confirmation."""
-    config = get_config()
+    config = initialize_config().agent_settings
 
     is_safe, reason = is_path_safe(target_file)
     if not is_safe:
@@ -507,7 +523,7 @@ def apply_edit(target_file: str, code_edit: str) -> str:
 
 # Legacy function that accepts ReadFileArgs for compatibility
 def read_file_legacy(args: ReadFileArgs) -> str:
-    return read_file(args.path)
+    return read_file(args)
 
 
 # Legacy function that accepts ApplyEditArgs for compatibility
@@ -523,11 +539,11 @@ if __name__ == "__main__":
 
     print("Testing read_file tool:")
     # Use the updated tool with args object
-    result_good = read_file("dummy_read_test.txt")
+    result_good = read_file(ReadFileArgs(path="dummy_read_test.txt"))
     print(f"Reading existing file:\n---\n{result_good}\n---")
 
     # Use the updated tool with args object
-    result_bad = read_file("non_existent_file.txt")
+    result_bad = read_file(ReadFileArgs(path="non_existent_file.txt"))
     print(f"Reading non-existent file:\n---\n{result_bad}\n---")
 
     # Clean up dummy file

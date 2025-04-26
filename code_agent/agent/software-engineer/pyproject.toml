@@ -1,0 +1,40 @@
+[project]
+name = "software-engineer"
+version = "0.1.0"
+description = "An AI software engineer agent that assists with coding tasks, code reviews, debugging, testing, and documentation."
+authors = [
+    {name = "James", email = "james@example.com"}
+]
+license = "Apache License 2.0"
+readme = "README.md"
+requires-python = ">=3.11"
+
+[tool.poetry.dependencies]
+google-cloud-aiplatform = { extras = [
+    "agent_engines",
+    "adk",
+], git = "https://github.com/googleapis/python-aiplatform.git", rev = "copybara_738852226" }
+python = "^3.11"
+pydantic = "^2.10.6"
+python-dotenv = "^1.0.1"
+google-genai = "^1.9.0"
+google-adk = ">=0.0.2"
+
+[tool.poetry.group.dev]
+optional = true
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.5"
+google-adk = { version = ">=0.0.2", extras = ["eval"] }
+
+[tool.poetry.group.deployment]
+optional = true
+
+[tool.poetry.group.deployment.dependencies]
+absl-py = "^2.2.1"
+cloudpickle = "^3.1.1"
+flake8-pyproject = "^1.2.3"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api" 

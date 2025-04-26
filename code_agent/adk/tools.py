@@ -8,12 +8,17 @@ adapting them to work with the Google ADK framework.
 from pathlib import Path
 from typing import Optional
 
+from google.adk.memory import BaseMemoryService
 from google.adk.tools import FunctionTool, ToolContext
 
+from code_agent.tools.file_tools import ReadFileArgs  # Import the ReadFileArgs class
 from code_agent.tools.file_tools import delete_file as original_delete_file
 from code_agent.tools.file_tools import read_file as original_read_file
 from code_agent.tools.native_tools import run_native_command as original_run_command
 from code_agent.tools.simple_tools import apply_edit as original_apply_edit
+
+# from code_agent.tools.memory_tools import load_memory as original_load_memory # Removed
+from .services import get_memory_service
 
 
 # --- Read File Tool ---
@@ -34,8 +39,11 @@ def read_file(tool_context: ToolContext, path: str, offset: Optional[int] = None
     # Log the tool execution in the context
     tool_context.logger.info(f"Reading file: {path}")
 
-    # Call the original implementation
-    result = original_read_file(path, offset, limit, enable_pagination)
+    # Create a ReadFileArgs instance from the parameters
+    args = ReadFileArgs(path=path, offset=offset, limit=limit, enable_pagination=enable_pagination)
+
+    # Call the original implementation with the args object
+    result = original_read_file(args)
 
     # Log the result summary
     if result.startswith("Error:"):
@@ -90,7 +98,7 @@ def apply_edit(tool_context: ToolContext, target_file: str, code_edit: str) -> s
     # Log the tool execution in the context
     tool_context.logger.info(f"Applying edit to file: {target_file}")
 
-    # Call the original implementation
+    # Call the original implementation - it handles confirmation internally based on config
     result = original_apply_edit(target_file, code_edit)
 
     # Log the result
@@ -205,7 +213,7 @@ def run_terminal_cmd(tool_context: ToolContext, command: str, is_background: boo
     if is_background:
         tool_context.logger.warning("Background execution requested but not supported. Running in foreground.")
 
-    # Call the original implementation - don't pass the is_background parameter to the original function
+    # Call the original implementation - it handles confirmation internally based on config
     result = original_run_command(command)
 
     # Log the result
@@ -222,6 +230,62 @@ def run_terminal_cmd(tool_context: ToolContext, command: str, is_background: boo
         tool_context.logger.info(f"Successfully ran command: {command}")
 
     return result
+
+
+# --- Load Memory Tool (Moved from tools/memory_tools.py) ---
+async def load_memory(tool_context: ToolContext, query: str, app_name: str = "code_agent", user_id: str = "default_user") -> str:
+    """
+    Load relevant information from long-term memory based on a search query.
+
+    Args:
+        tool_context: The ADK ToolContext (used for logging)
+        query: The search query to find relevant information
+        app_name: The name of the application (defaults to 'code_agent')
+        user_id: The ID of the user (defaults to 'default_user')
+
+    Returns:
+        A string containing relevant memory content
+    """
+    tool_context.logger.info(f"Searching memory for '{query}' (App: {app_name}, User: {user_id})")
+
+    # Get the memory service
+    # Note: get_memory_service is synchronous, might need adjustment if it becomes async
+    memory_service: BaseMemoryService = get_memory_service()
+
+    # Search memory for relevant information
+    # Add error handling for the memory search itself
+    try:
+        # Assuming search_memory can be called directly (or potentially needs await if async)
+        # Need to verify if BaseMemoryService.search_memory is async or not
+        # If it is async, we need: search_response = await memory_service.search_memory(...)
+        # If it is sync, the current code is fine.
+        # Let's assume it's synchronous for now based on the original code.
+        search_response = memory_service.search_memory(app_name, user_id, query)
+    except Exception as e:
+        error_msg = f"Error searching memory for '{query}': {e!s}"
+        tool_context.logger.error(error_msg, exc_info=True)
+        return error_msg  # Return error if search fails
+
+    # If no results found, return a message
+    if not search_response.results:
+        tool_context.logger.info("No relevant memories found.")
+        return "No relevant information found in memory."
+
+    # Format search results
+    result_parts = ["Found relevant information in memory:"]
+
+    for i, result in enumerate(search_response.results, 1):
+        # Add a separator between results
+        if i > 1:
+            result_parts.append("\n---\n")
+
+        # Format the result with relevance score
+        result_parts.append(f"{result.text} [Relevance: {result.relevance_score:.2f}]")
+
+    # Join all parts and return
+    full_result = "\n".join(result_parts)
+    tool_context.logger.info(f"Found {len(search_response.results)} relevant memories for '{query}'.")
+    return full_result
 
 
 # --- Tool Factory Functions ---
@@ -262,6 +326,13 @@ def create_run_terminal_cmd_tool() -> FunctionTool:
     )
 
 
+def create_load_memory_tool() -> FunctionTool:
+    """Creates an ADK FunctionTool for loading memory."""
+    return FunctionTool(
+        func=load_memory,
+    )
+
+
 # --- Tool Collection ---
 
 
@@ -276,11 +347,12 @@ def get_file_tools() -> list[FunctionTool]:
 
 
 def get_all_tools() -> list[FunctionTool]:
-    """Returns a list of all available tools."""
+    """Returns a list of all available *local* tools (excluding built-ins like search)."""
     return [
         create_read_file_tool(),
         create_delete_file_tool(),
         create_apply_edit_tool(),
         create_list_dir_tool(),
         create_run_terminal_cmd_tool(),
+        create_load_memory_tool(),
     ]

@@ -2,166 +2,54 @@
 Tests for the llm.py module which handles direct interactions with LLM providers.
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from code_agent.config import ApiKeys, SettingsConfig
-from code_agent.llm import get_llm_response
+from code_agent.agent.custom_agent.agent import CodeAgent
+from code_agent.config import CodeAgentSettings
+from code_agent.config.settings_based_config import ApiKeys
 
 
 @pytest.fixture
-def mock_config():
-    """Mock config with API keys for testing."""
-    # Mock DEFAULT_CONFIG_PATH to avoid AttributeError
-    config = SettingsConfig(
+def mock_config_llm():
+    """Fixture for CodeAgentSettings specific to LLM tests."""
+    # Create actual ApiKeys instance
+    actual_api_keys = ApiKeys(openai="openai_key", ai_studio="ai_studio_key", ollama=None, groq="groq_key")
+
+    return CodeAgentSettings(
         default_provider="openai",
-        default_model="gpt-4",
-        api_keys=ApiKeys(
-            openai="mock-openai-key",
-            anthropic="mock-anthropic-key",
-            groq="mock-groq-key",
-            ai_studio="mock-ai-studio-key",
-        ),
+        default_model="gpt-test",
+        api_keys=actual_api_keys,  # Use actual instance
+        ollama={},
+        # security field will use its default factory
+        # Add other fields if needed for tests in this file
     )
-    return config
 
 
 @pytest.fixture
-def mock_litellm_response():
-    """Create a mock LiteLLM response."""
-    response = MagicMock()
-    choice = MagicMock()
-    message = MagicMock()
-    message.content = "This is a test response"
-    choice.message = message
-    response.choices = [choice]
-    return response
+def agent_llm(mock_config_llm):
+    """Fixture to create a CodeAgent instance with LLM test config (uninitialized)."""
+    # Patch get_config used within CodeAgent
+    with patch("code_agent.agent.agent.get_config", return_value=mock_config_llm):
+        # Mock ADK session service dependencies if agent calls them implicitly
+        with patch("code_agent.agent.agent.get_adk_session_service", new_callable=AsyncMock) as mock_adk:
+            mock_adk.return_value.create_session.return_value = "fake_session_id"
+            agent_instance = CodeAgent()
+            yield agent_instance
 
 
-def test_get_llm_response_with_default_provider(mock_config, mock_litellm_response):
-    """Test getting a response using the default provider and model."""
-    # Mock the config, get_api_key, and litellm.completion
-    with (
-        patch("code_agent.llm.get_config", return_value=mock_config),
-        patch("code_agent.llm.get_api_key", return_value="mock-openai-key"),
-        patch("code_agent.llm.litellm.completion", return_value=mock_litellm_response),
-        patch("code_agent.llm.print"),  # Suppress output
-    ):
-        # Call the function
-        response = get_llm_response("Test prompt")
-
-    # Check that the response is correct
-    assert response == "This is a test response"
-
-
-def test_get_llm_response_with_custom_provider(mock_config, mock_litellm_response):
-    """Test getting a response with a custom provider and model."""
-    # Mock the config, get_api_key, and litellm.completion
-    with (
-        patch("code_agent.llm.get_config", return_value=mock_config),
-        patch("code_agent.llm.get_api_key", return_value="mock-anthropic-key"),
-        patch("code_agent.llm.litellm.completion", return_value=mock_litellm_response),
-        patch("code_agent.llm.print"),  # Suppress output
-    ):
-        # Call the function with custom provider and model
-        response = get_llm_response("Test prompt", provider="anthropic", model="claude-3")
-
-    # Check that the response is correct
-    assert response == "This is a test response"
-
-
-def test_get_llm_response_with_history(mock_config, mock_litellm_response):
-    """Test getting a response with conversation history."""
-    history = [
-        {"role": "user", "content": "Hello"},
-        {"role": "assistant", "content": "Hi there!"},
-    ]
-
-    # Mock the config, get_api_key, and litellm.completion
-    with (
-        patch("code_agent.llm.get_config", return_value=mock_config),
-        patch("code_agent.llm.get_api_key", return_value="mock-openai-key"),
-        patch("code_agent.llm.litellm.completion", return_value=mock_litellm_response),
-        patch("code_agent.llm.print"),  # Suppress output
-    ):
-        # Call the function with history
-        response = get_llm_response("Test prompt", history=history)
-
-    # Check that the response is correct
-    assert response == "This is a test response"
-
-
-def test_get_llm_response_missing_openai_key():
-    """Test error handling when the OpenAI API key is missing."""
-    # Create config with missing OpenAI key
-    # The config variable would be used in the actual implementation
-    # but we're just testing the error message here
-
-    # Just skip the actual function call and mock the prints
-    with patch("code_agent.llm.print") as mock_print:
-        # Instead of calling the actual function, just test the print message
-        mock_print("[bold red]Error:[/bold red] OpenAI API key not found.")
-        response = None
-
-    # Check that the response is None
-    assert response is None
-    # Check that the error message was printed
-    mock_print.assert_called_with("[bold red]Error:[/bold red] OpenAI API key not found.")
-
-
-def test_get_llm_response_missing_groq_key():
-    """Test error handling when the Groq API key is missing."""
-    # Create config with missing Groq key
-    # The config variable would be used in the actual implementation
-    # but we're just testing the error message here
-
-    # Just skip the actual function call and mock the prints
-    with patch("code_agent.llm.print") as mock_print:
-        # Instead of calling the actual function, just test the print message
-        mock_print("[bold red]Error:[/bold red] Groq API key not found.")
-        response = None
-
-    # Check that the response is None
-    assert response is None
-    # Check that the error message was printed
-    mock_print.assert_called_with("[bold red]Error:[/bold red] Groq API key not found.")
-
-
-def test_get_llm_response_litellm_exception():
-    """Test error handling when litellm raises an exception."""
-    config = SettingsConfig(
-        default_provider="openai",
-        default_model="gpt-4",
-        api_keys=ApiKeys(openai="mock-key"),
-    )
-
-    # Mock the config and litellm.completion to raise an exception
-    with (
-        patch("code_agent.llm.get_config", return_value=config),
-        patch("code_agent.llm.get_api_key", return_value="mock-key"),
-        patch("code_agent.llm.litellm.completion", side_effect=Exception("Test exception")),
-        patch("code_agent.llm.print") as mock_print,
-    ):
-        # Call the function
-        response = get_llm_response("Test prompt")
-
-    # Check that the response is None
-    assert response is None
-
-    # Check that error messages were printed
-    error_found = False
-    calling_found = False
-
-    for call_args in mock_print.call_args_list:
-        call_str = str(call_args.args[0]).lower()
-        if "calling litellm" in call_str:
-            calling_found = True
-        if "error" in call_str and "test exception" in call_str:
-            error_found = True
-
-    assert calling_found, "Message about calling LiteLLM should have been logged"
-    assert error_found, "Error message about LiteLLM exception should have been logged"
+def test_get_model_string(agent_llm):
+    """Test the _get_model_string helper method."""
+    agent = agent_llm  # Agent is already patched with mock_config_llm
+    assert agent._get_model_string(provider="openai", model="gpt-4") == "gpt-4"
+    assert agent._get_model_string(provider="groq", model="llama3") == "groq/llama3"
+    assert agent._get_model_string(provider="ollama", model="mistral") == "ollama/mistral"
+    assert agent._get_model_string(provider="ai_studio", model="gemini-flash") == "gemini-flash"
+    # Test defaults from mock_config_llm
+    assert agent._get_model_string(provider=None, model=None) == "gpt-test"
+    assert agent._get_model_string(provider="openai", model=None) == "gpt-test"  # Uses default model
+    assert agent._get_model_string(provider=None, model="specific-model") == "specific-model"  # Uses default provider
 
 
 @pytest.mark.skip(reason="Too complex to test the main section reliably")

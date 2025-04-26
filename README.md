@@ -16,10 +16,6 @@ It allows interaction with various AI providers (OpenAI, Groq, etc. via LiteLLM)
 cli-agent/
 ├── code_agent/       # Main package source code
 │   ├── adk/          # Google ADK integration
-├── cli_agent/        # Ollama integration and extensions
-│   ├── providers/    # Provider implementations (Ollama)
-│   ├── commands/     # CLI commands for providers
-│   └── main.py       # CLI entry point for extensions
 ├── sandbox/          # Experimentation environment
 │   └── adk_sandbox.py # ADK testing sandbox
 ├── tests/            # Unit and integration tests
@@ -46,7 +42,6 @@ cli-agent/
 ### Key Directories
 
 - **code_agent/**: Contains the main source code for the CLI tool
-- **cli_agent/**: Contains the Ollama integration and extensions
 - **tests/**: Test suite for ensuring code quality and functionality
 - **docs/**: Project documentation and guides
 - **scripts/**: Utility scripts for development, testing, and CI/CD pipelines
@@ -117,8 +112,93 @@ pip install cli-code-agent
 # Or using uv (faster)
 uv pip install cli-code-agent
 
+# Or using uvx
+uvx --from cli-code-agent code-agent chat
+
+# Or uaing uvx from GitHub branch
+uvx --from git+https://github.com/BlueCentre/code-agent.git@main code-agent chat
+
 # For using Ollama features, ensure you have requests and rich:
 pip install requests rich
+```
+
+## Development
+
+### Setting Up Development Environment
+
+The project supports two package managers: Poetry (default) and UV (recommended for faster installation).
+
+#### Quick Setup (Recommended)
+
+Run our setup script which detects available package managers and sets up the environment automatically:
+
+```bash
+# Clone the repository
+git clone https://github.com/your-username/code-agent.git
+cd code-agent
+
+# Run the setup script (automatically uses UV if available)
+./scripts/setup_dev_env.sh
+```
+
+#### Manual Setup
+
+If you prefer to set up manually:
+
+```bash
+# Create and activate virtual environment
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Using UV (faster)
+uv pip install -e '.[dev]'
+
+# Install pre-commit hooks
+pre-commit install
+```
+
+### Development Commands
+
+The project includes a Makefile with the following commands:
+
+| Command | Description |
+|---------|-------------|
+| `make setup-dev` | Set up development environment (creates .venv and installs dependencies) |
+| `make test` | Run all tests |
+| `make test-unit` | Run only unit tests |
+| `make test-integration` | Run only integration tests |
+| `make test-coverage` | Run tests with coverage report (fails if less than 80% coverage) |
+| `make test-report` | Run tests with coverage and open HTML report |
+| `make lint` | Check code style using Ruff |
+| `make format` | Format code using Ruff |
+| `make clean` | Clean build artifacts and caches |
+
+#### UV-specific Commands
+
+If you have UV installed, these commands offer faster performance:
+
+```bash
+make uv-test    # Run tests using UV
+make uv-lint    # Check code style using UV
+make uv-format  # Format code using UV
+```
+
+### Testing
+
+Tests are written using pytest and are located in the `tests/` directory:
+
+- `tests/unit/`: Unit tests for individual components
+- `tests/integration/`: Integration tests for components working together
+- `tests/fixtures/`: Test fixtures and shared test utilities
+
+Run tests with:
+
+```bash
+# Run all tests
+make test
+
+# Run with coverage report
+make test-coverage
 ```
 
 ## Upgrading
@@ -126,10 +206,7 @@ pip install requests rich
 To upgrade Code Agent to the latest version:
 
 ```bash
-# Using pip
-pip install --upgrade cli-code-agent
-
-# Or using uv (faster)
+# Using uv (faster)
 uv pip install --upgrade cli-code-agent
 ```
 

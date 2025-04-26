@@ -8,10 +8,12 @@ This document provides comprehensive guidance on testing the Code Agent CLI appl
   - [Basic Test Examples](#basic-test-examples)
   - [Testing File Operations](#testing-file-operations)
   - [Testing Shell Commands](#testing-shell-commands)
-  - [Testing Web Search Functionality](#testing-web-search-functionality)
+  - [Testing Google Search Functionality](#testing-google-search-functionality)
+  - [Testing Memory Functionality](#testing-memory-functionality)
   - [Testing Error Handling](#testing-error-handling)
   - [Testing Configuration](#testing-configuration)
 - [Automated End-to-End Testing](#automated-end-to-end-testing)
+- [Comprehensive Test Scenarios](#comprehensive-test-scenarios)
 - [Performance Testing](#performance-testing)
 - [Security Testing](#security-testing)
 - [Continuous Integration](#continuous-integration)
@@ -33,16 +35,16 @@ Test basic chat functionality with piped input:
 
 ```bash
 # Test single interaction and exit
-echo "Tell me a joke?\nexit" | code-agent chat
+echo "Tell me a joke?" | uv run code-agent chat
 
 # Test multiple interactions and exit
-echo "What is Python?\nWhat is a list in Python?\nexit" | code-agent chat
+echo "What is Python?\nWhat is a list in Python?" | uv run code-agent chat
 
 # Test with system commands
-echo "List files in this directory\nexit" | code-agent chat
+echo "List files in this directory\nexit" | uv run code-agent chat
 
 # Test special commands in chat
-echo "What is your name?\n/help\n/clear\nTell me another joke\n/exit" | code-agent chat
+echo "What is your name?\n/help\n/clear\nTell me another joke\n/exit" | uv run code-agent chat
 ```
 
 #### Testing the `run` Command
@@ -51,15 +53,15 @@ Test single prompt processing:
 
 ```bash
 # Basic question
-code-agent run "What is your name?"
+uv run code-agent run "What is your name?"
 
 # Code-related query
-code-agent run "Write a Python function to check if a string is a palindrome"
+uv run code-agent run "Write a Python function to check if a string is a palindrome"
 
 # Using with different providers
-code-agent --provider openai run "Explain quantum computing in simple terms"
-code-agent --provider groq --model llama3-70b-8192 run "Write a Dockerfile for a Node.js app"
-code-agent --provider anthropic run "Compare Python and JavaScript for web development"
+uv run code-agent --provider openai run "Explain quantum computing in simple terms"
+uv run code-agent --provider groq --model llama3-70b-8192 run "Write a Dockerfile for a Node.js app"
+uv run code-agent --provider anthropic run "Compare Python and JavaScript for web development"
 ```
 
 #### Testing Ollama Commands
@@ -68,16 +70,16 @@ Test integration with local Ollama models:
 
 ```bash
 # List available models
-code-agent ollama list
+uv run code-agent ollama list
 
 # List models in JSON format
-code-agent ollama list --json
+uv run code-agent ollama list --json
 
 # Run command with a local model
-code-agent ollama run llama3 "Tell me a short joke"
+uv run code-agent ollama run llama3 "Tell me a short joke"
 
 # Chat with system prompt
-code-agent ollama chat codellama:13b "Write a sorting algorithm" --system "You are a helpful coding assistant"
+uv run code-agent ollama chat codellama:13b "Write a sorting algorithm" --system "You are a helpful coding assistant"
 ```
 
 ### Testing File Operations
@@ -86,13 +88,23 @@ Test file reading and editing capabilities:
 
 ```bash
 # Read a file
-code-agent run "Show me the contents of README.md"
+uv run code-agent run "Show me the contents of README.md"
 
 # Create a new file
-code-agent run "Create a new file called hello.py with a simple Hello World program"
+uv run code-agent run "Create a new file called hello.py with a simple Hello World program"
 
 # Edit an existing file
-code-agent run "Add a docstring to hello.py"
+uv run code-agent run "Add a docstring to hello.py"
+
+# Test path validation
+uv run code-agent run "Try to read a file outside the workspace like /etc/passwd"
+
+# Test large file handling
+uv run code-agent run "Create a large test file with 10,000 lines of text"
+uv run code-agent run "Read the first 50 lines of the large test file"
+
+# Test file operation with auto-approve
+uv run code-agent --auto-approve-edits run "Create a file named autotest.py with a simple hello world function"
 ```
 
 ### Testing Shell Commands
@@ -101,36 +113,109 @@ Test executing shell commands through the agent:
 
 ```bash
 # Directory listing
-code-agent run "List all files in the current directory"
+uv run code-agent run "List all files in the current directory"
 
 # System information
-code-agent run "Show system information"
+uv run code-agent run "Show system information"
 
 # Git operations
-code-agent run "Show git status of this repository"
+uv run code-agent run "Show git status of this repository"
+
+# Test command allowlist functionality
+uv run code-agent run "Run 'ls -la' to list files"  # Should be allowlisted
+
+# Test dangerous command protection
+uv run code-agent run "Run 'rm -rf /'"  # Should be blocked by security
+
+# Test with working directory parameter
+uv run code-agent run "Run 'pwd' in the /tmp directory"
+
+# Test command with auto-approve flag
+uv run code-agent --auto-approve-native-commands run "List all processes running on this machine"
 ```
 
-### Testing Web Search Functionality
+### Testing Google Search Functionality
 
 Test the agent's ability to search the web for information:
 
 ```bash
-# Basic web search
-code-agent run "What is the current weather in London?"
+# Basic Google search
+uv run code-agent run "What is the current weather in London?"
 
 # Technical documentation search
-code-agent run "Find the documentation for Python's requests library and summarize the key features"
+uv run code-agent run "Find the documentation for Python's requests library and summarize the key features"
 
 # Current events search
-code-agent run "What were the major tech announcements in the last month?"
+uv run code-agent run "What were the major tech announcements in the last month?"
 
 # Combined search and local operation
-code-agent run "Search for best Python logging practices and create a logging_example.py file implementing them"
+uv run code-agent run "Search for best Python logging practices and create a logging_example.py file implementing them"
 
-# Search with disabled functionality
-code-agent config set security.enable_web_search false
-code-agent run "What is the population of Tokyo?"
-code-agent config set security.enable_web_search true  # Re-enable after test
+# Test complex search queries
+uv run code-agent run "Find information about 'generative AI agent architectures' and summarize the key approaches"
+
+# Test search with follow-up analysis
+uv run code-agent run "Search for information about Python's asyncio library and explain how it relates to our codebase"
+```
+
+### Testing Memory Functionality
+
+Test the agent's ability to store and retrieve information across sessions using the memory system:
+
+```bash
+# Test storing and retrieving information within the same session
+echo "My name is Alex and I'm working on a Python project.\nWhat was my name again?\nexit" | uv run code-agent chat
+
+# Test storing and retrieving information across multiple sessions
+# Session 1: Store information
+echo "My favorite programming language is Rust.\nexit" | uv run code-agent chat
+# Session 2: Retrieve information
+echo "What was my favorite programming language?\nexit" | uv run code-agent chat
+
+# Test memory with specific queries
+uv run code-agent run "Remember that my team is working on Project Phoenix"
+uv run code-agent run "What project was my team working on?"
+
+# Test memory with technical information
+uv run code-agent run "The API endpoint for our service is https://api.example.com/v2/data"
+uv run code-agent run "What was our API endpoint?"
+
+# Test memory with complex, multi-turn dialog
+echo "I need to install TensorFlow version 2.10.\nWhat version of CUDA is compatible with that?\nOK please note that for my documentation.\nWhat was the TensorFlow version I wanted to install?\nexit" | uv run code-agent chat
+```
+
+#### Testing Memory Integration with Other Tools
+
+Test how memory works in combination with other agent capabilities:
+
+```bash
+# Test memory + file operations
+uv run code-agent run "Create a file called project_notes.md with the text 'Project Phoenix starts on January 15, 2025'"
+uv run code-agent run "When does Project Phoenix start? Include this information in your answer."
+
+# Test memory + web search
+uv run code-agent run "The latest version of PyTorch is 2.1.0"
+uv run code-agent run "Compare the version of PyTorch I mentioned earlier with the current latest release"
+
+# Test memory in problem-solving context
+echo "I'm having an issue with my Dockerfile where the build fails with error 'standard_init_linux.go:228: exec user process caused: no such file or directory'\nHow can I fix this?\nThanks! I'll try that. If I encounter this issue again, what was the solution?\nexit" | uv run code-agent chat
+```
+
+#### Testing Memory Persistence
+
+Test the persistence and durability of memory:
+
+```bash
+# Test memory persistence across process restarts (note: InMemoryMemoryService doesn't persist across process restarts)
+uv run code-agent run "Remember that my database password is DB_PASSWORD_123"
+# Restart the uv run code-agent process
+uv run code-agent run "What was my database password?" # Should not remember with InMemoryMemoryService
+
+# Test memory with different users
+CODE_AGENT_USER=user1 uv run code-agent run "My name is Alice"
+CODE_AGENT_USER=user2 uv run code-agent run "My name is Bob"
+CODE_AGENT_USER=user1 uv run code-agent run "What is my name?" # Should respond with Alice
+CODE_AGENT_USER=user2 uv run code-agent run "What is my name?" # Should respond with Bob
 ```
 
 ### Testing Error Handling
@@ -139,19 +224,25 @@ Test how the application handles errors:
 
 ```bash
 # Invalid provider
-code-agent --provider invalid_provider run "Hello"
+uv run code-agent --provider invalid_provider run "Hello"
 
 # Non-existent model
-code-agent --provider openai --model nonexistent_model run "Hello"
+uv run code-agent --provider openai --model nonexistent_model run "Hello"
 
 # Missing API keys
-OPENAI_API_KEY="" code-agent --provider openai run "Hello"
+OPENAI_API_KEY="" uv run code-agent --provider openai run "Hello"
 
 # Reading non-existent file
-code-agent run "Show me the contents of non_existent_file.txt"
+uv run code-agent run "Show me the contents of non_existent_file.txt"
 
-# Web search connection errors (can be simulated by disconnecting from network)
-code-agent run "What is the current exchange rate between USD and EUR?"
+# Connection errors (can be simulated by disconnecting from network)
+uv run code-agent run "What is the current exchange rate between USD and EUR?"
+
+# Path traversal attempts
+uv run code-agent run "Read the file at ../../../etc/passwd"
+
+# Recovery from errors
+uv run code-agent run "Try to read a non-existent file, then create it if it doesn't exist"
 ```
 
 ### Testing Configuration
@@ -160,16 +251,21 @@ Test configuration management:
 
 ```bash
 # Show current configuration
-code-agent config show
+uv run code-agent config show
 
 # Provider-specific configuration
-code-agent config openai
-code-agent config ollama
+uv run code-agent config openai
+uv run code-agent config ollama
 
-# Enable/disable web search
-code-agent config set security.enable_web_search false
-code-agent config show  # Verify setting changed
-code-agent config set security.enable_web_search true  # Restore default
+# Test configuration reset
+uv run code-agent config reset
+uv run code-agent config show
+
+# Test verbosity settings
+uv run code-agent --verbosity 3 run "Run with debug verbosity"
+
+# Test configuration via environment variables
+AI_STUDIO_API_KEY="test_key" uv run code-agent config show
 ```
 
 ## Automated End-to-End Testing
@@ -181,21 +277,21 @@ For automated testing, create shell scripts that run various commands and check 
 # Example automated end-to-end test script
 
 # Test version command
-output=$(code-agent --version)
+output=$(uv run code-agent --version)
 if [[ $output != *"Code Agent version"* ]]; then
   echo "Version test failed"
   exit 1
 fi
 
 # Test help command
-output=$(code-agent --help)
+output=$(uv run code-agent --help)
 if [[ $output != *"CLI agent for interacting with"* ]]; then
   echo "Help test failed"
   exit 1
 fi
 
 # Test simple run command with mock response
-output=$(echo "What is 2+2?" | CODE_AGENT_TEST_MODE=1 code-agent chat)
+output=$(echo "What is 2+2?" | CODE_AGENT_TEST_MODE=1 uv run code-agent chat)
 if [[ $output != *"4"* ]]; then
   echo "Simple math test failed"
   exit 1
@@ -204,19 +300,115 @@ fi
 echo "All tests passed!"
 ```
 
+## Comprehensive Test Scenarios
+
+### Multi-Turn Conversation Test
+
+```bash
+# Create a test script for multi-turn conversational flow
+cat > test_conversation.txt << EOL
+What files are in this project?
+What Python modules are imported in code_agent/agent/agent.py?
+Create a summary of the main classes and their relationships in this codebase
+exit
+EOL
+
+# Run the test
+cat test_conversation.txt | uv run code-agent chat
+```
+
+### Tool Chaining Test
+
+```bash
+# Test complex reasoning with multiple tool steps
+uv run code-agent run "Analyze the code in the code_agent/tools directory, identify all functions, and create a markdown report with a table listing each function name, its purpose, and parameter list"
+```
+
+### Integration with Development Workflow Test
+
+```bash
+# Test code generation
+uv run code-agent run "Create a Python script that uses argparse to handle CLI arguments for a simple file conversion tool"
+
+# Test code review capabilities
+uv run code-agent run "Review the code in code_agent/tools/security.py and suggest improvements"
+
+# Test documentation generation
+uv run code-agent run "Generate API documentation for the functions in code_agent/tools/simple_tools.py"
+```
+
+### Comprehensive End-to-End Workflow Test Script
+
+```bash
+#!/bin/bash
+# e2e_test.sh - Comprehensive workflow test
+
+set -e  # Exit on any error
+
+echo "Starting comprehensive E2E test"
+
+# Clean test directory
+rm -rf /tmp/code-agent-test
+mkdir -p /tmp/code-agent-test
+cd /tmp/code-agent-test
+
+# Test project analysis
+echo "Running project analysis..."
+uv run code-agent run "What are the key components of this codebase?" > analysis.txt
+
+# Test file creation
+echo "Testing file creation..."
+uv run code-agent --auto-approve-edits run "Create a Python file called math_utils.py with functions for add, subtract, multiply and divide" > file_creation.txt
+
+# Test file reading
+echo "Testing file reading..."
+uv run code-agent run "Show me the content of math_utils.py" > file_reading.txt
+
+# Test file modification
+echo "Testing file modification..."
+uv run code-agent --auto-approve-edits run "Add docstrings to all functions in math_utils.py" > file_modification.txt
+
+# Test command execution
+echo "Testing command execution..."
+uv run code-agent --auto-approve-native-commands run "Run 'python3 -c \"from math_utils import add; print(add(5, 3))\"'" > command_execution.txt
+
+# Test error handling
+echo "Testing error handling..."
+uv run code-agent run "Try to read a file that doesn't exist" > error_handling.txt
+
+# Test all outputs
+echo "Test results:"
+for file in *.txt; do
+  echo "==== $file ===="
+  cat "$file"
+  echo ""
+done
+
+echo "E2E test completed successfully"
+```
+
 ## Performance Testing
 
 Test performance aspects of the application:
 
 ```bash
 # Measure response time
-time code-agent run "What is the capital of France?"
+time uv run code-agent run "What is the capital of France?"
 
 # Test with large prompts
-code-agent run "$(cat large_prompt.txt)"
+uv run code-agent run "$(cat large_prompt.txt)"
 
-# Measure web search response time
-time code-agent run "What are the latest developments in quantum computing?"
+# Generate a large test file
+dd if=/dev/zero bs=1M count=10 | tr '\0' 'X' > large_file.txt
+
+# Test memory usage with large files
+uv run code-agent run "Read large_file.txt and count the number of lines"
+
+# Test rapid successive requests
+for i in {1..5}; do 
+  uv run code-agent run "Quick test $i: What is 2+2?"
+  sleep 2
+done
 ```
 
 ## Security Testing
@@ -225,13 +417,13 @@ Test security constraints:
 
 ```bash
 # Test allowlist enforcement
-code-agent run "Execute rm -rf /"  # Should be blocked or require confirmation
+uv run code-agent run "Execute rm -rf /"  # Should be blocked or require confirmation
 
 # Test path validation
-code-agent run "Read the file /etc/passwd"  # Should be restricted
+uv run code-agent run "Read the file /etc/passwd"  # Should be restricted
 
-# Test web search security
-code-agent run "Search for information about <insert sensitive info here>"  # Should sanitize query
+# Test security boundaries
+uv run code-agent run "Try to access environment variables or system configuration files"
 ```
 
 ## Troubleshooting Failed Tests
@@ -242,8 +434,7 @@ When end-to-end tests fail, check the following:
 2. Verify that API keys are properly configured
 3. Check that Ollama service is running (for local model tests)
 4. Examine logs for detailed error messages
-5. Confirm network connectivity for cloud API calls and web searches
-6. Verify that duckduckgo-search package is installed correctly
+5. Confirm network connectivity for cloud API calls and search functionality
 
 ## Continuous Integration
 
@@ -342,8 +533,8 @@ echo "Running file operation tests..."
 echo "Running model provider tests..."
 ./scripts/test_providers.sh
 
-echo "Running web search tests..."
-./scripts/test_web_search.sh
+echo "Running Google search tests..."
+./scripts/test_google_search.sh
 
 echo "Running Ollama integration tests..."
 # Only if Ollama is installed in the CI environment
@@ -366,6 +557,9 @@ When developing new features, always include end-to-end tests for:
 3. Error cases (invalid inputs, missing dependencies)
 4. Performance aspects (large inputs, many operations)
 5. Security boundaries (permissions, restrictions)
+6. Provider-specific behavior (test across different LLM providers)
+7. Tool integration (test proper functioning of all tools)
+8. Complex multi-step reasoning (test ability to solve complex problems)
 
 Remember that end-to-end tests complement unit and integration tests but do not replace them. Use all testing approaches for comprehensive quality assurance.
 
@@ -382,7 +576,7 @@ The following tests were performed after updating the default model to Gemini 2.
 ##### 1. Default Configuration Verification
 
 ```bash
-code-agent config show
+uv run code-agent config show
 ```
 
 **Purpose**: Verify that the configuration reflects the updated default model.
@@ -392,7 +586,7 @@ code-agent config show
 ##### 2. Provider List Verification
 
 ```bash
-code-agent providers list
+uv run code-agent providers list
 ```
 
 **Purpose**: Confirm the default provider and model in the providers list.
@@ -402,7 +596,7 @@ code-agent providers list
 ##### 3. AI Studio Configuration Details
 
 ```bash
-code-agent config aistudio
+uv run code-agent config aistudio
 ```
 
 **Purpose**: Verify AI Studio configuration has been updated with the correct model information.
@@ -414,7 +608,7 @@ code-agent config aistudio
 ##### 4. Simple Query Test
 
 ```bash
-code-agent run "What is the Python version and how can I check it in the terminal?"
+uv run code-agent run "What is the Python version and how can I check it in the terminal?"
 ```
 
 **Purpose**: Test basic query handling without tool execution.
@@ -424,7 +618,7 @@ code-agent run "What is the Python version and how can I check it in the termina
 ##### 5. Command Execution with Approval
 
 ```bash
-code-agent run "List all Python files in the code_agent directory"
+uv run code-agent run "List all Python files in the code_agent directory"
 ```
 
 **Purpose**: Test that the agent requests approval before executing commands.
@@ -434,7 +628,7 @@ code-agent run "List all Python files in the code_agent directory"
 ##### 6. Command Execution with Auto-Approval
 
 ```bash
-echo y | code-agent run "Find all Python files in the code_agent directory and its subdirectories"
+echo y | uv run code-agent run "Find all Python files in the code_agent directory and its subdirectories"
 ```
 
 **Purpose**: Test command execution workflow when approval is provided.
@@ -444,55 +638,42 @@ echo y | code-agent run "Find all Python files in the code_agent directory and i
 ##### 7. File Reading Test
 
 ```bash
-code-agent run "Show me the first 10 lines of the README.md file"
+uv run code-agent run "Show me the first 10 lines of the README.md file"
 ```
 
 **Purpose**: Verify file reading functionality.
 
 **Result**: ✅ Agent successfully read and displayed the beginning of the README.md file.
 
-##### 8. Web Search Functionality Test
+##### 8. Google Search Functionality Test
 
 ```bash
-code-agent run "What is the Model Context Protocol (MCP)?"
+uv run code-agent run "What is the Model Context Protocol (MCP)?"
 ```
 
 **Purpose**: Test the agent's ability to search the web for information not available in the local context.
 
-**Result**: ✅ Agent successfully used the web_search tool to find information about MCP and provided a well-summarized response.
-
-##### 9. Web Search Error Handling
-
-```bash
-# Temporarily disable web search in configuration
-code-agent config set security.enable_web_search false
-code-agent run "What is the latest version of Python?"
-code-agent config set security.enable_web_search true  # Re-enable after test
-```
-
-**Purpose**: Test how the agent handles web search when the feature is disabled.
-
-**Result**: ✅ Agent correctly reported that web search is disabled and offered alternative ways to find the information.
+**Result**: ✅ Agent successfully used the google_search tool to find information about MCP and provided a well-summarized response.
 
 #### Chat Mode Tests
 
 ##### 10. Basic Chat Interaction
 
 ```bash
-echo -e "Hello, what is your default model?\n/exit" | code-agent chat
+echo -e "Hello, what is your default model?\n/exit" | uv run code-agent chat
 ```
 
 **Purpose**: Test chat mode functionality with a simple interaction.
 
 **Result**: ✅ Chat session initialized properly, though the response about the default model was generic.
 
-##### 11. Web Search in Chat Mode
+##### 11. Google Search in Chat Mode
 
 ```bash
-echo -e "What happened in the latest SpaceX launch?\n/exit" | code-agent chat
+echo -e "What happened in the latest SpaceX launch?\n/exit" | uv run code-agent chat
 ```
 
-**Purpose**: Test web search functionality in chat mode for current events.
+**Purpose**: Test google search functionality in chat mode for current events.
 
 **Result**: ✅ Agent searched the web and provided up-to-date information about the latest SpaceX launch.
 
@@ -503,7 +684,7 @@ These complex scenarios test multiple capabilities together and reflect real-wor
 ##### 12. Code Analysis and Explanation
 
 ```bash
-code-agent run "Analyze the code_agent/agent/agent.py file and explain what the CodeAgent class does, including its main methods and how it uses tools"
+uv run code-agent run "Analyze the code_agent/agent/agent.py file and explain what the CodeAgent class does, including its main methods and how it uses tools"
 ```
 
 **Purpose**: Test the agent's ability to analyze more complex code structures, understand class relationships, and provide clear explanations.
@@ -513,7 +694,7 @@ code-agent run "Analyze the code_agent/agent/agent.py file and explain what the 
 ##### 13. Multi-Step File Operation
 
 ```bash
-code-agent chat
+uv run code-agent chat
 # Enter the following prompts:
 # 1. "Find Python files in the code_agent directory that import the 'rich' library"
 # 2. "For the files you found, identify which 'rich' components each file is using"
@@ -528,7 +709,7 @@ code-agent chat
 ##### 14. Code Refactoring Suggestion
 
 ```bash
-code-agent run "Analyze our error handling in code_agent/tools/*.py files and suggest a consistent approach to improve error handling. Include a specific code example of how we could refactor one of the error handling sections."
+uv run code-agent run "Analyze our error handling in code_agent/tools/*.py files and suggest a consistent approach to improve error handling. Include a specific code example of how we could refactor one of the error handling sections."
 ```
 
 **Purpose**: Test code analysis across multiple files, pattern recognition, and ability to generate improvement suggestions with concrete examples.
@@ -541,7 +722,7 @@ Additional advanced tests were conducted to validate functionality around:
 - Command chaining with dynamic inputs
 - Configuration file analysis
 - Documentation generation
-- Web search for implementation
+- Google search for implementation
 - Error simulation and debugging
 - Configuration validation and security checks
 
@@ -550,7 +731,7 @@ Additional advanced tests were conducted to validate functionality around:
 ##### 21. Alternative Model Test
 
 ```bash
-code-agent --model gemini-1.5-flash run "Tell me a short joke about programming"
+uv run code-agent --model gemini-1.5-flash run "Tell me a short joke about programming"
 ```
 
 **Purpose**: Verify the ability to override the default model for a specific query.
@@ -566,7 +747,7 @@ The Gemini 2.0 migration tests confirmed that:
    - Text query processing
    - Command execution with approval
    - File operations
-   - Web search capabilities
+   - Google search capabilities
 3. Model selection and overrides are working properly.
 4. Chat mode functions correctly.
 

@@ -15,6 +15,24 @@ This document outlines the plan for building a versatile Command-Line Interface 
 ## 2. Configuration Hierarchy
 Prioritize configuration settings: CLI flags > Environment Variables > config.yaml file (e.g., ~/.config/code-agent/config.yaml).
 
-## 3. Future Enhancements
+## 3. Build & Development Process
+
+### 3.1 Environment Management
+- Support both Poetry (standard) and UV (enhanced speed) for dependency management
+- Maintain a standardized virtual environment structure (.venv)
+- Provide user-friendly setup scripts for easy onboarding
+
+### 3.2 Testing Framework
+- Maintain comprehensive test suite with pytest
+- Enforce 80% minimum test coverage
+- Support both unit and integration testing
+- Provide specialized test targets for focused testing
+
+### 3.3 CI/CD Pipeline
+- Use GitHub Actions for automated testing
+- Leverage UV for faster dependency installation in CI
+- Maintain SonarCloud integration for code quality metrics
+
+## 4. Future Enhancements
 
 > **Note**: All future enhancements have been moved to the consolidated priority task list at [docs/planning_priorities.md](docs/planning_priorities.md) under the "Future Enhancements" section.

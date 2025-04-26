@@ -5,11 +5,15 @@ from unittest.mock import patch
 import pytest
 import yaml
 
-# Ensure imports work correctly from the test directory
+# Import the new settings class and necessary functions
+# Remove DEFAULT_CONFIG_PATH
 from code_agent.config import (
-    SettingsConfig,
+    CodeAgentSettings,
     build_effective_config,
     get_config,
+    initialize_config,
+    load_config_from_file,
+    validate_config,
 )
 
 # --- Fixtures ---
@@ -47,7 +51,7 @@ def test_load_config_defaults_no_file(mock_config_path: Path):
     """Test loading default config when the file doesn't exist."""
     # Test building effective config when file is missing
     config = build_effective_config(mock_config_path)
-    assert isinstance(config, SettingsConfig)
+    assert isinstance(config, CodeAgentSettings)
     assert config.default_provider == "ai_studio"
     assert config.default_model == "gemini-2.0-flash"
     # The default config now includes 'openai' with None value
@@ -218,7 +222,7 @@ def test_get_config_raises_error_if_not_initialized():
     # In the current implementation, it initializes with defaults if called early
     # If we changed it to raise RuntimeError, this test would need modification.
     config = get_config()  # Should trigger initialization with defaults
-    assert isinstance(config, SettingsConfig)
+    assert isinstance(config, CodeAgentSettings)
     assert config.default_provider == "ai_studio"  # Check default value
     # with pytest.raises(
     #     RuntimeError,
@@ -281,3 +285,41 @@ def test_get_config_loads_once(mock_config_path: Path):
         config_module.build_effective_config = original_build_effective_config
         # Reset the config for other tests
         config_module._config = None
+
+
+def test_load_config_from_file_exists(mock_config_file):
+    """Test loading config from an existing file."""
+    config_data = load_config_from_file(mock_config_file)
+    assert config_data["default_provider"] == "openai"
+    assert config_data["api_keys"]["openai"] == "file_key"
+
+
+def test_build_effective_config_all_layers(mock_config_file, monkeypatch):
+    """Test building config with file, env, and CLI overrides."""
+    # ... (Setup remains the same) ...
+    effective_config = build_effective_config(
+        # ... args ...
+    )
+    # Assertions now check attributes of CodeAgentSettings object
+    assert isinstance(effective_config, CodeAgentSettings)
+    assert effective_config.default_provider == "cli_provider"
+    assert effective_config.default_model == "cli_model"
+    assert effective_config.api_keys.openai == "env_key"
+    assert effective_config.auto_approve_edits is True
+    assert effective_config.auto_approve_native_commands is False
+
+
+def test_get_config_initialization(mock_config_file):
+    """Test that get_config initializes and returns the config object."""
+    # Reset the global config for clean test
+    initialize_config(validate=False)  # Initialize without validation for this test
+    config = get_config()
+    assert isinstance(config, CodeAgentSettings)
+    assert config.default_provider == "openai"  # From mock file
+
+
+def test_validate_config_valid(valid_config):
+    """Test validation passes for a valid configuration object."""
+    # The valid_config fixture should now yield a CodeAgentSettings object
+    with patch("code_agent.config.config._config", valid_config):
+        assert validate_config() is True
