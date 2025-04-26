@@ -18,13 +18,6 @@ from typing_extensions import Annotated
 # Remove nest_asyncio import and apply
 from code_agent import __version__ as agent_version  # Updated import
 
-api_key = os.environ.get("GOOGLE_API_KEY") or os.environ.get("AI_STUDIO_API_KEY")
-if api_key:
-    print(f"Initializing Google Generative AI with API key from {'GOOGLE_API_KEY' if 'GOOGLE_API_KEY' in os.environ else 'AI_STUDIO_API_KEY'}")
-    genai.configure(api_key=api_key)
-else:
-    print("WARNING: No API key found in environment. Check GOOGLE_API_KEY or AI_STUDIO_API_KEY variables. Models will not work.")
-
 # Add ADK version import
 try:
     import google.adk as adk
@@ -201,6 +194,25 @@ def main(
     # state.provider = provider
     # These might not be needed if get_config() is always used
     # state.model = model
+
+    # --- ADD API KEY CONFIGURATION LOGIC HERE --- #
+    config = get_config()  # Get the fully processed config
+
+    # Configure Google Generative AI based on the effective config
+    # Try GOOGLE_API_KEY first, then AI_STUDIO_API_KEY
+    # Access keys directly from the main config object, as dotenv loads them there
+    google_api_key_val = config.google_api_key or config.ai_studio_api_key
+    if google_api_key_val:
+        # Determine which key was used for the message
+        key_source = "GOOGLE_API_KEY" if config.google_api_key else "AI_STUDIO_API_KEY"
+        print(f"Initializing Google Generative AI with API key from {key_source}")
+        genai.configure(api_key=google_api_key_val)
+    else:
+        # Only warn if a Google provider is likely intended
+        if config.default_provider in ["google", "ai_studio", "vertexai"]:
+             print("WARNING: No Google API key found (GOOGLE_API_KEY or AI_STUDIO_API_KEY).")
+             print("         Google models may not work without an API key or appropriate ADC.")
+        # Note: Other providers (OpenAI, Anthropic, etc.) are configured via litellm
 
 
 # --- Helper Callbacks ---
