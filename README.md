@@ -194,19 +194,20 @@ Available agents and their run commands:
 
 *   **Software Engineer Agent:**
     ```bash
-    uv run adk run code_agent/agent/software_engineer
+    #uv run adk run code_agent/agent/software_engineer
+    cd code_agent/agent/software_engineer && ./star_run.sh
+    # or
+    cd code_agent/agent/software_engineer && uvx --from git+https://github.com/google/adk-python.git@main adk run software_engineer
     ```
 *   **Travel Concierge Agent:** (Assuming similar structure)
     ```bash
-    uv run adk run code_agent/agent/travel-concierge
+    #uv run adk run code_agent/agent/travel-concierge
+    cd code_agent/agent/travel-concierge && ./start_run.sh
     ```
 *   **Sandbox ADK Runner:** (Simple test runner)
     ```bash
     uv run adk run sandbox/agent_adk_runner
     ```
-
-    GOOGLE_API_KEY=AIzaSyCL7EElWtbCMJRbpwJDeJc2BGBr2yqbyxA uv run adk run code_agent/agent/software_engineer
-    GOOGLE_API_KEY=AIzaSyCL7EElWtbCMJRbpwJDeJc2BGBr2yqbyxA uvx --from git+https://github.com/google/adk-python.git@main adk run software_engineer
 
 ### Testing
 

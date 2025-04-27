@@ -15,7 +15,7 @@ from software_engineer.shared_libraries.types import DesignPatternResponse
 from software_engineer.tools.search import google_search_grounding
 
 design_pattern_agent = Agent(
-    model="gemini-2.0-flash-001",
+    model="gemini-2.5-flash-preview-04-17", #"gemini-2.0-flash-001",
     name="design_pattern_agent",
     description="Recommends design patterns for specific problems",
     instruction=prompt.DESIGN_PATTERN_AGENT_INSTR,

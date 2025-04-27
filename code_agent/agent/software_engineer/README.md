@@ -116,6 +116,15 @@ root_agent
 
 ## Running the Agent
 
+### Configuring File Edit Approvals
+
+By default, for safety, the agent requires user confirmation before creating or modifying any file. When the agent needs to edit a file, it will first show you the proposed path and content and ask for your approval.
+
+You can change this behavior for your current session:
+
+*   **To disable approvals (allow direct edits):** Tell the agent: `"Disable file edit approvals for this session."` (The agent should use the `configure_edit_approval` tool with `require_approval=False`).
+*   **To re-enable approvals:** Tell the agent: `"Enable file edit approvals for this session."` (The agent should use the `configure_edit_approval` tool with `require_approval=True`).
+
 ### Using `adk`
 
 Start the agent locally:

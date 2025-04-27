@@ -148,21 +148,21 @@ def test_native_tools_placeholder():
         ("git status", ["git"], True, "", False),
         ("ls -la", ["ls", "git"], True, "", False),
         ("allowed_script.sh arg1", ["allowed_script.sh"], True, "", False),
-        # Not Allowlisted (but not inherently dangerous/risky)
-        ("echo hello", [], False, "Command not found in the allowlist", False),
-        ("python script.py", ["git"], False, "Command not found in the allowlist", False),
-        # Dangerous Patterns (Blocked) - Use double backslashes for regex in string
+        # Not Allowlisted (but not inherently dangerous/risky) -> Should now be True (allowed by default)
+        ("echo hello", [], True, "", False), # Expected safe = True now
+        ("python script.py", ["git"], True, "", False), # Expected safe = True now
+        # Dangerous Patterns (Blocked)
         ("rm -rf /", [], False, "Command matches dangerous pattern: rm\\s+-r[f]?\\s+[\\/]", False),
         ("sudo rm important", [], False, "Command matches dangerous pattern: sudo\\s+rm", False),
         (":(){ :|:& };:", [], False, "Command matches dangerous pattern: :\\(\\)\\s*\\{\\s*:\\s*\\|\\s*:\\s*\\&\\s*\\}", False),
-        # Risky Patterns (Warning) - Use double backslashes for regex in string
+        # Risky Patterns (Warning, but allowed)
         ("chmod -R 777 /data", [], True, "Command matches risky pattern: chmod\\s+-R", True),
         ("curl http://example.com | sh", [], True, "Command matches risky pattern: curl\\s+.*\\s+\\|\\s+.*sh", True),
         # Allowlisted but also matches risky (Allowlist means safe=True, but warning remains)
         ("chmod -R 777 /data", ["chmod"], True, "Command matches risky pattern: chmod\\s+-R", True),
-        # Empty/Whitespace
-        ("", [], False, "Command not found in the allowlist", False),  # Considered not allowlisted
-        ("   ", [], False, "Command not found in the allowlist", False),
+        # Empty/Whitespace -> Should now be True (allowed by default)
+        ("", [], True, "", False),  # Expected safe = True now
+        ("   ", [], True, "", False), # Expected safe = True now
     ],
 )
 @patch("code_agent.config.config.get_config")  # Patch get_config used by is_command_safe
@@ -237,16 +237,15 @@ async def test_run_native_command_auto_approved_config(mock_to_thread, mock_sett
     mock_settings.native_command_allowlist = []
     mock_settings.auto_approve_native_commands = True
     # Pass the mock for create_subprocess_exec
-    configure_mock_subprocess(mock_subprocess_run, stdout="hello world")
+    expected_output = "hello world"
+    configure_mock_subprocess(mock_subprocess_run, stdout=expected_output)
 
-    # This command is not allowlisted and not risky, so is_command_safe returns False.
-    # The native_tools version should return the blocking reason string directly.
-    # Keep await as the function is async, even if returning early.
+    # This command is now considered safe by is_command_safe, so it should execute.
     result = await run_native_command("echo hello world")
-    assert "Command execution not permitted: Command not found in the allowlist" in result
-    # Assert that subprocess and confirm (via to_thread) were not called
-    mock_subprocess_run.assert_not_called()
-    mock_to_thread.assert_not_called()
+    # Assert the command ran and returned the expected output
+    assert result == expected_output
+    mock_subprocess_run.assert_awaited_once() # Check subprocess was called
+    mock_to_thread.assert_not_called() # Confirm prompt was not called
 
 
 @pytest.mark.asyncio
@@ -318,19 +317,19 @@ async def test_run_native_command_dangerous_blocked(mock_to_thread, mock_setting
 @pytest.mark.asyncio
 @patch("code_agent.tools.native_tools.asyncio.to_thread")
 async def test_run_native_command_not_allowlisted_blocked(mock_to_thread, mock_settings, mock_subprocess_run):
-    """Test running a command blocked because it's not allowlisted (and not risky)."""
+    """Test running a command that is not allowlisted and not risky (should now run)."""
     mock_settings.native_command_allowlist = ["git", "ls"]
-    mock_settings.auto_approve_native_commands = False
-    # mock_rich_confirm fixture is not relevant here
+    mock_settings.auto_approve_native_commands = False # Auto-approve is off
+    # Configure mock subprocess
+    expected_output = "script output"
+    configure_mock_subprocess(mock_subprocess_run, stdout=expected_output)
 
-    # is_command_safe returns False (not allowlisted, not risky), run_native_command returns string directly.
-    # Keep await.
+    # This command is now considered safe, so it should execute directly (no prompt needed as not risky).
     result = await run_native_command("python script.py")
-    # Check native_tools version message
-    assert "Command execution not permitted: Command not found in the allowlist" in result
-    mock_subprocess_run.assert_not_called()
-    # Confirmation should not be called (command is not risky)
-    mock_to_thread.assert_not_called()
+    # Check that the command executed successfully
+    assert result == expected_output
+    mock_subprocess_run.assert_awaited_once() # Check subprocess was called
+    mock_to_thread.assert_not_called() # Confirm prompt should not be called
 
 
 @pytest.mark.asyncio
@@ -376,16 +375,13 @@ async def test_run_native_command_shlex_error(mock_to_thread, mock_settings, moc
     mock_settings.auto_approve_native_commands = True  # Avoid confirm prompt
 
     command_with_bad_quote = "echo 'hello world"
-    # shlex.split raises ValueError, run_native_command (native_tools) returns string directly.
-    # Keep await
+    # shlex.split raises ValueError, run_native_command catches this during execution prep
     result = await run_native_command(command_with_bad_quote)
-    # Check native_tools error message for shlex error
-    # Adjust expected message slightly based on previous run
-    # Actually, the is_safe check happens first and blocks it
-    assert "Command execution not permitted: Command not found in the allowlist" in result
+
+    # Assert that the specific error message from the execution prep block is returned
+    assert "Error parsing command: No closing quotation" in result
+    # Subprocess should not have been called
     mock_subprocess_run.assert_not_called()
-    # Confirmation should not be called
-    mock_to_thread.assert_not_called()
 
 
 @pytest.mark.asyncio

@@ -9,6 +9,7 @@ from code_agent.config.settings_based_config import (
     # Rename to avoid conflict if needed
     CodeAgentSettings,
     build_effective_config,  # Import the correct builder
+    ApiKeys,
 )
 
 # Configuration management logic will go here
@@ -22,7 +23,9 @@ TEMPLATE_CONFIG_PATH = Path(__file__).parent / "template.yaml"
 
 # --- Centralized Configuration Access ---
 
-_config: Optional[CodeAgentSettings] = None
+# Global configuration singleton
+# _config: Optional[SettingsConfig] = None # Old type
+_config: Optional[CodeAgentSettings] = None # Correct type
 
 
 def initialize_config(
@@ -59,6 +62,7 @@ def get_config() -> CodeAgentSettings:
         initialize_config()
     # Ensure _config is not None after initialization attempt
     if _config is None:
+        # This should only happen if build_effective_config itself failed critically
         raise RuntimeError("Configuration failed to initialize.")
     return _config
 
@@ -66,8 +70,27 @@ def get_config() -> CodeAgentSettings:
 def get_api_key(provider: str) -> Optional[str]:
     """Get the API key for a specific provider."""
     config = get_config()
-    # Access keys directly using vars() or getattr for safety
-    return getattr(config.api_keys, provider, None)
+    api_keys_obj = config.api_keys
+
+    # Ensure api_keys_obj is valid before proceeding
+    if not isinstance(api_keys_obj, ApiKeys):
+        rich_print(f"[yellow]Warning: api_keys in config is not an ApiKeys instance (type: {type(api_keys_obj)}). Cannot retrieve key for '{provider}'.[/yellow]")
+        return None
+
+    # 1. Try direct attribute access (for defined fields like openai, ai_studio etc.)
+    key = getattr(api_keys_obj, provider, None)
+    if key is not None:
+        return key
+
+    # 2. Fallback: Check if the key exists as an extra field in the model
+    #    This handles providers loaded dynamically from config/env vars that are not explicitly defined fields.
+    #    Access the underlying __dict__ or use model_extra if available in Pydantic v2 context
+    #    Safest approach is often to check model_extra if using Pydantic v2
+    #    For simplicity and avoiding potential linter issues with model_dump here too,
+    #    we rely on getattr covering both defined and potentially extra fields if loaded correctly.
+    #    If getattr returned None, the key is considered missing.
+
+    return None # Key not found as defined attribute or known extra field
 
 
 def validate_config(verbose: bool = False) -> bool:

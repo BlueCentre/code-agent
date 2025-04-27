@@ -303,10 +303,10 @@ class CodeAgentADKSessionManager:
             # Create function response with a dictionary
             function_response = genai_types.FunctionResponse(name=tool_name, response=response_dict)
 
-            # Create the Content object with role='user' for history formatting
+            # Create the Content object with role='function' for history formatting
             event_content = genai_types.Content(
                 parts=[genai_types.Part(function_response=function_response)],
-                role="user",  # Set role='user' as per ADK docs for tool results in history
+                role="function",  # Set role='function' for tool results in history
             )
 
             event = Event(author=author, content=event_content, invocation_id=invocation_id or "")
@@ -347,13 +347,14 @@ class CodeAgentADKSessionManager:
     ):
         """Adds an error event to the session."""
         # Create an Event object specifically for errors
+        error_content = genai_types.Content(parts=[genai_types.Part(text=error_message)], role="user")
         event = Event(
             author=author,
-            content=None,  # Errors typically don't have primary content
-            error_message=error_message,  # Use the dedicated field
-            error_code=error_code,  # Use the dedicated field
+            content=error_content,
+            custom_metadata={"event_type": "error"},
             invocation_id=invocation_id or "",
         )
+        # Directly call add_event which handles session retrieval and appending
         await self.add_event(session_id, event)
 
     async def add_system_message(self, session_id: str, content: str, invocation_id: Optional[str] = None):

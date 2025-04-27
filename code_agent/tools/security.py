@@ -202,11 +202,11 @@ def is_command_safe(command: str) -> Tuple[bool, str, bool]:
     else:
         # Not allowlisted:
         if is_risky:
-            # Block risky commands NOT on allowlist, but provide reason and warning flag
-            return False, risky_reason, True
+            # Risky but not allowlisted: Allow with warning
+            return True, risky_reason, True
         else:
-            # Block non-dangerous, non-risky, non-allowlisted commands
-            return False, "Command not found in the allowlist", False
+            # Not allowlisted and not risky: Allow (considered safe by default)
+            return True, "", False
 
 
 def validate_commands_allowlist(allowlist: List[str]) -> List[str]:

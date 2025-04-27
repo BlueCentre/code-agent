@@ -32,7 +32,7 @@ config = get_config()
 verbosity_controller = get_controller()
 
 # --- Read File Tool ---
-def read_file(tool_context: ToolContext, path: str, offset: Optional[int] = None, limit: Optional[int] = None, enable_pagination: bool = False) -> str:
+async def read_file(tool_context: ToolContext, path: str, offset: Optional[int] = None, limit: Optional[int] = None, enable_pagination: bool = False) -> str:
     """
     Reads a file and returns its contents.
 
@@ -51,21 +51,21 @@ def read_file(tool_context: ToolContext, path: str, offset: Optional[int] = None
     # Create a ReadFileArgs instance from the parameters
     args = ReadFileArgs(path=path, offset=offset, limit=limit, enable_pagination=enable_pagination)
 
-    # Call the original implementation with the args object
-    result = original_read_file(args)
+    # Call the original implementation with the args object and await its result
+    result_str = await original_read_file(args)
 
     # Log the result summary
-    if result.startswith("Error:"):
+    if result_str.startswith("Error:"):
         tool_context.logger.error(f"Failed to read file: {path}")
     else:
-        file_size = len(result)
+        file_size = len(result_str)
         tool_context.logger.info(f"Successfully read file: {path} ({file_size} bytes)")
 
-    return result
+    return result_str
 
 
 # --- Delete File Tool ---
-def delete_file(tool_context: ToolContext, path: str) -> str:
+async def delete_file(tool_context: ToolContext, path: str) -> str:
     """
     Deletes a file at the specified path.
 
@@ -78,7 +78,7 @@ def delete_file(tool_context: ToolContext, path: str) -> str:
     # Log the tool execution in the context
     tool_context.logger.info(f"Deleting file: {path}")
 
-    # Call the original implementation
+    # Call the original implementation (it's synchronous)
     result = original_delete_file(path)
 
     # Log the result
@@ -91,7 +91,7 @@ def delete_file(tool_context: ToolContext, path: str) -> str:
 
 
 # --- Apply Edit Tool ---
-def apply_edit(tool_context: ToolContext, target_file: str, code_edit: str) -> str:
+async def apply_edit(tool_context: ToolContext, target_file: str, code_edit: str) -> str:
     """
     Applies proposed content changes to a file after showing a diff and requesting user confirmation.
 
@@ -105,7 +105,7 @@ def apply_edit(tool_context: ToolContext, target_file: str, code_edit: str) -> s
     # Log the tool execution in the context
     tool_context.logger.info(f"Applying edit to file: {target_file}")
 
-    # Call the original implementation - it handles confirmation internally based on config
+    # Call the original implementation - it handles confirmation internally based on config (synchronous)
     result = original_apply_edit(target_file, code_edit)
 
     # Log the result
@@ -118,7 +118,7 @@ def apply_edit(tool_context: ToolContext, target_file: str, code_edit: str) -> s
 
 
 # --- List Directory Tool ---
-def list_dir(tool_context: ToolContext, relative_workspace_path: str = ".") -> str:
+async def list_dir(tool_context: ToolContext, relative_workspace_path: str = ".") -> str:
     """
     Lists the contents of a directory.
 
@@ -199,7 +199,7 @@ def list_dir(tool_context: ToolContext, relative_workspace_path: str = ".") -> s
 
 
 # --- Run Terminal Command Tool ---
-def run_terminal_cmd(tool_context: ToolContext, command: str, is_background: bool = False) -> str:
+async def run_terminal_cmd(tool_context: ToolContext, command: str, is_background: bool = False) -> str:
     """
     Executes a terminal command after security checks and user confirmation.
 
@@ -219,22 +219,22 @@ def run_terminal_cmd(tool_context: ToolContext, command: str, is_background: boo
         tool_context.logger.warning("Background execution requested but not supported. Running in foreground.")
 
     # Call the original implementation - it handles confirmation internally based on config
-    result = original_run_command(command)
+    result_str = await original_run_command(command)
 
     # Log the result
     # Check for known error prefixes/substrings returned by original_run_command
     if (
-        result.startswith("Error:")
-        or "Error executing command:" in result
-        or "Command timed out" in result
-        or result.startswith("Command execution not permitted:")
-        or "[red]Error (exit code:" in result
+        result_str.startswith("Error:")
+        or "Error executing command:" in result_str
+        or "Command timed out" in result_str
+        or result_str.startswith("Command execution not permitted:")
+        or "[red]Error (exit code:" in result_str
     ):  # Check for non-zero exit code message
-        tool_context.logger.error(f"Failed to run command: {command} -> {result}")
+        tool_context.logger.error(f"Failed to run command: {command} -> {result_str}")
     else:
         tool_context.logger.info(f"Successfully ran command: {command}")
 
-    return result
+    return result_str
 
 
 # --- Load Memory Tool (Moved from tools/memory_tools.py) ---

@@ -35,14 +35,14 @@ def mock_config_base():
         file_operations=FileOperationsSettings(),
         auto_approve_native_commands=False,
         native_command_allowlist=[],
-        auto_approve_edits=False,  # Needed for apply_edit tests
+        auto_approve_edit=False,  # Corrected: Changed edits -> edit
     )
 
 
 @pytest.fixture
 def auto_approve_config(mock_config_base):
     """Mock config with auto-approve edits enabled."""
-    mock_config_base.auto_approve_edits = True
+    mock_config_base.auto_approve_edit = True  # Corrected: Changed edits -> edit
     return mock_config_base
 
 
@@ -216,7 +216,7 @@ def test_apply_edit_path_exists_but_not_file(mock_is_path_within_cwd, mock_get_c
 @patch("code_agent.tools.simple_tools.get_config")
 @patch("code_agent.tools.simple_tools.is_path_within_cwd")
 @patch("rich.prompt.Confirm.ask")
-def test_apply_edit_success_new_file(mock_confirm_ask, mock_is_path_within_cwd, mock_get_config, mock_config_base, tmp_path):
+def test_apply_edit_success_new_file(mock_confirm_ask, mock_is_path_within_cwd, mock_get_config, mock_config_base, tmp_path, mocker):
     """Test apply_edit successfully creates a new file."""
     mock_is_path_within_cwd.return_value = True  # Path is within CWD
     mock_get_config.return_value = mock_config_base
@@ -225,11 +225,28 @@ def test_apply_edit_success_new_file(mock_confirm_ask, mock_is_path_within_cwd, 
     new_file_path = tmp_path / "new_file.txt"
     content = "This is a new file"
 
+    # Mock Path methods for the new file scenario
+    mock_is_file = mocker.patch("pathlib.Path.is_file", return_value=False)
+    mock_exists = mocker.patch("pathlib.Path.exists", return_value=False)
+    mock_write_text = mocker.patch("pathlib.Path.write_text")
+    # Mock mkdir on the parent directory
+    mock_mkdir = mocker.patch("pathlib.Path.mkdir")
+
     result = apply_edit(str(new_file_path), content)
 
-    assert "successfully" in result
-    assert new_file_path.read_text() == content
+    # Assertions
+    mock_is_path_within_cwd.assert_called_once_with(str(new_file_path))
+    # is_file and exists should be called on the target path
+    # Check call args if specific path instance is needed, but call_count might suffice
+    assert mock_is_file.call_count >= 1
+    assert mock_exists.call_count >= 1 # Should be called after is_file is false
     mock_confirm_ask.assert_called_once()
+    mock_mkdir.assert_called_once_with(parents=True, exist_ok=True)
+    # Check write_text was called once with the correct content argument
+    # The mock captures (self, content) args, assert_called_once_with checks non-self args
+    mock_write_text.assert_called_once_with(content)
+
+    assert "successfully" in result
 
 
 @patch("code_agent.tools.simple_tools.get_config")

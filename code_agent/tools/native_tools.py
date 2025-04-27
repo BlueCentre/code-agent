@@ -80,8 +80,13 @@ COMMAND_CATEGORIES = {
 
 def _categorize_command(command: str) -> List[str]:
     """Determine which categories a command falls into for better context."""
-    cmd_parts = shlex.split(command)
-    base_cmd = cmd_parts[0] if cmd_parts else ""
+    try:
+        cmd_parts = shlex.split(command)
+        base_cmd = cmd_parts[0] if cmd_parts else ""
+    except ValueError:
+        # Handle invalid command syntax gracefully
+        cmd_parts = []
+        base_cmd = "" # Or maybe use the raw command string if needed?
 
     categories = []
     for category, info in COMMAND_CATEGORIES.items():

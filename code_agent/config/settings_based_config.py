@@ -151,10 +151,10 @@ class CodeAgentSettings(BaseModel):
     # Agent rules
     rules: List[str] = Field(
         default_factory=list,
-        description="Custom rules to influence the agent's behavior",
+        description="Custom rules to influence the agent\'s behavior",
     )
 
-    # Add max_tokens setting
+    # Add max_tokens setting here as well to match SettingsConfig and ensure it's a known field
     max_tokens: int = Field(
         default=1000,
         description="Maximum number of tokens for the LLM response",
@@ -167,6 +167,19 @@ class CodeAgentSettings(BaseModel):
     temperature: float | None = Field(
         default=0.7,
         description="Temperature for the LLM model",
+    )
+
+    # User-specific configurations
+    user_id: Optional[str] = None
+    auto_approve_edit: bool = False  # Added new setting
+
+    # Tool-specific configurations
+    tool_schema: Optional[dict[str, Any]] = None
+
+    # LiteLLM Additional Parameters
+    additional_params: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Additional keyword arguments to pass to litellm.completion",
     )
 
     # Other fields from config can be added as needed
@@ -245,6 +258,12 @@ class SettingsConfig(BaseSettings):
     temperature: float | None = Field(
         default=0.7,
         description="Temperature for the LLM model",
+    )
+
+    # Add max_tokens setting here for env var loading
+    max_tokens: int = Field(
+        default=1000, # Default can live here or be overridden by CodeAgentSettings default
+        description="Maximum number of tokens for the LLM response",
     )
 
     # Environment variable mapping configuration
@@ -360,18 +379,13 @@ def build_effective_config(
     effective_data = deep_update(effective_data, settings_file_data)
 
     # 3. Load environment variables using SettingsConfig and merge
-    try:
-        env_settings = SettingsConfig()  # Loads from .env and env vars
-        # Get only values explicitly set by env vars (not defaults from SettingsConfig)
-        env_data = env_settings.model_dump(exclude_unset=True)
-        # Special handling for potentially empty nested dicts like api_keys
-        if "api_keys" in env_data and not env_data["api_keys"]:
-            del env_data["api_keys"]  # Don't merge empty dict over existing keys
-        # Remove other potentially empty nested structures if needed
+    # Let ValidationError propagate if env vars are invalid
+    env_settings = SettingsConfig()  # Loads from .env and env vars
+    env_data = env_settings.model_dump(exclude_unset=True)
+    # Special handling for potentially empty nested dicts like api_keys
+    if "api_keys" in env_data and not env_data["api_keys"]:
+        del env_data["api_keys"]  # Don't merge empty dict over existing keys
 
-    except ValidationError as e:
-        print(f"Warning: Error loading environment configuration: {e}")
-        env_data = {}
     effective_data = deep_update(effective_data, env_data)
 
     # 4. Prepare CLI overrides (only non-None values)
@@ -440,8 +454,30 @@ def get_config() -> SettingsConfig:
 def get_api_key(provider: str) -> Optional[str]:
     """Gets the API key for a specific provider from the loaded config."""
     config = get_config()
-    # Access keys directly using vars() instead of model_dump
-    return vars(config.api_keys).get(provider)
+    api_keys_obj = config.api_keys
+
+    # 1. Try direct attribute access (for defined fields)
+    try:
+        key = getattr(api_keys_obj, provider, None)
+        if key is not None:
+            return key
+    except AttributeError:
+        pass # Field not explicitly defined, proceed to check extras
+
+    # 2. Fallback: Check extra fields via model_dump()
+    # Use exclude_unset=True to include all fields, even defaults if needed
+    # Use exclude_none=False if you want to differentiate between unset and set-to-None
+    try:
+        # Ensure api_keys_obj is an ApiKeys instance before calling model_dump
+        if isinstance(api_keys_obj, ApiKeys):
+            keys_dict = api_keys_obj.model_dump(exclude_unset=True, exclude_none=True)
+            return keys_dict.get(provider)
+        else:
+            # Handle case where api_keys_obj is None or not the expected type
+            return None
+    except Exception:
+        # Handle potential errors during model_dump or if it's not a dict
+        return None
 
 
 def create_settings_model(config_data: Dict) -> CodeAgentSettings:
