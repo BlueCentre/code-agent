@@ -5,31 +5,29 @@ This module wraps the existing tool functions as ADK FunctionTool instances,
 adapting them to work with the Google ADK framework.
 """
 
-from pathlib import Path
-from typing import Optional, Any, Callable, Dict, List, Tuple, Union
-import os
 import logging
-import functools
-import tempfile
+from pathlib import Path
+from typing import List, Optional
 
 from google.adk.memory import BaseMemoryService
 from google.adk.tools import FunctionTool, ToolContext
 from google.adk.tools.google_search_tool import google_search
 
+from code_agent.config import get_config
 from code_agent.tools.file_tools import ReadFileArgs  # Import the ReadFileArgs class
 from code_agent.tools.file_tools import delete_file as original_delete_file
 from code_agent.tools.file_tools import read_file as original_read_file
 from code_agent.tools.native_tools import run_native_command as original_run_command
 from code_agent.tools.simple_tools import apply_edit as original_apply_edit
+from code_agent.tools.verbosity import get_controller
 
 # from code_agent.tools.memory_tools import load_memory as original_load_memory # Removed
 from .services import get_memory_service
-from code_agent.config import get_config
-from code_agent.tools.verbosity import get_controller
 
 logger = logging.getLogger(__name__)
 config = get_config()
 verbosity_controller = get_controller()
+
 
 # --- Read File Tool ---
 async def read_file(tool_context: ToolContext, path: str, offset: Optional[int] = None, limit: Optional[int] = None, enable_pagination: bool = False) -> str:
@@ -328,7 +326,7 @@ def create_run_terminal_cmd_tool() -> FunctionTool:
 
 def create_google_search_tool() -> FunctionTool:
     """Create a Google Search tool.
-    
+
     This tool uses Google's search capability to find information on the web.
     It requires a valid Google API key to be set in the environment.
     """

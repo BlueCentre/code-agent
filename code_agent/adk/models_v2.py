@@ -8,15 +8,14 @@ This module provides:
 4. Fallback behavior for handling model failures
 """
 
-from typing import Any, Dict, List, Optional, Tuple, Union, AsyncGenerator
+from typing import Any, AsyncGenerator, Dict, List, Optional, Union
 
 import litellm
+
 # Ensure Gemini is imported
-from google.adk.models import BaseLlm, Gemini, LlmRequest, LlmResponse
+from google.adk.models import BaseLlm, LlmRequest, LlmResponse
 from google.genai import types
-from google.generativeai.types import GenerationConfig
-from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
-import asyncio
+from pydantic import BaseModel, ConfigDict, Field
 
 from code_agent.config.config import get_api_key, get_config
 from code_agent.tools.error_utils import format_api_error
@@ -103,7 +102,7 @@ class LiteLlm(BaseLlm):
             messages = []
             for content_item in prompt.contents:
                 # Assuming simple text parts for now
-                if content_item.parts and hasattr(content_item.parts[0], 'text') and content_item.parts[0].text:
+                if content_item.parts and hasattr(content_item.parts[0], "text") and content_item.parts[0].text:
                     messages.append({"role": content_item.role, "content": content_item.parts[0].text})
         elif isinstance(prompt, str):
             messages = [{"role": "user", "content": prompt}]
@@ -148,7 +147,7 @@ class LiteLlm(BaseLlm):
                 # Assuming LlmResponse might have a metadata field based on previous errors, trying that.
                 try:
                     return LlmResponse(content=response_content, metadata=metadata)
-                except Exception: # Fallback if metadata kwarg isn't valid
+                except Exception:  # Fallback if metadata kwarg isn't valid
                     return LlmResponse(content=response_content)
 
             except Exception as e:
@@ -271,7 +270,7 @@ def create_model(
     retry_count: int = 2,
     fallback_provider: Optional[str] = None,
     fallback_model: Optional[str] = None,
-) -> Union[BaseLlm, str]: # Ensure return type hint is correct
+) -> Union[BaseLlm, str]:  # Ensure return type hint is correct
     """
     Factory function to select the appropriate model identifier or instance.
 
@@ -342,11 +341,11 @@ def create_model(
             # REVERTED: Return the model name string for ai_studio.
             # The caller (e.g., LlmAgent) handles instantiation via registry.
             if not api_key:
-                 print(f"Warning: No API key found for ai_studio. Gemini model might rely on ADC.")
+                print("Warning: No API key found for ai_studio. Gemini model might rely on ADC.")
             # Validate model name prefix (optional)
             if not target_model.startswith("gemini-"):
-                 print(f"Warning: Model name '{target_model}' for ai_studio doesn\'t start with 'gemini-'")
-            return target_model # Return string
+                print(f"Warning: Model name '{target_model}' for ai_studio doesn't start with 'gemini-'")
+            return target_model  # Return string
         elif target_provider == "ollama":
             # Use specialized Ollama wrapper
             ollama_config = config.ollama or {}
@@ -431,4 +430,4 @@ def get_default_models_by_provider() -> Dict[str, str]:
         "anthropic": "claude-3-haiku",
         "groq": "llama3-70b-8192",
         "ollama": "llama3.2:latest",
-    } 
+    }

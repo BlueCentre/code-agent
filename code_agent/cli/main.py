@@ -1,9 +1,5 @@
-import os  # For environment variables
 import sys  # For command-line arguments
-from typing import Optional, List
-
-import anyio # Add anyio import for Typer async handling
-import asyncio # Add asyncio import
+from typing import Optional
 
 from dotenv import load_dotenv  # Import dotenv
 
@@ -213,8 +209,8 @@ def main(
     else:
         # Only warn if a Google provider is likely intended
         if config.default_provider in ["google", "ai_studio", "vertexai"]:
-             print("WARNING: No Google API key found (GOOGLE_API_KEY or AI_STUDIO_API_KEY).")
-             print("         Google models may not work without an API key or appropriate ADC.")
+            print("WARNING: No Google API key found (GOOGLE_API_KEY or AI_STUDIO_API_KEY).")
+            print("         Google models may not work without an API key or appropriate ADC.")
         # Note: Other providers (OpenAI, Anthropic, etc.) are configured via litellm
 
 
@@ -476,43 +472,43 @@ Examples:
                                                 query = function_args["query"]
                                                 verbosity_controller.show_verbose(f"Using simulated search for '{query}' in CLI mode")
                                                 verbosity_controller.show_warning("Note: For real Google Search, use this agent in ADK deployment mode")
-                                                
+
                                                 # Simulated search results based on common queries
                                                 if "lithium" in query.lower() or "battery" in query.lower() or "batteries" in query.lower():
                                                     search_results = [
                                                         {
                                                             "title": "Lithium-ion battery - Wikipedia",
                                                             "url": "https://en.wikipedia.org/wiki/Lithium-ion_battery",
-                                                            "snippet": "A lithium-ion battery is a type of rechargeable battery that uses lithium ions as the primary component of its electrolyte. They are commonly used in portable electronics and electric vehicles and are growing in popularity for military and aerospace applications."
+                                                            "snippet": "A lithium-ion battery is a type of rechargeable battery that uses lithium ions as the primary component of its electrolyte. They are commonly used in portable electronics and electric vehicles and are growing in popularity for military and aerospace applications.",
                                                         },
                                                         {
                                                             "title": "How Do Lithium Batteries Work? - Science ABC",
                                                             "url": "https://www.scienceabc.com/innovation/how-do-lithium-ion-batteries-work.html",
-                                                            "snippet": "Lithium batteries work by the movement of lithium ions from the negative electrode through an electrolyte to the positive electrode during discharge, and back when charging. They offer high energy density and low self-discharge rates compared to other battery technologies."
+                                                            "snippet": "Lithium batteries work by the movement of lithium ions from the negative electrode through an electrolyte to the positive electrode during discharge, and back when charging. They offer high energy density and low self-discharge rates compared to other battery technologies.",
                                                         },
                                                         {
                                                             "title": "Environmental Impact of Lithium Batteries - National Geographic",
                                                             "url": "https://www.nationalgeographic.com/environment/article/lithium-batteries-environment",
-                                                            "snippet": "While lithium batteries power clean energy technologies, their production has significant environmental impacts. Mining lithium requires vast amounts of water and can cause pollution. Researchers are working on more sustainable extraction methods and recycling programs."
-                                                        }
+                                                            "snippet": "While lithium batteries power clean energy technologies, their production has significant environmental impacts. Mining lithium requires vast amounts of water and can cause pollution. Researchers are working on more sustainable extraction methods and recycling programs.",
+                                                        },
                                                     ]
                                                 elif "ai" in query.lower() or "artificial intelligence" in query.lower() or "llm" in query.lower():
                                                     search_results = [
                                                         {
                                                             "title": "What is Artificial Intelligence (AI)? - IBM",
                                                             "url": "https://www.ibm.com/topics/artificial-intelligence",
-                                                            "snippet": "Artificial intelligence is a field of computer science that aims to create systems capable of performing tasks that typically require human intelligence. These include visual perception, speech recognition, decision-making, and language translation."
+                                                            "snippet": "Artificial intelligence is a field of computer science that aims to create systems capable of performing tasks that typically require human intelligence. These include visual perception, speech recognition, decision-making, and language translation.",
                                                         },
                                                         {
                                                             "title": "Large Language Models: A New Frontier in AI - Stanford HAI",
                                                             "url": "https://hai.stanford.edu/news/large-language-models-new-frontier-ai",
-                                                            "snippet": "Large Language Models (LLMs) like GPT-4, Claude, and Gemini represent a significant advancement in AI technology, capable of generating human-like text, translating languages, and even writing code based on natural language instructions."
+                                                            "snippet": "Large Language Models (LLMs) like GPT-4, Claude, and Gemini represent a significant advancement in AI technology, capable of generating human-like text, translating languages, and even writing code based on natural language instructions.",
                                                         },
                                                         {
                                                             "title": "The State of AI in 2024 - MIT Technology Review",
                                                             "url": "https://www.technologyreview.com/2024/01/10/the-state-of-ai-2024/",
-                                                            "snippet": "2024 has seen significant advancements in multimodal AI systems, regulatory frameworks for AI governance, and increased focus on AI safety and alignment. Companies are investing billions in AI research and infrastructure."
-                                                        }
+                                                            "snippet": "2024 has seen significant advancements in multimodal AI systems, regulatory frameworks for AI governance, and increased focus on AI safety and alignment. Companies are investing billions in AI research and infrastructure.",
+                                                        },
                                                     ]
                                                 else:
                                                     # Default results for other queries
@@ -520,18 +516,18 @@ Examples:
                                                         {
                                                             "title": f"Search result 1 for: {query}",
                                                             "url": "https://example.com/result1",
-                                                            "snippet": f"This is a simulated search result for '{query}'. In a real implementation, this would connect to an actual search API and return relevant results."
+                                                            "snippet": f"This is a simulated search result for '{query}'. In a real implementation, this would connect to an actual search API and return relevant results.",
                                                         },
                                                         {
                                                             "title": f"Search result 2 for: {query}",
                                                             "url": "https://example.com/result2",
-                                                            "snippet": f"More information about '{query}'. This is a demonstration of the search capability, showing how search results would be formatted."
+                                                            "snippet": f"More information about '{query}'. This is a demonstration of the search capability, showing how search results would be formatted.",
                                                         },
                                                         {
                                                             "title": f"Search result 3 for: {query}",
                                                             "url": "https://example.com/result3",
-                                                            "snippet": f"Additional details related to '{query}'. In a production environment, these results would be from actual web sources."
-                                                        }
+                                                            "snippet": f"Additional details related to '{query}'. In a production environment, these results would be from actual web sources.",
+                                                        },
                                                     ]
 
                                                 # Format the results
@@ -587,11 +583,11 @@ Be engaging and natural in your tone. If the search results are not sufficient, 
 If appropriate, suggest follow-up questions the user might be interested in."""
 
                                             new_response = model.generate_content(function_result_prompt)
-                                            if new_response and hasattr(new_response, 'candidates') and new_response.candidates:
+                                            if new_response and hasattr(new_response, "candidates") and new_response.candidates:
                                                 candidate = new_response.candidates[0]
-                                                if hasattr(candidate, 'content') and hasattr(candidate.content, 'parts'):
+                                                if hasattr(candidate, "content") and hasattr(candidate.content, "parts"):
                                                     parts = candidate.content.parts
-                                                    if parts and hasattr(parts[0], 'text'):
+                                                    if parts and hasattr(parts[0], "text"):
                                                         response_text = parts[0].text
                                                     else:
                                                         response_text = "I couldn't extract a proper response from the tool results."
@@ -608,24 +604,21 @@ If appropriate, suggest follow-up questions the user might be interested in."""
                                         break
                             else:
                                 # No function call, just use the text response
-                                if hasattr(candidate.content, 'text'):
+                                if hasattr(candidate.content, "text"):
                                     response_text = candidate.content.text
                                 else:
                                     # If no direct text property, extract from parts
-                                    if hasattr(candidate.content, 'parts') and candidate.content.parts:
+                                    if hasattr(candidate.content, "parts") and candidate.content.parts:
                                         parts = candidate.content.parts
-                                        if parts and hasattr(parts[0], 'text'):
+                                        if parts and hasattr(parts[0], "text"):
                                             response_text = parts[0].text
                                         else:
                                             response_text = "I couldn't extract a proper response."
                                     else:
                                         response_text = "I wasn't able to generate a proper response."
-                                    
+
                                 # Create assistant event with the text
-                                assistant_event = Event(
-                                    author="assistant",
-                                    content=genai_types.Content(parts=[genai_types.Part(text=response_text)])
-                                )
+                                assistant_event = Event(author="assistant", content=genai_types.Content(parts=[genai_types.Part(text=response_text)]))
                                 session_service.append_event(session=current_session, event=assistant_event)
                         else:
                             # Fallback for any other response format

@@ -151,7 +151,7 @@ class CodeAgentSettings(BaseModel):
     # Agent rules
     rules: List[str] = Field(
         default_factory=list,
-        description="Custom rules to influence the agent\'s behavior",
+        description="Custom rules to influence the agent's behavior",
     )
 
     # Add max_tokens setting here as well to match SettingsConfig and ensure it's a known field
@@ -262,7 +262,7 @@ class SettingsConfig(BaseSettings):
 
     # Add max_tokens setting here for env var loading
     max_tokens: int = Field(
-        default=1000, # Default can live here or be overridden by CodeAgentSettings default
+        default=1000,  # Default can live here or be overridden by CodeAgentSettings default
         description="Maximum number of tokens for the LLM response",
     )
 
@@ -462,7 +462,7 @@ def get_api_key(provider: str) -> Optional[str]:
         if key is not None:
             return key
     except AttributeError:
-        pass # Field not explicitly defined, proceed to check extras
+        pass  # Field not explicitly defined, proceed to check extras
 
     # 2. Fallback: Check extra fields via model_dump()
     # Use exclude_unset=True to include all fields, even defaults if needed

@@ -17,7 +17,7 @@ from google.generativeai.types import HarmBlockThreshold, HarmCategory
 from rich import print
 
 # Service/Manager imports remain
-from code_agent.adk import CodeAgentADKSessionManager, get_adk_session_service, get_memory_service
+from code_agent.adk import CodeAgentADKSessionManager, get_adk_session_service
 
 # Import memory tools
 # from code_agent.tools.memory_tools import load_memory # Old import
@@ -28,7 +28,7 @@ from code_agent.config import CodeAgentSettings, get_config  # Changed
 
 # Import agent configuration tools
 from code_agent.tools.agent_config_tools import set_verbosity
-from code_agent.tools.error_utils import format_api_error, format_tool_error
+from code_agent.tools.error_utils import format_tool_error
 
 # Import run_native_command from native_tools
 from code_agent.tools.native_tools import run_native_command
@@ -43,22 +43,29 @@ from code_agent.verbosity import VerbosityLevel, get_controller
 # Maximum number of tool calls allowed in a single turn
 MAX_TOOL_CALLS = 10
 
-import logging # Add import
+import logging  # Add import
 
-logger = logging.getLogger(__name__) # Get logger instance
+logger = logging.getLogger(__name__)  # Get logger instance
 
 # --- Tool Management --- # Added Section Header
 # Assuming ToolManager exists and can be imported
 try:
-    from code_agent.tools import ToolManager # Use the correct path for ToolManager
+    from code_agent.tools import ToolManager  # Use the correct path for ToolManager
 except ImportError:
     # Define a placeholder if ToolManager is not available or refactored
     class ToolManager:
         def __init__(self, tools=None):
             self._tools = tools or []
-        def get_tools(self): return self._tools
-        async def execute_tool(self, name, **kwargs): return {"error": f"Tool '{name}' not found or ToolManager not fully implemented."}
-        def get_tool_schema(self): return [] # Placeholder schema
+
+        def get_tools(self):
+            return self._tools
+
+        async def execute_tool(self, name, **kwargs):
+            return {"error": f"Tool '{name}' not found or ToolManager not fully implemented."}
+
+        def get_tool_schema(self):
+            return []  # Placeholder schema
+
 
 # Define available tools (ensure imports are correct)
 # These should match the tools intended for use with LiteLLM/ToolManager
@@ -72,6 +79,7 @@ AVAILABLE_TOOLS_LIST = [
     # Add other tools managed by ToolManager if necessary
 ]
 
+
 class CodeAgent:
     """Core class for the Code Agent, handling interaction loops and tool use using ADK sessions."""
 
@@ -84,10 +92,10 @@ class CodeAgent:
         self._initialized: bool = False  # Flag to track async initialization
 
         # ---- Add Missing Attributes ----
-        self.agent_name: str = "CodeAgent" # Added agent_name
-        self.tool_manager = ToolManager(tools=AVAILABLE_TOOLS_LIST) # Added ToolManager instance
-        self.streaming_callback: Optional[callable] = None # Added streaming_callback
-        self.tool_call_ids: Dict[str, str] = {} # Added tool_call_ids mapping (func_name -> llm_tool_call_id)
+        self.agent_name: str = "CodeAgent"  # Added agent_name
+        self.tool_manager = ToolManager(tools=AVAILABLE_TOOLS_LIST)  # Added ToolManager instance
+        self.streaming_callback: Optional[callable] = None  # Added streaming_callback
+        self.tool_call_ids: Dict[str, str] = {}  # Added tool_call_ids mapping (func_name -> llm_tool_call_id)
         # ---- End Add Missing Attributes ----
 
         # Initialize verbosity controller with config setting
@@ -248,12 +256,12 @@ class CodeAgent:
         elif provider == "ollama":
             # Get from config or use default
             # Ensure self.config.ollama exists and is a dict before accessing 'base_url'
-            ollama_config = getattr(self.config, 'ollama', None)
+            ollama_config = getattr(self.config, "ollama", None)
             if isinstance(ollama_config, dict):
                 # Check for 'base_url' key specifically
                 return ollama_config.get("base_url", "http://localhost:11434")
             else:
-                return "http://localhost:11434" # Default if config section is missing/invalid
+                return "http://localhost:11434"  # Default if config section is missing/invalid
         # For None or unhandled providers, use OpenAI's endpoint as fallback
         # This prevents errors when provider is None or unknown
         return "https://api.openai.com/v1"
@@ -513,14 +521,14 @@ class CodeAgent:
                 continue
 
             author = event.author
-            content_role = event.content.role # ADK role (e.g., 'user', 'model', 'function')
+            content_role = event.content.role  # ADK role (e.g., 'user', 'model', 'function')
             parts = event.content.parts
             event_id = event.id
 
             # Extract data from parts
-            text_content = " ".join([p.text for p in parts if hasattr(p, 'text') and p.text])
-            function_calls = [p.function_call for p in parts if hasattr(p, 'function_call') and p.function_call]
-            function_responses = [p.function_response for p in parts if hasattr(p, 'function_response') and p.function_response]
+            text_content = " ".join([p.text for p in parts if hasattr(p, "text") and p.text])
+            function_calls = [p.function_call for p in parts if hasattr(p, "function_call") and p.function_call]
+            function_responses = [p.function_response for p in parts if hasattr(p, "function_response") and p.function_response]
 
             litellm_role = None
             litellm_message = {}
@@ -558,16 +566,18 @@ class CodeAgent:
                                 result_content = str(func_resp.response)
 
                             # Append a separate message for each tool result
-                            messages.append({
-                                "role": "tool",
-                                "tool_call_id": tool_call_id_to_match,
-                                "content": result_content,
-                                # "name": tool_name # LiteLLM doesn't typically use name here
-                            })
+                            messages.append(
+                                {
+                                    "role": "tool",
+                                    "tool_call_id": tool_call_id_to_match,
+                                    "content": result_content,
+                                    # "name": tool_name # LiteLLM doesn't typically use name here
+                                }
+                            )
                         else:
                             # If no matching request ID found, SKIP this tool result message
                             print(f"[Code Agent Warning] Skipping tool result for '{tool_name}' from event {event_id} - could not find matching request ID.")
-                    continue # Skip adding a main message for this event if it only contained tool results
+                    continue  # Skip adding a main message for this event if it only contained tool results
 
                 else:
                     # ADK Assistant response/request -> LiteLLM 'assistant' role message
@@ -598,22 +608,21 @@ class CodeAgent:
 
                     # Ensure content is not empty string if no text content, should be None
                     if not litellm_message["content"] and not litellm_message.get("tool_calls"):
-                         continue # Skip empty assistant messages
+                        continue  # Skip empty assistant messages
                     if not litellm_message["content"]:
-                         litellm_message["content"] = None # Use None instead of empty string if only tool calls
+                        litellm_message["content"] = None  # Use None instead of empty string if only tool calls
 
             # Append the constructed message if a role was determined
             if litellm_role and litellm_message:
-                 # Special case: If this is the *very last* event and it's from the user,
-                 # ensure its role is 'user' for LiteLLM, even if ADK role differs.
-                 # (This handles cases where the ADK might use a different role internally)
-                 # However, based on current logic, author=='user' already sets role='user'.
-                 # Let's ensure no empty content for user/system messages either.
-                 if litellm_role in ["user", "system"] and not litellm_message["content"]:
-                     continue # Skip empty user/system messages
+                # Special case: If this is the *very last* event and it's from the user,
+                # ensure its role is 'user' for LiteLLM, even if ADK role differs.
+                # (This handles cases where the ADK might use a different role internally)
+                # However, based on current logic, author=='user' already sets role='user'.
+                # Let's ensure no empty content for user/system messages either.
+                if litellm_role in ["user", "system"] and not litellm_message["content"]:
+                    continue  # Skip empty user/system messages
 
-                 messages.append(litellm_message)
-
+                messages.append(litellm_message)
 
         # Final check: Ensure the very last message has role 'user' if the turn started with a user prompt.
         # This might be too simplistic. The run_turn loop likely handles adding the final user prompt separately.
@@ -1100,7 +1109,7 @@ class CodeAgent:
         system_prompt: str,
         invocation_id: str,
         quiet: bool = False,
-        initial_messages: Optional[List[Dict[str, Any]]] = None, # Accept initial messages
+        initial_messages: Optional[List[Dict[str, Any]]] = None,  # Accept initial messages
     ) -> Optional[str]:
         """Runs a turn using litellm with streaming and function calling."""
         # Get model string in proper format for LiteLLM
@@ -1121,9 +1130,10 @@ class CodeAgent:
                 # Use rich print for better formatting if available
                 try:
                     from rich import print
+
                     print(f"[bold red]Error:[/bold red] {error_message}")
                 except ImportError:
-                    print(f"Error: {error_message}") # Fallback
+                    print(f"Error: {error_message}")  # Fallback
 
             # Add error message to session history (as assistant message for context)
             # Consider adding a specific error event type if ADK supports it better
@@ -1139,10 +1149,9 @@ class CodeAgent:
         available_tools = {
             tool.__name__: getattr(self.tool_manager, tool.__name__)
             for tool in self.tool_manager.get_tools()
-            if hasattr(self.tool_manager, tool.__name__) # Check attribute using function name
+            if hasattr(self.tool_manager, tool.__name__)  # Check attribute using function name
         }
         logger.debug(f"Available tools prepared for LLM: {list(available_tools.keys())}")
-
 
         response_text = ""  # Store the final accumulated text response here
         loop_ended_naturally = True  # Flag to track if loop finished without break
@@ -1151,19 +1160,18 @@ class CodeAgent:
         messages = initial_messages if initial_messages is not None else []
         # If initial_messages wasn't passed (e.g., direct call), construct it
         if not messages:
-             history_events = await self.session_manager.get_history(self.session_id)
-             converted_history = self._convert_adk_events_to_litellm(history_events)
-             if system_prompt:
-                 messages.append({"role": "system", "content": system_prompt})
-             messages.extend(converted_history)
-             # Explicitly add the current user prompt for this turn
-             if prompt:
-                 messages.append({"role": "user", "content": prompt})
-
+            history_events = await self.session_manager.get_history(self.session_id)
+            converted_history = self._convert_adk_events_to_litellm(history_events)
+            if system_prompt:
+                messages.append({"role": "system", "content": system_prompt})
+            messages.extend(converted_history)
+            # Explicitly add the current user prompt for this turn
+            if prompt:
+                messages.append({"role": "user", "content": prompt})
 
         try:
             with thinking_indicator("Agent is thinking...") as indicator:
-                tool_calls_pending = True # Start assuming a tool call might be needed, loop checks response
+                tool_calls_pending = True  # Start assuming a tool call might be needed, loop checks response
                 tool_call_count = 0
                 current_invocation_id = invocation_id  # Track current invocation
                 last_assistant_event_id = None  # Track the ID of the last partial assistant event
@@ -1192,15 +1200,14 @@ class CodeAgent:
                         # DO NOT re-add the original user prompt here, it's in the history.
                     # Else (first call, tool_call_count == 0), 'messages' list is already prepared outside the loop
 
-
                     # Debug logging to check final messages sent to LLM
                     verbosity_controller = get_controller()
                     # Ensure messages is actually defined here before logging
                     if messages:
                         verbosity_controller.show_debug(f"Final messages sent to LLM: {json.dumps(messages, indent=2)}")
                     else:
-                         verbosity_controller.show_debug("Messages list is unexpectedly empty before LLM call.")
-                         logger.warning("Messages list is unexpectedly empty before LLM call.")
+                        verbosity_controller.show_debug("Messages list is unexpectedly empty before LLM call.")
+                        logger.warning("Messages list is unexpectedly empty before LLM call.")
 
                     # ---- START DEBUG LOG ----
                     try:
@@ -1227,11 +1234,10 @@ class CodeAgent:
 
                         # additional_litellm_params = self.config.additional_params.copy()
                         if api_base:
-                             additional_litellm_params["api_base"] = api_base
+                            additional_litellm_params["api_base"] = api_base
                         # Add api_key only if it's not None (Ollama case)
                         if api_key:
-                             additional_litellm_params["api_key"] = api_key
-
+                            additional_litellm_params["api_key"] = api_key
 
                         response = await litellm.acompletion(
                             model=model_string,
@@ -1239,11 +1245,11 @@ class CodeAgent:
                             temperature=self.config.temperature,
                             max_tokens=self.config.max_tokens,
                             stream=True,
-                            tools=send_tools, # Send tool definitions
-                            tool_choice="auto", # Let the LLM decide if it needs tools
+                            tools=send_tools,  # Send tool definitions
+                            tool_choice="auto",  # Let the LLM decide if it needs tools
                             # Pass api_base and api_key within additional_params if needed
                             # **self.config.additional_params, # Original
-                            **additional_litellm_params # Use potentially updated params
+                            **additional_litellm_params,  # Use potentially updated params
                         )
                         verbosity_controller.show_verbose(f"[{self.agent_name}] LiteLLM call initiated (streaming).")
 
@@ -1284,7 +1290,7 @@ class CodeAgent:
 
                                     if index not in current_tool_calls:
                                         current_tool_calls[index] = {"id": tool_id, "function": {"name": function_name, "arguments": ""}}
-                                    elif tool_id and current_tool_calls[index]["id"] is None: # Sometimes ID comes in a later chunk
+                                    elif tool_id and current_tool_calls[index]["id"] is None:  # Sometimes ID comes in a later chunk
                                         current_tool_calls[index]["id"] = tool_id
 
                                     if function_args_delta:
@@ -1293,12 +1299,11 @@ class CodeAgent:
                                     # Stream intermediate tool call delta (raw arguments)
                                     if self.streaming_callback is not None:
                                         # We might want to signal the start/progress/end of tool calls
-                                         await self.streaming_callback(
+                                        await self.streaming_callback(
                                             {"index": index, "id": tool_id, "function": {"name": function_name, "arguments_delta": function_args_delta}},
                                             is_final=False,
-                                            metadata={"type": "tool_delta"}
+                                            metadata={"type": "tool_delta"},
                                         )
-
 
                             # --- End of chunk processing loop ---
 
@@ -1324,19 +1329,17 @@ class CodeAgent:
                             )
                             # Also include ID if available and needed (check FunctionCall definition)
                             # The ID is primarily used to match results back to calls. We'll store it separately.
-                            self.tool_call_ids[tool_data["function"]["name"]] = tool_data.get("id") # Store ID mapping
-
+                            self.tool_call_ids[tool_data["function"]["name"]] = tool_data.get("id")  # Store ID mapping
 
                         # Add the final assistant message with full text and parsed tool calls
                         await self.session_manager.add_assistant_message(
                             session_id=self.session_id,
-                            content=response_text if response_text else None, # Add None if empty
-                            tool_calls=tool_calls if tool_calls else None, # Add None if empty
-                            partial=False, # Mark as final
+                            content=response_text if response_text else None,  # Add None if empty
+                            tool_calls=tool_calls if tool_calls else None,  # Add None if empty
+                            partial=False,  # Mark as final
                             invocation_id=invocation_id,
                         )
                         # --- End Finalize ---
-
 
                         verbosity_controller.show_verbose(f"[{self.agent_name}] LiteLLM stream finished.")
                         logger.info(f"[{self.agent_name}] Assistant response received: {response_text}")
@@ -1346,20 +1349,28 @@ class CodeAgent:
                     # --- Correctly indented exception handlers for litellm.acompletion ---
                     except litellm.exceptions.APIConnectionError as e:
                         logger.error(f"[{self.agent_name}] API Connection Error: {e}", exc_info=True)
-                        await self.session_manager.add_error_event(session_id=self.session_id, error_message=f"LLM API connection failed: {str(e)}", invocation_id=invocation_id)
-                        return f"An error occurred connecting to the language model: {str(e)}" # Return error
-                    except litellm.exceptions.APIError as e: # Catch other LiteLLM API errors
+                        await self.session_manager.add_error_event(
+                            session_id=self.session_id, error_message=f"LLM API connection failed: {e!s}", invocation_id=invocation_id
+                        )
+                        return f"An error occurred connecting to the language model: {e!s}"  # Return error
+                    except litellm.exceptions.APIError as e:  # Catch other LiteLLM API errors
                         logger.error(f"[{self.agent_name}] LiteLLM API Error: {e}", exc_info=True)
-                        await self.session_manager.add_error_event(session_id=self.session_id, error_message=f"LLM API call failed: {str(e)}", invocation_id=invocation_id)
-                        return f"An API error occurred with the language model: {str(e)}" # Return error
+                        await self.session_manager.add_error_event(
+                            session_id=self.session_id, error_message=f"LLM API call failed: {e!s}", invocation_id=invocation_id
+                        )
+                        return f"An API error occurred with the language model: {e!s}"  # Return error
                     except Exception as e:
                         import traceback
-                        error_details = traceback.format_exc()
-                        logger.error(f"[{self.agent_name}] Unexpected error during LiteLLM call/processing: {e}\n{error_details}", exc_info=False) # Log details manually
-                        await self.session_manager.add_error_event(session_id=self.session_id, error_message=f"Unexpected error processing LLM response: {str(e)}", invocation_id=invocation_id)
-                        return f"An unexpected error occurred while processing the language model response: {str(e)}" # Return error
-                    # --- End of corrected exception handlers ---
 
+                        error_details = traceback.format_exc()
+                        logger.error(
+                            f"[{self.agent_name}] Unexpected error during LiteLLM call/processing: {e}\n{error_details}", exc_info=False
+                        )  # Log details manually
+                        await self.session_manager.add_error_event(
+                            session_id=self.session_id, error_message=f"Unexpected error processing LLM response: {e!s}", invocation_id=invocation_id
+                        )
+                        return f"An unexpected error occurred while processing the language model response: {e!s}"  # Return error
+                    # --- End of corrected exception handlers ---
 
                     # --- Execute Tool Calls ---
                     if tool_calls:
@@ -1368,27 +1379,24 @@ class CodeAgent:
                             warning_msg = f"Maximum tool call limit ({self.config.max_tool_calls}) reached. Skipping further tool execution."
                             logger.warning(warning_msg)
                             await self.session_manager.add_error_event(
-                                session_id=self.session_id,
-                                error_message=warning_msg,
-                                author="agent",
-                                invocation_id=invocation_id
+                                session_id=self.session_id, error_message=warning_msg, author="agent", invocation_id=invocation_id
                             )
-                            tool_calls_pending = False # Stop loop
-                            break # Exit while loop
+                            tool_calls_pending = False  # Stop loop
+                            break  # Exit while loop
 
                         # If limit not reached, proceed with execution
                         logger.info(f"[{self.agent_name}] Executing {len(tool_calls)} tool calls...")
-                        tool_calls_pending = True # Signal that we need another LLM call after results
-                        tool_call_count += 1 # Increment tool call counter
+                        tool_calls_pending = True  # Signal that we need another LLM call after results
+                        tool_call_count += 1  # Increment tool call counter
 
-                        tool_results_for_next_turn = [] # Prepare results for the *next* LLM call
+                        tool_results_for_next_turn = []  # Prepare results for the *next* LLM call
 
                         # Check tool_calls again *after* potential break from max_calls check
                         if tool_calls:
                             for tool_call in tool_calls:
                                 tool_name = tool_call.name
-                                tool_args = tool_call.args # Already parsed dict
-                                tool_call_id = self.tool_call_ids.get(tool_name) # Retrieve the ID
+                                tool_args = tool_call.args  # Already parsed dict
+                                tool_call_id = self.tool_call_ids.get(tool_name)  # Retrieve the ID
 
                                 logger.debug(f"Executing tool: {tool_name} with args: {tool_args}")
 
@@ -1400,25 +1408,25 @@ class CodeAgent:
                                     logger.debug(f"Tool {tool_name} executed. Result keys: {result.keys()}")
 
                                     # Check for error key in result first
-                                    if "error" in result and result["error"]:
-                                        tool_error = str(result['error'])
+                                    if result.get("error"):
+                                        tool_error = str(result["error"])
                                         logger.error(f"Tool {tool_name} execution failed: {tool_error}")
                                         await self.session_manager.add_error_event(
                                             session_id=self.session_id,
                                             error_message=tool_error,
-                                            author="tool", # Indicate error came from the tool
+                                            author="tool",  # Indicate error came from the tool
                                             invocation_id=invocation_id,
                                             # Consider adding tool_name/tool_call_id to metadata if possible
                                         )
                                     elif "output" in result:
                                         tool_output = result["output"]
-                                        logger.info(f"Tool {tool_name} result: {str(tool_output)[:200]}...") # Log truncated output
+                                        logger.info(f"Tool {tool_name} result: {str(tool_output)[:200]}...")  # Log truncated output
                                         # Add tool result to ADK history
                                         await self.session_manager.add_tool_result(
                                             session_id=self.session_id,
-                                            tool_call_id=tool_call_id, # Pass the ID
+                                            tool_call_id=tool_call_id,  # Pass the ID
                                             tool_name=tool_name,
-                                            content=tool_output, # Pass the output content
+                                            content=tool_output,  # Pass the output content
                                             invocation_id=invocation_id,
                                         )
                                     else:
@@ -1433,38 +1441,42 @@ class CodeAgent:
                                         )
 
                                 except Exception as e:
-                                    tool_error = f"Agent failed to execute tool {tool_name}: {str(e)}"
+                                    tool_error = f"Agent failed to execute tool {tool_name}: {e!s}"
                                     logger.error(f"[{self.agent_name}] Error executing tool {tool_name}: {e}", exc_info=True)
                                     # Add error event to ADK history
                                     await self.session_manager.add_error_event(
                                         session_id=self.session_id,
                                         error_message=tool_error,
-                                        author="agent", # Error occurred in agent logic calling tool
+                                        author="agent",  # Error occurred in agent logic calling tool
                                         invocation_id=invocation_id,
                                     )
 
                                 # Add result/error to the list for the next LLM call
                                 if tool_error:
-                                    tool_results_for_next_turn.append({
-                                        "tool_call_id": tool_call_id,
-                                        "role": "tool",
-                                        "name": tool_name,
-                                        "content": json.dumps({"error": tool_error}) # Standardize error reporting
-                                    })
+                                    tool_results_for_next_turn.append(
+                                        {
+                                            "tool_call_id": tool_call_id,
+                                            "role": "tool",
+                                            "name": tool_name,
+                                            "content": json.dumps({"error": tool_error}),  # Standardize error reporting
+                                        }
+                                    )
                                 else:
-                                    tool_results_for_next_turn.append({
-                                        "tool_call_id": tool_call_id,
-                                        "role": "tool",
-                                        "name": tool_name,
-                                        "content": json.dumps(tool_output) if not isinstance(tool_output, str) else tool_output # Ensure content is string
-                                    })
+                                    tool_results_for_next_turn.append(
+                                        {
+                                            "tool_call_id": tool_call_id,
+                                            "role": "tool",
+                                            "name": tool_name,
+                                            "content": json.dumps(tool_output) if not isinstance(tool_output, str) else tool_output,  # Ensure content is string
+                                        }
+                                    )
                                 # --- End of tool execution loop ---
 
-                        else: # No tool calls requested in the last response
-                            tool_calls_pending = False # Stop the loop
+                        else:  # No tool calls requested in the last response
+                            tool_calls_pending = False  # Stop the loop
 
-                    else: # No tool calls requested in the last response
-                        tool_calls_pending = False # Stop the loop
+                    else:  # No tool calls requested in the last response
+                        tool_calls_pending = False  # Stop the loop
 
                     # --- Loop condition check ---
                     # The loop continues if tool_calls_pending is True AND tool_call_count < max_tool_calls
@@ -1477,10 +1489,7 @@ class CodeAgent:
                     logger.warning(warning_msg)
                     # Optionally add an error event to the session
                     await self.session_manager.add_error_event(
-                        session_id=self.session_id,
-                        error_message=warning_msg,
-                        author="agent",
-                        invocation_id=invocation_id
+                        session_id=self.session_id, error_message=warning_msg, author="agent", invocation_id=invocation_id
                     )
                     # Return the text generated *before* hitting the limit (which is already in response_text)
                     # The final assistant message was already added.
@@ -1489,21 +1498,26 @@ class CodeAgent:
                 # The final assistant message (text and/or tool calls) was already added.
                 # We just need to return the final response text.
                 indicator.update(f"Agent finished: {response_text[:50]}...")
-                return response_text # Return the final text response accumulated
+                return response_text  # Return the final text response accumulated
 
             # End of 'with thinking_indicator(...)'
         except Exception as e:
             # Catch-all for errors outside the main LLM/tool loop (e.g., initial message conversion)
             import traceback
+
             error_details = traceback.format_exc()
-            logger.error(f"[{self.agent_name}] Unexpected error in run_turn: {e}\n{error_details}", exc_info=False) # Use logger
+            logger.error(f"[{self.agent_name}] Unexpected error in run_turn: {e}\n{error_details}", exc_info=False)  # Use logger
             # Try to add an error event if session manager is available
-            if hasattr(self, 'session_manager') and self.session_id:
+            if hasattr(self, "session_manager") and self.session_id:
                 try:
-                    await self.session_manager.add_error_event(session_id=self.session_id, error_message=f"Agent runtime error: {str(e)}", invocation_id=invocation_id if 'invocation_id' in locals() else None)
+                    await self.session_manager.add_error_event(
+                        session_id=self.session_id,
+                        error_message=f"Agent runtime error: {e!s}",
+                        invocation_id=invocation_id if "invocation_id" in locals() else None,
+                    )
                 except Exception as add_err:
                     logger.error(f"Failed to add error event to session after runtime error: {add_err}")
-            return f"An unexpected error occurred in the agent: {str(e)}" # Return error message
+            return f"An unexpected error occurred in the agent: {e!s}"  # Return error message
 
     def _get_tool_definitions(self) -> Optional[List[Dict[str, Any]]]:
         """Returns the tool definitions in the format expected by LiteLLM."""
@@ -1519,4 +1533,4 @@ class CodeAgent:
                 return None
         except Exception as e:
             logger.error(f"Failed to get tool definitions from ToolManager: {e}")
-            return None # Return None if schema generation fails
+            return None  # Return None if schema generation fails

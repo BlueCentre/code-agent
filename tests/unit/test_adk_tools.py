@@ -5,7 +5,6 @@ from pathlib import Path
 from unittest import mock
 
 import pytest
-import pytest_asyncio
 
 from code_agent.adk.tools import (
     create_apply_edit_tool,
@@ -16,7 +15,7 @@ from code_agent.adk.tools import (
 )
 
 # Import CodeAgentSettings for mocking
-from code_agent.config.settings_based_config import CodeAgentSettings, SecuritySettings
+from code_agent.config.settings_based_config import CodeAgentSettings
 
 
 class MockLogger:
@@ -81,14 +80,14 @@ async def test_read_file_tool(tmp_path, mock_tool_context, file_exists, expected
 
     # Mock security check and config with nested agent_settings
     mock_settings = mock.MagicMock(spec=CodeAgentSettings)
-    mock_settings.agent_settings = mock.MagicMock() # Add nested mock
+    mock_settings.agent_settings = mock.MagicMock()  # Add nested mock
     # Add file_operations attribute expected by read_file
     mock_settings.agent_settings.file_operations = mock.MagicMock()
     mock_settings.agent_settings.file_operations.read_file = mock.MagicMock(enable_pagination=False, max_lines=1000)
 
     with (
         mock.patch("code_agent.tools.file_tools.is_path_safe", return_value=(True, None)),
-        mock.patch("code_agent.tools.file_tools.initialize_config", return_value=mock_settings)
+        mock.patch("code_agent.tools.file_tools.initialize_config", return_value=mock_settings),
     ):
         # Act
         result = await tool.func(mock_tool_context, test_path)
@@ -158,8 +157,8 @@ async def test_apply_edit_tool(tmp_path, mock_tool_context):
     with (
         mock.patch("code_agent.tools.file_tools.is_path_safe", return_value=(True, None)),
         mock.patch("code_agent.tools.simple_tools.is_path_within_cwd", return_value=True),
-        mock.patch("code_agent.tools.simple_tools.Confirm.ask", return_value=True), # Mock ask even if auto-approve is True for robustness
-        mock.patch("code_agent.tools.simple_tools.get_config", return_value=mock_settings) # Mock get_config
+        mock.patch("code_agent.tools.simple_tools.Confirm.ask", return_value=True),  # Mock ask even if auto-approve is True for robustness
+        mock.patch("code_agent.tools.simple_tools.get_config", return_value=mock_settings),  # Mock get_config
     ):
         # Act
         result = await tool.func(mock_tool_context, test_path, new_content)
@@ -183,13 +182,13 @@ async def test_apply_edit_cancelled_tool(tmp_path, mock_tool_context):
     # Mock security checks, confirmation (to return False), and config
     # Create a mock settings object with auto_approve_edit directly
     mock_settings = mock.MagicMock(spec=CodeAgentSettings)
-    mock_settings.auto_approve_edit = False # Set attribute directly
+    mock_settings.auto_approve_edit = False  # Set attribute directly
 
     with (
         mock.patch("code_agent.tools.file_tools.is_path_safe", return_value=(True, None)),
         mock.patch("code_agent.tools.simple_tools.is_path_within_cwd", return_value=True),
-        mock.patch("code_agent.tools.simple_tools.Confirm.ask", return_value=False), # Mock ask to return False
-        mock.patch("code_agent.tools.simple_tools.get_config", return_value=mock_settings) # Mock get_config
+        mock.patch("code_agent.tools.simple_tools.Confirm.ask", return_value=False),  # Mock ask to return False
+        mock.patch("code_agent.tools.simple_tools.get_config", return_value=mock_settings),  # Mock get_config
     ):
         # Act
         result = await tool.func(mock_tool_context, test_path, new_content)
@@ -314,7 +313,7 @@ async def test_run_terminal_cmd_tool(mock_tool_context):
 
     # Mock setup for asyncio.create_subprocess_exec
     mock_process = mock.AsyncMock()
-    mock_process.communicate.return_value = (b"Hello, world!", b"") # stdout, stderr as bytes
+    mock_process.communicate.return_value = (b"Hello, world!", b"")  # stdout, stderr as bytes
     mock_process.returncode = 0
 
     with (
@@ -336,8 +335,8 @@ async def test_run_terminal_cmd_tool(mock_tool_context):
         result = await tool.func(mock_tool_context, command)
 
         # Assert
-        mock_create_subprocess.assert_called_once() # Check if subprocess was created
-        assert "Hello, world!" in result # Check output
+        mock_create_subprocess.assert_called_once()  # Check if subprocess was created
+        assert "Hello, world!" in result  # Check output
         assert len(mock_tool_context.logger.info_messages) >= 1
 
 
@@ -354,7 +353,7 @@ async def test_run_terminal_cmd_with_background(mock_tool_context):
 
     # Mock setup for asyncio.create_subprocess_exec
     mock_process = mock.AsyncMock()
-    mock_process.communicate.return_value = (b"", b"") # No output for background usually
+    mock_process.communicate.return_value = (b"", b"")  # No output for background usually
     mock_process.returncode = 0
 
     with (
@@ -430,15 +429,15 @@ async def test_read_file_with_pagination(tmp_path, mock_tool_context):
 
     # Mock security check and config with nested agent_settings
     mock_settings = mock.MagicMock(spec=CodeAgentSettings)
-    mock_settings.agent_settings = mock.MagicMock() # Add nested mock
+    mock_settings.agent_settings = mock.MagicMock()  # Add nested mock
     # Add file_operations attribute expected by read_file
     mock_settings.agent_settings.file_operations = mock.MagicMock()
     # Ensure pagination is enabled in the mock for this test
-    mock_settings.agent_settings.file_operations.read_file = mock.MagicMock(enable_pagination=True, max_lines=50) # Lower max_lines for test
+    mock_settings.agent_settings.file_operations.read_file = mock.MagicMock(enable_pagination=True, max_lines=50)  # Lower max_lines for test
 
     with (
         mock.patch("code_agent.tools.file_tools.is_path_safe", return_value=(True, None)),
-        mock.patch("code_agent.tools.file_tools.initialize_config", return_value=mock_settings)
+        mock.patch("code_agent.tools.file_tools.initialize_config", return_value=mock_settings),
     ):
         # Act with pagination enabled, offset and limit
         result = await tool.func(mock_tool_context, str(file_path), offset=10, limit=20, enable_pagination=True)
@@ -469,10 +468,11 @@ def test_get_file_tools():
 
 def test_get_all_tools():
     """Test the get_all_tools function returns all the expected tools."""
-    from code_agent.adk.tools import get_all_tools
     # Import the specific tool types for checking
     from google.adk.tools import FunctionTool
     from google.adk.tools.google_search_tool import GoogleSearchTool
+
+    from code_agent.adk.tools import get_all_tools
 
     # Act
     tools = get_all_tools()

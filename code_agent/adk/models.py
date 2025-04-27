@@ -8,14 +8,12 @@ This module provides:
 4. Fallback behavior for handling model failures
 """
 
-from typing import Any, Dict, List, Optional, Tuple, Union, AsyncGenerator
+from typing import Any, AsyncGenerator, Dict, List, Optional, Union
 
 import litellm
-from google.adk.models import BaseLlm, Gemini, LlmRequest, LlmResponse
+from google.adk.models import BaseLlm, LlmRequest, LlmResponse
 from google.genai import types
-from google.generativeai.types import GenerationConfig
-from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
-import asyncio
+from pydantic import BaseModel, ConfigDict, Field
 
 from code_agent.config.config import get_api_key, get_config
 from code_agent.tools.error_utils import format_api_error
@@ -102,7 +100,7 @@ class LiteLlm(BaseLlm):
             messages = []
             for content_item in prompt.contents:
                 # Assuming simple text parts for now
-                if content_item.parts and hasattr(content_item.parts[0], 'text') and content_item.parts[0].text:
+                if content_item.parts and hasattr(content_item.parts[0], "text") and content_item.parts[0].text:
                     messages.append({"role": content_item.role, "content": content_item.parts[0].text})
         elif isinstance(prompt, str):
             messages = [{"role": "user", "content": prompt}]
@@ -147,7 +145,7 @@ class LiteLlm(BaseLlm):
                 # Assuming LlmResponse might have a metadata field based on previous errors, trying that.
                 try:
                     return LlmResponse(content=response_content, metadata=metadata)
-                except Exception: # Fallback if metadata kwarg isn't valid
+                except Exception:  # Fallback if metadata kwarg isn't valid
                     return LlmResponse(content=response_content)
 
             except Exception as e:
@@ -353,7 +351,7 @@ def create_model(
             # The caller (e.g., LlmAgent) will handle instantiation.
             # Ensure the target model name is valid for Gemini (optional check, could be added)
             if not target_model.startswith("gemini-"):
-                 print(f"Warning: Model name '{target_model}' for ai_studio doesn\'t start with 'gemini-'")
+                print(f"Warning: Model name '{target_model}' for ai_studio doesn't start with 'gemini-'")
             return target_model
         elif target_provider == "ollama":
             # Use specialized Ollama wrapper

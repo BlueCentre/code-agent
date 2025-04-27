@@ -6,10 +6,10 @@ from rich import print as rich_print
 # Import directly from settings_based_config
 from code_agent.config.settings_based_config import (
     DEFAULT_CONFIG_PATH,  # Import path constant
+    ApiKeys,
     # Rename to avoid conflict if needed
     CodeAgentSettings,
     build_effective_config,  # Import the correct builder
-    ApiKeys,
 )
 
 # Configuration management logic will go here
@@ -25,7 +25,7 @@ TEMPLATE_CONFIG_PATH = Path(__file__).parent / "template.yaml"
 
 # Global configuration singleton
 # _config: Optional[SettingsConfig] = None # Old type
-_config: Optional[CodeAgentSettings] = None # Correct type
+_config: Optional[CodeAgentSettings] = None  # Correct type
 
 
 def initialize_config(
@@ -74,7 +74,9 @@ def get_api_key(provider: str) -> Optional[str]:
 
     # Ensure api_keys_obj is valid before proceeding
     if not isinstance(api_keys_obj, ApiKeys):
-        rich_print(f"[yellow]Warning: api_keys in config is not an ApiKeys instance (type: {type(api_keys_obj)}). Cannot retrieve key for '{provider}'.[/yellow]")
+        rich_print(
+            f"[yellow]Warning: api_keys in config is not an ApiKeys instance (type: {type(api_keys_obj)}). Cannot retrieve key for '{provider}'.[/yellow]"
+        )
         return None
 
     # 1. Try direct attribute access (for defined fields like openai, ai_studio etc.)
@@ -90,7 +92,7 @@ def get_api_key(provider: str) -> Optional[str]:
     #    we rely on getattr covering both defined and potentially extra fields if loaded correctly.
     #    If getattr returned None, the key is considered missing.
 
-    return None # Key not found as defined attribute or known extra field
+    return None  # Key not found as defined attribute or known extra field
 
 
 def validate_config(verbose: bool = False) -> bool:

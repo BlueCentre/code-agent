@@ -1,16 +1,13 @@
 """Code analysis tool for the software engineer agent."""
 
 import os
-from typing import Any, Dict, Annotated
+from typing import Annotated, Any, Dict
 
 from google.adk.tools import FunctionTool, ToolContext
 from pydantic import Field
 
 
-def _analyze_code(
-    file_path: Annotated[str, Field(description="Path to the file to analyze")],
-    tool_context: ToolContext
-) -> Dict[str, Any]:
+def _analyze_code(file_path: Annotated[str, Field(description="Path to the file to analyze")], tool_context: ToolContext) -> Dict[str, Any]:
     """
     Analyze code in a file for quality issues.
 

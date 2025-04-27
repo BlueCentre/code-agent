@@ -4,14 +4,12 @@ from unittest.mock import MagicMock, patch
 # Remove Session and Event imports as they are not directly used by the service methods
 # from google.adk.events.event import Event
 # from google.adk.sessions import Session
-
 from code_agent.adk.memory import (
     InMemoryMemoryService,
-    SearchMemoryResponse,
-    MemoryResult,
     MemoryManager,  # Import for mocking spec
-    MemoryType, # Import for assertions
-    get_memory_manager # Import for patching target
+    MemoryResult,
+    MemoryType,  # Import for assertions
+    SearchMemoryResponse,  # Import for patching target
 )
 
 
@@ -79,7 +77,7 @@ class TestInMemoryMemoryService(unittest.TestCase):
         memory_service = InMemoryMemoryService()
         session_id = "test_session_search_found"
         query = "python"
-        limit = 2 # Example limit
+        limit = 2  # Example limit
 
         # Act
         response = memory_service.search(session_id, query, limit=limit)
@@ -93,6 +91,7 @@ class TestInMemoryMemoryService(unittest.TestCase):
         self.assertEqual(response.results[0].score, 0.9)
         self.assertEqual(response.results[1].content, "Something else about Python.")
         self.assertEqual(response.results[1].score, 0.8)
+
 
 # Remove old tests based on non-existent methods and direct _memories access
 # class TestInMemoryMemoryService(unittest.TestCase):

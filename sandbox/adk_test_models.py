@@ -32,10 +32,11 @@ import argparse
 import asyncio
 import os
 import sys
-from typing import Optional, Dict, Any
+from typing import Dict, Optional
 
 # Load environment variables from .env file
 from dotenv import load_dotenv
+
 load_dotenv()
 
 # Add the project root to the Python path to allow importing from code_agent
@@ -46,10 +47,12 @@ from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
+
 # Simulate functions from the original models module if needed, or define statically
 def get_model_providers() -> list[str]:
     # Based on the original code_agent/adk/models.py
     return ["ai_studio", "openai", "anthropic", "groq", "ollama"]
+
 
 def get_default_models_by_provider() -> Dict[str, str]:
     # Based on the original code_agent/adk/models.py
@@ -60,6 +63,7 @@ def get_default_models_by_provider() -> Dict[str, str]:
         "groq": "llama3-70b-8192",
         "ollama": "llama3.2:latest",
     }
+
 
 async def test_model(
     provider: str,
@@ -104,7 +108,7 @@ async def test_model(
     # For LiteLLM-based providers, we might need to adjust this if LlmAgent doesn't use LiteLlm directly
     # Assuming LlmAgent handles 'gemini-*' for ai_studio/Vertex and maybe others via registry
     adk_model_identifier = model_name
-    if provider == "ai_studio": # ADK registry handles gemini-* directly
+    if provider == "ai_studio":  # ADK registry handles gemini-* directly
         adk_model_identifier = model_name
     # Add logic here if other providers need specific formatting for LlmAgent
     # or if we need to use the LiteLlm wrapper class explicitly
@@ -124,18 +128,18 @@ async def test_model(
         # 1. Configure Generation Settings
         gen_config_params = {}
         if temperature is not None:
-            gen_config_params['temperature'] = temperature
+            gen_config_params["temperature"] = temperature
         if max_tokens is not None:
-            gen_config_params['max_output_tokens'] = max_tokens
+            gen_config_params["max_output_tokens"] = max_tokens
         # Use types.GenerationConfig from google.genai
         generate_config = types.GenerateContentConfig(**gen_config_params) if gen_config_params else None
 
         # 2. Create the LlmAgent
         agent = LlmAgent(
-            model=adk_model_identifier, # Pass the model string
+            model=adk_model_identifier,  # Pass the model string
             name=f"{provider}_test_agent",
-            instruction="You are a helpful assistant responding to the user's prompt.", # Simple instruction
-            generate_content_config=generate_config
+            instruction="You are a helpful assistant responding to the user's prompt.",  # Simple instruction
+            generate_content_config=generate_config,
         )
 
         # 3. Set up Runner and Session
@@ -147,7 +151,7 @@ async def test_model(
 
         # 4. Prepare the input message
         # LlmAgent expects types.Content
-        input_content = types.Content(role='user', parts=[types.Part(text=prompt)])
+        input_content = types.Content(role="user", parts=[types.Part(text=prompt)])
 
         # 5. Run the agent asynchronously
         start_time = asyncio.get_event_loop().time()
@@ -155,7 +159,7 @@ async def test_model(
         final_event = None
         async for event in runner.run_async(user_id=user_id, session_id=session_id, new_message=input_content):
             if verbose:
-                print(f"  ...Event: {event.event_type} by {event.author}") # Basic event logging
+                print(f"  ...Event: {event.event_type} by {event.author}")  # Basic event logging
             if event.is_final_response():
                 final_event = event
                 if event.content and event.content.parts:
@@ -231,7 +235,9 @@ def parse_args() -> argparse.Namespace:
     # Main options
     # Provider is now mainly a hint for determining the default model if --model is not given
     parser.add_argument("--provider", default="ai_studio", choices=get_model_providers(), help="Provider hint for default model lookup.")
-    parser.add_argument("--model", dest="model_name", help="Specific model identifier string for LlmAgent (e.g., gemini-1.5-flash, openai/gpt-4o). Overrides provider default.")
+    parser.add_argument(
+        "--model", dest="model_name", help="Specific model identifier string for LlmAgent (e.g., gemini-1.5-flash, openai/gpt-4o). Overrides provider default."
+    )
     parser.add_argument("--prompt", help="Custom prompt (defaults to a standard test prompt)")
 
     # Model parameters

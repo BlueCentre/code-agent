@@ -4,7 +4,7 @@ Tests for the CodeAgent class focusing on ADK integration.
 
 import asyncio
 import json
-from unittest.mock import AsyncMock, MagicMock, patch, ANY
+from unittest.mock import ANY, AsyncMock, MagicMock, patch
 
 import pytest
 from google.adk.events import Event
@@ -15,7 +15,6 @@ from code_agent.adk import CodeAgentADKSessionManager
 from code_agent.agent.custom_agent.agent import CodeAgent
 from code_agent.config import CodeAgentSettings
 from code_agent.config.settings_based_config import ApiKeys
-from code_agent.tools.simple_tools import read_file
 
 # Mark all tests in this module as async
 pytestmark = pytest.mark.asyncio
@@ -37,7 +36,7 @@ def mock_config():
         verbosity=1,
         max_tokens=1000,
         max_tool_calls=10,
-        additional_params={}, # Explicitly initialize
+        additional_params={},  # Explicitly initialize
         # security will use default factory
     )
 
@@ -50,11 +49,11 @@ def mock_session_service():
         "create_session",
         "get_session",
         "append_event",
-        "add_user_message", # Used by manager
-        "add_assistant_message", # Used by manager
-        "add_tool_result", # Used by manager
-        "add_error_event", # Used by manager
-        "get_history", # Used by manager
+        "add_user_message",  # Used by manager
+        "add_assistant_message",  # Used by manager
+        "add_tool_result",  # Used by manager
+        "add_error_event",  # Used by manager
+        "get_history",  # Used by manager
         # Add any other methods used by CodeAgentADKSessionManager
     ]
     mock = AsyncMock(spec=BaseSessionService, spec_set=spec_methods)
@@ -63,7 +62,7 @@ def mock_session_service():
     mock.create_session.return_value = Session(id="test-session-123", app_name="code_agent", user_id="default_user")
     mock.get_session.return_value = Session(id="test-session-123", app_name="code_agent", user_id="default_user", events=[])
     # Mock async methods used by the manager
-    mock.get_history.return_value = [] # Default empty history
+    mock.get_history.return_value = []  # Default empty history
     # Make methods like append_event awaitable if needed, but they might be sync in InMemory impl.
     # If the manager calls await service.append_event(...), this needs to be awaitable.
     # For now, assume manager calls sync append_event on the service instance.
@@ -570,7 +569,7 @@ def test_convert_adk_events_tool_result(agent):
         author="assistant",  # Author is assistant
         content=genai_types.Content(
             parts=[genai_types.Part(function_response=func_response)],
-            role="function", # Role for tool result is 'function'
+            role="function",  # Role for tool result is 'function'
         ),
         # Set the same invocation_id
         invocation_id=invocation_id,
@@ -723,14 +722,14 @@ async def test_run_turn_multiple_tool_calls(agent, mock_litellm_acompletion, moc
     stream1_chunk2 = MagicMock()
     stream1_chunk2.choices[0].delta.content = "the file."
     stream1_chunk2.choices[0].delta.tool_calls = None
-    stream1_chunk3 = MagicMock() # Tool call delta chunk
+    stream1_chunk3 = MagicMock()  # Tool call delta chunk
     stream1_chunk3.choices[0].delta.content = None
     tool_call_delta1 = MagicMock()
     tool_call_delta1.index = 0
     tool_call_delta1.id = read_tool_call_id
     tool_call_delta1.type = "function"
     tool_call_delta1.function.name = "read_file"
-    tool_call_delta1.function.arguments = read_args_str # Full args in one chunk for simplicity
+    tool_call_delta1.function.arguments = read_args_str  # Full args in one chunk for simplicity
     stream1_chunk3.choices[0].delta.tool_calls = [tool_call_delta1]
     stream1 = mock_async_iterator([stream1_chunk1, stream1_chunk2, stream1_chunk3])
 
@@ -746,7 +745,7 @@ async def test_run_turn_multiple_tool_calls(agent, mock_litellm_acompletion, moc
     # We need to mock the tool execution via the ToolManager if it's used,
     # or patch the underlying function if called directly/via asyncio.to_thread.
     # The current code uses ToolManager.execute_tool.
-    mock_tool_manager = agent.tool_manager # Assuming agent has tool_manager instance
+    mock_tool_manager = agent.tool_manager  # Assuming agent has tool_manager instance
     # Use AsyncMock if execute_tool is async
     mock_tool_manager.execute_tool = AsyncMock(return_value={"output": file_content})
 

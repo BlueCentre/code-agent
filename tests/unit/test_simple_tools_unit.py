@@ -239,7 +239,7 @@ def test_apply_edit_success_new_file(mock_confirm_ask, mock_is_path_within_cwd, 
     # is_file and exists should be called on the target path
     # Check call args if specific path instance is needed, but call_count might suffice
     assert mock_is_file.call_count >= 1
-    assert mock_exists.call_count >= 1 # Should be called after is_file is false
+    assert mock_exists.call_count >= 1  # Should be called after is_file is false
     mock_confirm_ask.assert_called_once()
     mock_mkdir.assert_called_once_with(parents=True, exist_ok=True)
     # Check write_text was called once with the correct content argument

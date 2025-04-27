@@ -6,7 +6,7 @@ manager and the overall turn-taking logic, potentially mocking the LLM
 but using real session services.
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from google.adk.sessions import InMemorySessionService
@@ -27,10 +27,10 @@ def mock_config_integration():
     # Use real ApiKeys model
     keys = ApiKeys(mock_provider="mock-api-key-12345", openai="dummy-key")
     return CodeAgentSettings(
-        default_provider="mock_provider", # Use a mock provider name
+        default_provider="mock_provider",  # Use a mock provider name
         default_model="mock_model",
-        api_keys=keys, # Assign ApiKeys instance
-        verbosity=0, # Quiet for integration tests
+        api_keys=keys,  # Assign ApiKeys instance
+        verbosity=0,  # Quiet for integration tests
         # Use defaults for other settings
     )
 

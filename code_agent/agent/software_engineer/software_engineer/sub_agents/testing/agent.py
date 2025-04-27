@@ -2,24 +2,22 @@
 
 from google.adk.agents import Agent
 from google.genai.types import GenerateContentConfig
-from google.adk.tools import FunctionTool
-# from google.adk.tools.tool_mixins import BaseTool
-from software_engineer.tools.filesystem import read_file_tool, list_dir_tool
+
 # from software_engineer.tools.git_tools import (
 #     git_status_tool,
 # )
-
 # NOTE: SWITCH TO ADK WEB or UNCOMMENT FOR ADK RUN
 # Use absolute imports with correct directory name
 # from code_agent.agent.software_engineer.software_engineer import prompt
 # from code_agent.agent.software_engineer.software_engineer.shared_libraries.types import TestingResponse
-
 # NOTE: SWITCH TO ADK WEB or COMMENT OUT FOR ADK RUN
 from software_engineer.sub_agents.testing import prompt
-from software_engineer.shared_libraries.types import TestingResponse
+
+# from google.adk.tools.tool_mixins import BaseTool
+from software_engineer.tools.filesystem import list_dir_tool, read_file_tool
 
 testing_agent = Agent(
-    model="gemini-2.5-flash-preview-04-17", #"gemini-2.0-flash-001",
+    model="gemini-2.5-flash-preview-04-17",  # "gemini-2.0-flash-001",
     name="testing_agent",
     description="Helps generate test cases and testing strategies",
     instruction=prompt.TESTING_AGENT_INSTR,

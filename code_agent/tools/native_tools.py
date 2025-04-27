@@ -86,7 +86,7 @@ def _categorize_command(command: str) -> List[str]:
     except ValueError:
         # Handle invalid command syntax gracefully
         cmd_parts = []
-        base_cmd = "" # Or maybe use the raw command string if needed?
+        base_cmd = ""  # Or maybe use the raw command string if needed?
 
     categories = []
     for category, info in COMMAND_CATEGORIES.items():

@@ -1,13 +1,15 @@
 # code_agent/agent/software_engineer/software_engineer/tools/filesystem_tools.py
-import os
 import logging
+import os
+from typing import Any, Dict
+
 from google.adk.tools import FunctionTool, ToolContext
-from typing import List, Union, Dict, Any
 
 logger = logging.getLogger(__name__)
 
 # Consider adding a WORKSPACE_ROOT validation here for security
 # WORKSPACE_ROOT = os.path.abspath(".") # Example: Use current working directory
+
 
 def read_file_content(filepath: str) -> Dict[str, Any]:
     """
@@ -33,7 +35,7 @@ def read_file_content(filepath: str) -> Dict[str, Any]:
     #     logger.error(message)
     #     return {"status": "error", "error_type": "SecurityViolation", "message": message}
     try:
-        with open(filepath, 'r', encoding='utf-8') as f:
+        with open(filepath, "r", encoding="utf-8") as f:
             content = f.read()
         logger.info(f"Successfully read file: {filepath}")
         return {"status": "success", "content": content}
@@ -49,6 +51,7 @@ def read_file_content(filepath: str) -> Dict[str, Any]:
         message = f"An unexpected error occurred while reading file '{filepath}': {e}"
         logger.error(message, exc_info=True)
         return {"status": "error", "error_type": "IOError", "message": message}
+
 
 def list_directory_contents(directory_path: str) -> Dict[str, Any]:
     """
@@ -75,9 +78,9 @@ def list_directory_contents(directory_path: str) -> Dict[str, Any]:
     #     return {"status": "error", "error_type": "SecurityViolation", "message": message}
     try:
         if not os.path.isdir(directory_path):
-             message = f"The specified path '{directory_path}' is not a valid directory."
-             logger.warning(message)
-             return {"status": "error", "error_type": "NotADirectory", "message": message}
+            message = f"The specified path '{directory_path}' is not a valid directory."
+            logger.warning(message)
+            return {"status": "error", "error_type": "NotADirectory", "message": message}
         contents = os.listdir(directory_path)
         logger.info(f"Successfully listed directory: {directory_path}")
         return {"status": "success", "contents": contents}
@@ -93,6 +96,7 @@ def list_directory_contents(directory_path: str) -> Dict[str, Any]:
         message = f"An unexpected error occurred while listing directory '{directory_path}': {e}"
         logger.error(message, exc_info=True)
         return {"status": "error", "error_type": "IOError", "message": message}
+
 
 def edit_file_content(filepath: str, content: str, tool_context: ToolContext) -> Dict[str, Any]:
     """
@@ -127,7 +131,7 @@ def edit_file_content(filepath: str, content: str, tool_context: ToolContext) ->
     #     logger.error(message)
     #     return {"status": "error", "error_type": "SecurityViolation", "message": message}
 
-    needs_approval = tool_context.state.get('require_edit_approval', True)
+    needs_approval = tool_context.state.get("require_edit_approval", True)
 
     if needs_approval:
         logger.info(f"Approval required for file edit: {filepath}. Returning pending status.")
@@ -135,7 +139,7 @@ def edit_file_content(filepath: str, content: str, tool_context: ToolContext) ->
             "status": "pending_approval",
             "proposed_filepath": filepath,
             "proposed_content": content,
-            "message": f"Approval required to write to '{filepath}'. User confirmation needed."
+            "message": f"Approval required to write to '{filepath}'. User confirmation needed.",
         }
 
     # Proceed with write only if approval is not required
@@ -143,11 +147,11 @@ def edit_file_content(filepath: str, content: str, tool_context: ToolContext) ->
     try:
         # Ensure the directory exists
         dir_path = os.path.dirname(filepath)
-        if dir_path: # Ensure dir_path is not empty (happens for root-level files)
-            os.makedirs(dir_path, exist_ok=True) # Creates parent dirs if needed
+        if dir_path:  # Ensure dir_path is not empty (happens for root-level files)
+            os.makedirs(dir_path, exist_ok=True)  # Creates parent dirs if needed
 
         # Consider atomic write here: write to temp file, then os.replace()
-        with open(filepath, 'w', encoding='utf-8') as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             f.write(content)
         message = f"Successfully wrote content to '{filepath}'."
         logger.info(message)
@@ -160,6 +164,7 @@ def edit_file_content(filepath: str, content: str, tool_context: ToolContext) ->
         message = f"An unexpected error occurred while writing to file '{filepath}': {e}"
         logger.error(message, exc_info=True)
         return {"status": "error", "error_type": "IOError", "message": message}
+
 
 def configure_edit_approval(require_approval: bool, tool_context: ToolContext) -> Dict[str, Any]:
     """
@@ -174,14 +179,15 @@ def configure_edit_approval(require_approval: bool, tool_context: ToolContext) -
         - {'status': 'success', 'message': 'Confirmation message'}
     """
     logger.info(f"Setting 'require_edit_approval' state to: {require_approval}")
-    tool_context.state['require_edit_approval'] = require_approval
+    tool_context.state["require_edit_approval"] = require_approval
     message = f"File edit approval requirement set to: {require_approval} for this session."
     logger.info(message)
     return {"status": "success", "message": message}
+
 
 # Wrap functions with FunctionTool
 # Note: The return type for the tool schema remains the base function's return type hint (Dict[str, Any])
 read_file_tool = FunctionTool(read_file_content)
 list_dir_tool = FunctionTool(list_directory_contents)
 edit_file_tool = FunctionTool(edit_file_content)
-configure_approval_tool = FunctionTool(configure_edit_approval) 
+configure_approval_tool = FunctionTool(configure_edit_approval)

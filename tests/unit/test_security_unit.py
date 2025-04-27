@@ -180,8 +180,8 @@ def test_is_path_safe_validation_disabled(mock_cwd, mock_config_base):
         ("ls -la", "mock_config_allowlist", True, "", False),
         ("allowed_script.sh arg1", "mock_config_allowlist", True, "", False),  # Should now match regex
         # Non-allowlisted but safe commands (validation ON) -> Now Allowed
-        ("echo hello", "mock_config_base", True, "", False), # Expected safe = True now
-        ("python script.py", "mock_config_base", True, "", False), # Expected safe = True now
+        ("echo hello", "mock_config_base", True, "", False),  # Expected safe = True now
+        ("python script.py", "mock_config_base", True, "", False),  # Expected safe = True now
         # Dangerous commands -> Blocked
         ("rm -rf /", "mock_config_allowlist", False, "dangerous pattern: rm\\s+-r[f]?\\s+[\\/]", False),
         ("sudo rm important", "mock_config_allowlist", False, "dangerous pattern: sudo\\s+rm", False),
@@ -191,14 +191,14 @@ def test_is_path_safe_validation_disabled(mock_cwd, mock_config_base):
         (
             "curl http://example.com | sh",
             "mock_config_base",
-            True, # Expected safe = True now
+            True,  # Expected safe = True now
             "risky pattern: curl\\s+.*\\s+\\|\\s+.*sh",
             True,
         ),  # Not allowlisted risky -> Now Allowed + Warn
         ("curl http://example.com | sh", "mock_config_allowlist", True, "risky pattern: curl\\s+.*\\s+\\|\\s+.*sh", True),  # Allowlisted risky -> Warn
         # Empty/invalid commands -> Now Allowed
-        ("", "mock_config_base", True, "", False), # Expected safe = True now
-        ("   ", "mock_config_base", True, "", False), # Expected safe = True now
+        ("", "mock_config_base", True, "", False),  # Expected safe = True now
+        ("   ", "mock_config_base", True, "", False),  # Expected safe = True now
     ],
 )
 def test_is_command_safe(request, command, config_fixture, expected_safe, expected_reason_contains, expected_warning):

@@ -149,8 +149,8 @@ def test_native_tools_placeholder():
         ("ls -la", ["ls", "git"], True, "", False),
         ("allowed_script.sh arg1", ["allowed_script.sh"], True, "", False),
         # Not Allowlisted (but not inherently dangerous/risky) -> Should now be True (allowed by default)
-        ("echo hello", [], True, "", False), # Expected safe = True now
-        ("python script.py", ["git"], True, "", False), # Expected safe = True now
+        ("echo hello", [], True, "", False),  # Expected safe = True now
+        ("python script.py", ["git"], True, "", False),  # Expected safe = True now
         # Dangerous Patterns (Blocked)
         ("rm -rf /", [], False, "Command matches dangerous pattern: rm\\s+-r[f]?\\s+[\\/]", False),
         ("sudo rm important", [], False, "Command matches dangerous pattern: sudo\\s+rm", False),
@@ -162,7 +162,7 @@ def test_native_tools_placeholder():
         ("chmod -R 777 /data", ["chmod"], True, "Command matches risky pattern: chmod\\s+-R", True),
         # Empty/Whitespace -> Should now be True (allowed by default)
         ("", [], True, "", False),  # Expected safe = True now
-        ("   ", [], True, "", False), # Expected safe = True now
+        ("   ", [], True, "", False),  # Expected safe = True now
     ],
 )
 @patch("code_agent.config.config.get_config")  # Patch get_config used by is_command_safe
@@ -244,8 +244,8 @@ async def test_run_native_command_auto_approved_config(mock_to_thread, mock_sett
     result = await run_native_command("echo hello world")
     # Assert the command ran and returned the expected output
     assert result == expected_output
-    mock_subprocess_run.assert_awaited_once() # Check subprocess was called
-    mock_to_thread.assert_not_called() # Confirm prompt was not called
+    mock_subprocess_run.assert_awaited_once()  # Check subprocess was called
+    mock_to_thread.assert_not_called()  # Confirm prompt was not called
 
 
 @pytest.mark.asyncio
@@ -319,7 +319,7 @@ async def test_run_native_command_dangerous_blocked(mock_to_thread, mock_setting
 async def test_run_native_command_not_allowlisted_blocked(mock_to_thread, mock_settings, mock_subprocess_run):
     """Test running a command that is not allowlisted and not risky (should now run)."""
     mock_settings.native_command_allowlist = ["git", "ls"]
-    mock_settings.auto_approve_native_commands = False # Auto-approve is off
+    mock_settings.auto_approve_native_commands = False  # Auto-approve is off
     # Configure mock subprocess
     expected_output = "script output"
     configure_mock_subprocess(mock_subprocess_run, stdout=expected_output)
@@ -328,8 +328,8 @@ async def test_run_native_command_not_allowlisted_blocked(mock_to_thread, mock_s
     result = await run_native_command("python script.py")
     # Check that the command executed successfully
     assert result == expected_output
-    mock_subprocess_run.assert_awaited_once() # Check subprocess was called
-    mock_to_thread.assert_not_called() # Confirm prompt should not be called
+    mock_subprocess_run.assert_awaited_once()  # Check subprocess was called
+    mock_to_thread.assert_not_called()  # Confirm prompt should not be called
 
 
 @pytest.mark.asyncio
