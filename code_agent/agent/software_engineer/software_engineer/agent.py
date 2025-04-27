@@ -1,7 +1,10 @@
 """Implementation of the Software Engineer Agent using Google Agent Development Kit."""
 
+# NOTE: SWITCH TO ADK WEB or COMMENT OUT FOR ADK RUN
+
 from google.adk.agents import Agent
 
+# Use relative imports from the 'software_engineer' sibling directory
 from software_engineer import prompt
 from software_engineer.sub_agents.code_review.agent import code_review_agent
 from software_engineer.sub_agents.debugging.agent import debugging_agent

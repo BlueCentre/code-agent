@@ -10,7 +10,6 @@ json_response_config = GenerateContentConfig(
     temperature=0.2,
     top_p=0.95,
     candidate_count=1,
-    output_structured_text=True,
 )
 
 

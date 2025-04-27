@@ -91,8 +91,8 @@ root_agent
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-repo/software-engineer.git
-   cd software-engineer
+   git clone https://github.com/your-repo/software_engineer.git
+   cd software_engineer
    ```
 
 2. Install dependencies using Poetry:

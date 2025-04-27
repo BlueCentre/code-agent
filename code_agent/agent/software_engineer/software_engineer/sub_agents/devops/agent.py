@@ -2,8 +2,15 @@
 
 from google.adk.agents import Agent
 from google.genai.types import GenerateContentConfig
+from google.adk.tools import FunctionTool
 
-from software_engineer import prompt
+# NOTE: SWITCH TO ADK WEB or UNCOMMENT FOR ADK RUN
+# Use absolute imports with correct directory name
+# from code_agent.agent.software_engineer.software_engineer import prompt
+# from code_agent.agent.software_engineer.software_engineer.shared_libraries.types import DevOpsResponse
+
+# NOTE: SWITCH TO ADK WEB or COMMENT OUT FOR ADK RUN
+from software_engineer.sub_agents.devops import prompt
 from software_engineer.shared_libraries.types import DevOpsResponse
 
 devops_agent = Agent(
@@ -18,3 +25,5 @@ devops_agent = Agent(
         top_p=0.95,
     ),
 )
+
+# Placeholder for actual tool implementation

@@ -1,6 +1,9 @@
 import os  # For environment variables
 import sys  # For command-line arguments
-from typing import Optional
+from typing import Optional, List
+
+import anyio # Add anyio import for Typer async handling
+import asyncio # Add asyncio import
 
 from dotenv import load_dotenv  # Import dotenv
 

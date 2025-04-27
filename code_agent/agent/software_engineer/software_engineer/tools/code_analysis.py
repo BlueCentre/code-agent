@@ -1,12 +1,16 @@
 """Code analysis tool for the software engineer agent."""
 
 import os
-from typing import Any, Dict
+from typing import Any, Dict, Annotated
 
-from google.adk.tools import Tool, ToolContext
+from google.adk.tools import FunctionTool, ToolContext
+from pydantic import Field
 
 
-def _analyze_code(file_path: str, tool_context: ToolContext) -> Dict[str, Any]:
+def _analyze_code(
+    file_path: Annotated[str, Field(description="Path to the file to analyze")],
+    tool_context: ToolContext
+) -> Dict[str, Any]:
     """
     Analyze code in a file for quality issues.
 
@@ -39,16 +43,9 @@ def _analyze_code(file_path: str, tool_context: ToolContext) -> Dict[str, Any]:
         return {"error": f"Error analyzing file: {e!s}"}
 
 
-analyze_code_tool = Tool(
-    name="analyze_code",
-    description="Analyzes code in a file for quality issues",
-    function=_analyze_code,
-    parameters=[
-        {
-            "name": "file_path",
-            "description": "Path to the file to analyze",
-            "type": "string",
-            "required": True,
-        }
-    ],
+# Define the tool using FunctionTool
+analyze_code_tool = FunctionTool(
+    func=_analyze_code,
+    # Description comes from func docstring
+    # input_model=AnalyzeCodeInput, # Input schema inferred from func signature
 )

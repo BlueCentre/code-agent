@@ -183,6 +183,31 @@ make uv-lint    # Check code style using UV
 make uv-format  # Format code using UV
 ```
 
+### Running ADK Agents
+
+This project includes agents compatible with the Google Agent Development Kit (ADK).
+You can run these agents directly using the `adk run` command within the activated development environment (e.g., using `uv run adk run ...` or `poetry run adk run ...`).
+
+Make sure you have installed the ADK (`pip install google-adk` or `uv pip install google-adk`).
+
+Available agents and their run commands:
+
+*   **Software Engineer Agent:**
+    ```bash
+    uv run adk run code_agent/agent/software_engineer
+    ```
+*   **Travel Concierge Agent:** (Assuming similar structure)
+    ```bash
+    uv run adk run code_agent/agent/travel-concierge
+    ```
+*   **Sandbox ADK Runner:** (Simple test runner)
+    ```bash
+    uv run adk run sandbox/agent_adk_runner
+    ```
+
+    GOOGLE_API_KEY=AIzaSyCL7EElWtbCMJRbpwJDeJc2BGBr2yqbyxA uv run adk run code_agent/agent/software_engineer
+    GOOGLE_API_KEY=AIzaSyCL7EElWtbCMJRbpwJDeJc2BGBr2yqbyxA uvx --from git+https://github.com/google/adk-python.git@main adk run software_engineer
+
 ### Testing
 
 Tests are written using pytest and are located in the `tests/` directory:
