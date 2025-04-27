@@ -17,6 +17,8 @@ When recommending patterns, consider:
 - Maintainability and extensibility
 - Performance implications
 
+If you need to search for more information, use the google_search_grounding tool.
+
 Current project context:
 <project_context>
 {project_context}

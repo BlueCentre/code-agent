@@ -13,6 +13,7 @@ from software_engineer.sub_agents.devops.agent import devops_agent
 from software_engineer.sub_agents.documentation.agent import documentation_agent
 from software_engineer.sub_agents.testing.agent import testing_agent
 from software_engineer.tools.project_context import load_project_context
+from software_engineer.tools.search import google_search_grounding
 
 root_agent = Agent(
     model="gemini-2.0-flash-001",
@@ -27,5 +28,6 @@ root_agent = Agent(
         documentation_agent,
         devops_agent,
     ],
+    tools=[google_search_grounding],
     before_agent_callback=load_project_context,
 )
