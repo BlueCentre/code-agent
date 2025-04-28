@@ -194,10 +194,17 @@ Available agents and their run commands:
 
 *   **Software Engineer Agent:**
     ```bash
-    #uv run adk run code_agent/agent/software_engineer
-    cd code_agent/agent/software_engineer && ./star_run.sh
-    # or
+    # using uvx to run the agent and scoped to the software_engineer directory
     cd code_agent/agent/software_engineer && uvx --from git+https://github.com/google/adk-python.git@main adk run software_engineer
+
+    # using uvx to run the agent in web mode and scoped to the software_engineer directory
+    cd code_agent/agent/software_engineer && uvx --from git+https://github.com/google/adk-python.git@main adk web
+
+    # or using uvx to run the agent and scoped to the top level directory
+    uvx --from git+https://github.com/google/adk-python.git@main adk run code_agent/agent/software_engineer/software_engineer
+
+    # or using uvx to run the agent in web mode and scoped to the top level directory
+    uvx --from git+https://github.com/google/adk-python.git@main adk web code_agent/agent/software_engineer
     ```
 *   **Travel Concierge Agent:** (Assuming similar structure)
     ```bash
