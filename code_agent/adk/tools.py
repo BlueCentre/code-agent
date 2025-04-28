@@ -19,7 +19,7 @@ from code_agent.tools.file_tools import delete_file as original_delete_file
 from code_agent.tools.file_tools import read_file as original_read_file
 from code_agent.tools.native_tools import run_native_command as original_run_command
 from code_agent.tools.simple_tools import apply_edit as original_apply_edit
-from code_agent.tools.verbosity import get_controller
+from code_agent.verbosity import get_controller
 
 # from code_agent.tools.memory_tools import load_memory as original_load_memory # Removed
 from .services import get_memory_service

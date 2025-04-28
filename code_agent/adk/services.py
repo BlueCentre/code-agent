@@ -17,7 +17,7 @@ from google.genai import types as genai_types  # For FunctionCall/Response types
 
 from code_agent.adk.memory import BaseMemoryService, InMemoryMemoryService, MemoryManager, MemoryType, get_memory_manager
 from code_agent.adk.session_config import IN_MEMORY_SESSION_CONFIG, CodeAgentSessionConfig
-from code_agent.tools.verbosity import get_controller
+from code_agent.verbosity import get_controller
 
 logger = logging.getLogger(__name__)
 verbosity_controller = get_controller()

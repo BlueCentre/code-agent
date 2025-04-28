@@ -15,7 +15,7 @@ import google.adk
 __adk_version__ = google.adk.__version__
 
 # Re-export tool wrappers
-from code_agent.adk.tools import (  # noqa
+from code_agent.adk.tools import (
     create_read_file_tool,
     create_delete_file_tool,
     create_apply_edit_tool,

@@ -19,7 +19,7 @@ else:
 # Project Tool Imports
 from code_agent.adk import tools as adk_tool_wrappers
 from code_agent.config import get_config
-from code_agent.tools.verbosity import get_controller  # For logging errors
+from code_agent.verbosity import get_controller  # Updated import
 
 # --- Configuration and Model Instantiation ---
 config = get_config()
