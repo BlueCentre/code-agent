@@ -22,7 +22,13 @@ from .tools.filesystem import (
 )
 from .tools.project_context import load_project_context
 from .tools.search import google_search_grounding
-from .tools.shell_command import run_shell_command, configure_shell_approval
+# Updated import for shell command tools
+from .tools.shell_command import (
+    configure_shell_approval,
+    configure_shell_whitelist,
+    check_shell_command_safety,
+    execute_vetted_shell_command,
+)
 from .tools.system_info import get_os_info, check_command_exists
 
 # REF: https://ai.google.dev/gemini-api/docs/rate-limits
@@ -45,10 +51,12 @@ root_agent = Agent(
         list_dir_tool,
         edit_file_tool,
         configure_approval_tool,
-        run_shell_command,
         get_os_info,
         check_command_exists,
         configure_shell_approval,
+        configure_shell_whitelist,
+        check_shell_command_safety,
+        execute_vetted_shell_command,
     ],
     before_agent_callback=load_project_context,
 )

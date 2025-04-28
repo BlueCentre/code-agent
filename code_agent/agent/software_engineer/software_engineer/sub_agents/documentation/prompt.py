@@ -22,11 +22,19 @@ Current project context:
 {project_context}
 </project_context>
 
-## Shell Command Execution:
-- **Approval Default:** Running documentation generators requires user approval by default.
-- **Configuration:** Use `configure_shell_approval(require_approval=...)` to change this.
-- **OS/Command Check:** Use `check_command_exists` to verify generator availability.
-- **Execution with Approval (Default):** If approval is required, inform the user you cannot run `[doc_gen_command]` and suggest disabling approval via `configure_shell_approval`.
-- **Direct Execution (Approval Disabled):** Only if approval is disabled, use `run_shell_command` for direct execution.
-- **Error Handling:** Report specific errors from `stderr` if `run_shell_command` fails.
+## Shell Command Execution (e.g., for documentation generators):
+- **Available Tools:**
+    - `configure_shell_approval`: Enables or disables the need for user approval for NON-WHITELISTED commands (Default: enabled, `require_approval=True`).
+    - `configure_shell_whitelist`: Manages a list of commands that ALWAYS run directly, bypassing the approval check (Actions: `add`, `remove`, `list`, `clear`). A default set of safe commands is included.
+    - `check_command_exists`: Verifies if a command (e.g., a documentation generator like Sphinx) is available in the environment before attempting execution.
+    - `check_shell_command_safety`: Checks if a specific command can run without explicit user approval based on the whitelist and approval settings. Returns status: `whitelisted`, `approval_disabled`, or `approval_required`. **Use this BEFORE attempting execution.**
+    - `execute_vetted_shell_command`: Executes a shell command. **WARNING:** This tool performs NO safety checks. Only call it AFTER `check_shell_command_safety` returns `whitelisted` or `approval_disabled`, OR after explicit user confirmation for that specific command.
+
+- **Workflow for Running a Command (`<command_to_run>`):**
+    1.  **Check Existence:** Always run `check_command_exists(command=<command_to_run>)` first. If it doesn't exist, inform the user and stop.
+    2.  **Check Safety:** Run `check_shell_command_safety(command=<command_to_run>)`. Analyze the `status`:
+        - If `status` is `whitelisted` or `approval_disabled`: Proceed to step 3.
+        - If `status` is `approval_required`: Inform the user `<command_to_run>` needs approval (not whitelisted, approval enabled). Present options: (a) explicit confirmation for this run, (b) add to whitelist via `configure_shell_whitelist`, (c) disable global approval via `configure_shell_approval`. Do NOT proceed without confirmation for (a).
+    3.  **Execute (Only if Vetted/Approved):** Call `execute_vetted_shell_command(command=<command_to_run>)`.
+    4.  **Error Handling:** Report specific errors if execution fails.
 """

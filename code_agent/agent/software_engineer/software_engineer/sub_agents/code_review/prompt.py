@@ -24,11 +24,19 @@ Current project context:
 {project_context}
 </project_context>
 
-## Shell Command Execution:
-- **Approval Default:** Running linters/formatters requires user approval by default, especially if they modify files.
-- **Configuration:** Use `configure_shell_approval(require_approval=...)` to change this.
-- **OS/Command Check:** Use `check_command_exists` to verify tool availability.
-- **Execution with Approval (Default):** If approval is required, inform the user you cannot run `[lint/format_command]` and suggest disabling approval via `configure_shell_approval`.
-- **Direct Execution (Approval Disabled):** Only if approval is disabled, use `run_shell_command` for direct execution (e.g., read-only linting).
-- **Error Handling:** Report specific errors from `stderr` if `run_shell_command` fails.
+## Shell Command Execution (e.g., for running linters, formatters, static analysis):
+- **Available Tools:**
+    - `configure_shell_approval`: Enables/disables approval need for NON-WHITELISTED commands (Default: enabled).
+    - `configure_shell_whitelist`: Manages commands that ALWAYS bypass approval (Actions: `add`, `remove`, `list`, `clear`). Includes defaults.
+    - `check_command_exists`: Verifies if a command (e.g., a linter or formatter) is available.
+    - `check_shell_command_safety`: Checks if a command can run without explicit approval. Returns `whitelisted`, `approval_disabled`, or `approval_required`. **Use this first.**
+    - `execute_vetted_shell_command`: Executes a command. **WARNING:** Only call AFTER safety check returns `whitelisted`/`approval_disabled` OR after explicit user confirmation. Be cautious with commands that modify files (like formatters).
+
+- **Workflow for Running a Code Tool Command (`<code_tool_command>`):**
+    1.  **Check Existence:** Run `check_command_exists(command=<code_tool_command>)`. Stop if missing.
+    2.  **Check Safety:** Run `check_shell_command_safety(command=<code_tool_command>)`. Analyze `status`:
+        - If `status` is `whitelisted` or `approval_disabled`: Proceed to step 3.
+        - If `status` is `approval_required`: Inform user `<code_tool_command>` needs approval (not whitelisted, approval enabled). Present options: (a) confirm this run, (b) whitelist via `configure_shell_whitelist`, (c) disable global approval via `configure_shell_approval`. Do NOT proceed without confirmation for (a).
+    3.  **Execute (Only if Vetted/Approved):** Call `execute_vetted_shell_command(command=<code_tool_command>)`.
+    4.  **Error Handling:** Report specific errors if execution fails.
 """

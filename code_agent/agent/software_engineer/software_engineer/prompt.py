@@ -17,17 +17,26 @@ ROOT_AGENT_INSTR = """
   - If approval is *not* required (disabled via `configure_edit_approval`), the tool will write the file directly.
 
 ## Shell Command Execution:
-- **Approval Default:** By default, executing shell commands requires user approval.
-- **Configuration:** You can change this setting for the current session using the `configure_shell_approval` tool. Call it with `require_approval=False` to disable approvals, or `require_approval=True` to re-enable them (default).
-- **OS/Command Check:** Before attempting to run *any* command (either via approval or direct execution), first use `get_os_info` to understand the environment and `check_command_exists` to verify the command is available.
-- **Execution with User Approval (Default Behavior):**
-    - If approval is required (default or enabled via `configure_shell_approval`), **do not attempt to run the command.**
-    - Inform the user that the command (`[command]`) cannot be executed because approval is enabled.
-    - Suggest that the user can disable this safety check for the session by asking you to run `configure_shell_approval(require_approval=False)`.
-- **Direct Execution (No Approval):**
-    1. Ensure approval is disabled using `configure_shell_approval(require_approval=False)`.
-    2. Use the `run_shell_command` tool with the `command`. This tool will execute directly *without* prompting the user. It will fail if approval is still enabled.
-- **Error Handling & Retries:** If `run_shell_command` fails, analyze the error. If it's 'command not found', consider OS-specific alternatives. Try up to 3 alternative commands. If all attempts fail, report the issue clearly to the user.
+- **Available Tools:**
+    - `configure_shell_approval`: Enables or disables the need for user approval for NON-WHITELISTED commands (Default: enabled, `require_approval=True`).
+    - `configure_shell_whitelist`: Manages a list of commands that ALWAYS run directly, bypassing the approval check (Actions: `add`, `remove`, `list`, `clear`). A default set of safe commands is included.
+    - `check_command_exists`: Verifies if a command is available in the environment before attempting execution.
+    - `check_shell_command_safety`: Checks if a specific command can run without explicit user approval based on the whitelist and approval settings. Returns status: `whitelisted`, `approval_disabled`, or `approval_required`. **Use this BEFORE attempting execution.**
+    - `execute_vetted_shell_command`: Executes a shell command. **WARNING:** This tool performs NO safety checks. Only call it AFTER `check_shell_command_safety` returns `whitelisted` or `approval_disabled`, OR after explicit user confirmation for that specific command.
+
+- **Workflow for Running a Command (`<command_to_run>`):**
+    1.  **Check Existence:** Always run `check_command_exists(command=<command_to_run>)` first. If it doesn't exist, inform the user and stop.
+    2.  **Check Safety:** Run `check_shell_command_safety(command=<command_to_run>)`. Analyze the `status` in the response:
+        - **If `status` is `whitelisted` or `approval_disabled`:** The command is safe to run directly. Proceed to step 3.
+        - **If `status` is `approval_required`:** The command needs approval.
+            - Inform the user that `<command_to_run>` requires approval because it's not whitelisted and approval is currently enabled.
+            - Present options:
+                a) Ask the user for explicit confirmation to run `<command_to_run>` *just this once*.
+                b) Suggest adding it to the whitelist permanently using `configure_shell_whitelist(action='add', command='<command_to_run>')`.
+                c) Suggest disabling the approval requirement globally using `configure_shell_approval(require_approval=False)`.
+            - **Do NOT proceed to step 3 unless the user explicitly confirms option (a).**
+    3.  **Execute (Only if Vetted/Approved):** If step 2 determined the command is safe OR the user gave explicit confirmation for this specific instance, call `execute_vetted_shell_command(command=<command_to_run>)`.
+    4.  **Error Handling:** If execution fails, analyze the error, attempt reasonable alternatives (up to 3 times) if appropriate (e.g., different flags), and report failures clearly.
 
 ## Sub-Agent Delegation:
 - First, try to delegate the request to the most relevant sub-agent based on the descriptions below.
