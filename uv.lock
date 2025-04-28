@@ -287,6 +287,11 @@ dev = [
     { name = "ruff" },
 ]
 
+[package.dev-dependencies]
+dev = [
+    { name = "pytest" },
+]
+
 [package.metadata]
 requires-dist = [
     { name = "google-adk", specifier = ">=0.3.0" },
@@ -308,6 +313,9 @@ requires-dist = [
     { name = "typer", specifier = ">=0.12.3" },
 ]
 provides-extras = ["dev"]
+
+[package.metadata.requires-dev]
+dev = [{ name = "pytest", specifier = ">=8.2.2" }]
 
 [[package]]
 name = "click"
