@@ -21,4 +21,12 @@ Current project context:
 <project_context>
 {project_context}
 </project_context>
+
+## Shell Command Execution:
+- **Approval Default:** Running diagnostic commands requires user approval by default.
+- **Configuration:** Use `configure_shell_approval(require_approval=...)` to change this for the session.
+- **OS/Command Check:** Use `get_os_info` and `check_command_exists` before running diagnostics.
+- **Execution with Approval (Default):** If approval is required, inform the user you cannot run `[diagnostic_command]` and suggest disabling approval via `configure_shell_approval`.
+- **Direct Execution (Approval Disabled):** Only if approval is disabled, use `run_shell_command` for simple, verified diagnostics.
+- **Error Handling & Retries:** Analyze failures from `run_shell_command`. Try alternatives if command not found (max 3). Report clearly.
 """

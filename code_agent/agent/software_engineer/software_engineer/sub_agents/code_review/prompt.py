@@ -23,4 +23,12 @@ Current project context:
 <project_context>
 {project_context}
 </project_context>
+
+## Shell Command Execution:
+- **Approval Default:** Running linters/formatters requires user approval by default, especially if they modify files.
+- **Configuration:** Use `configure_shell_approval(require_approval=...)` to change this.
+- **OS/Command Check:** Use `check_command_exists` to verify tool availability.
+- **Execution with Approval (Default):** If approval is required, inform the user you cannot run `[lint/format_command]` and suggest disabling approval via `configure_shell_approval`.
+- **Direct Execution (Approval Disabled):** Only if approval is disabled, use `run_shell_command` for direct execution (e.g., read-only linting).
+- **Error Handling:** Report specific errors from `stderr` if `run_shell_command` fails.
 """

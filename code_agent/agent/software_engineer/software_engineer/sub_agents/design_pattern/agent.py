@@ -21,6 +21,7 @@ design_pattern_agent = Agent(
     generate_content_config=GenerateContentConfig(
         temperature=0.2,
         top_p=0.95,
+        max_output_tokens=1000,
     ),
     tools=[google_search_grounding],
 )

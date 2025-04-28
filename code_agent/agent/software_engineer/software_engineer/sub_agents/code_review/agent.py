@@ -29,5 +29,6 @@ code_review_agent = Agent(
     generate_content_config=GenerateContentConfig(
         temperature=0.1,
         top_p=0.95,
+        max_output_tokens=1000,
     ),
 )
