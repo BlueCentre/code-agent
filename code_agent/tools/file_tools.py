@@ -167,7 +167,7 @@ async def read_file(args: ReadFileArgs) -> str:
 
                         # Check if file is too large
                         if file_size > MAX_FILE_SIZE_BYTES:
-                            return f"Error: File '{args.path}' is too large ({file_size_mb:.2f} MB). Maximum allowed size is {MAX_FILE_SIZE_BYTES / 1024 / 1024:.2f} MB." # noqa: E501
+                            return f"Error: File '{args.path}' is too large ({file_size_mb:.2f} MB). Maximum allowed size is {MAX_FILE_SIZE_BYTES / 1024 / 1024:.2f} MB."  # noqa: E501
                     except Exception as stat_error:
                         return format_file_error(stat_error, args.path, "checking size of")
 

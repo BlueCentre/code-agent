@@ -420,7 +420,7 @@ Be conversational, helpful, and engaging. If asked for creative content like jok
 Examples:
 - "Tell me a joke" → Respond with a joke from your knowledge
 - "Search the web for the latest AI developments" → Use google_search with query "latest AI developments"
-- "What files are in this directory?" → Use list_dir""" # noqa: E501
+- "What files are in this directory?" → Use list_dir"""  # noqa: E501
 
                         # Generate the response with tool access enabled if possible
                         model = genai.GenerativeModel(
@@ -502,17 +502,17 @@ Examples:
                                                         {
                                                             "title": "Lithium-ion battery - Wikipedia",
                                                             "url": "https://en.wikipedia.org/wiki/Lithium-ion_battery",
-                                                            "snippet": "A lithium-ion battery is a type of rechargeable battery that uses lithium ions as the primary component of its electrolyte. They are commonly used in portable electronics and electric vehicles and are growing in popularity for military and aerospace applications.", # noqa: E501
+                                                            "snippet": "A lithium-ion battery is a type of rechargeable battery that uses lithium ions as the primary component of its electrolyte. They are commonly used in portable electronics and electric vehicles and are growing in popularity for military and aerospace applications.",  # noqa: E501
                                                         },
                                                         {
                                                             "title": "How Do Lithium Batteries Work? - Science ABC",
                                                             "url": "https://www.scienceabc.com/innovation/how-do-lithium-ion-batteries-work.html",
-                                                            "snippet": "Lithium batteries work by the movement of lithium ions from the negative electrode through an electrolyte to the positive electrode during discharge, and back when charging. They offer high energy density and low self-discharge rates compared to other battery technologies.", # noqa: E501
+                                                            "snippet": "Lithium batteries work by the movement of lithium ions from the negative electrode through an electrolyte to the positive electrode during discharge, and back when charging. They offer high energy density and low self-discharge rates compared to other battery technologies.",  # noqa: E501
                                                         },
                                                         {
                                                             "title": "Environmental Impact of Lithium Batteries - National Geographic",
                                                             "url": "https://www.nationalgeographic.com/environment/article/lithium-batteries-environment",
-                                                            "snippet": "While lithium batteries power clean energy technologies, their production has significant environmental impacts. Mining lithium requires vast amounts of water and can cause pollution. Researchers are working on more sustainable extraction methods and recycling programs.", # noqa: E501
+                                                            "snippet": "While lithium batteries power clean energy technologies, their production has significant environmental impacts. Mining lithium requires vast amounts of water and can cause pollution. Researchers are working on more sustainable extraction methods and recycling programs.",  # noqa: E501
                                                         },
                                                     ]
                                                 elif "ai" in query.lower() or "artificial intelligence" in query.lower() or "llm" in query.lower():
@@ -520,17 +520,17 @@ Examples:
                                                         {
                                                             "title": "What is Artificial Intelligence (AI)? - IBM",
                                                             "url": "https://www.ibm.com/topics/artificial-intelligence",
-                                                            "snippet": "Artificial intelligence is a field of computer science that aims to create systems capable of performing tasks that typically require human intelligence. These include visual perception, speech recognition, decision-making, and language translation.", # noqa: E501
+                                                            "snippet": "Artificial intelligence is a field of computer science that aims to create systems capable of performing tasks that typically require human intelligence. These include visual perception, speech recognition, decision-making, and language translation.",  # noqa: E501
                                                         },
                                                         {
                                                             "title": "Large Language Models: A New Frontier in AI - Stanford HAI",
                                                             "url": "https://hai.stanford.edu/news/large-language-models-new-frontier-ai",
-                                                            "snippet": "Large Language Models (LLMs) like GPT-4, Claude, and Gemini represent a significant advancement in AI technology, capable of generating human-like text, translating languages, and even writing code based on natural language instructions.", # noqa: E501
+                                                            "snippet": "Large Language Models (LLMs) like GPT-4, Claude, and Gemini represent a significant advancement in AI technology, capable of generating human-like text, translating languages, and even writing code based on natural language instructions.",  # noqa: E501
                                                         },
                                                         {
                                                             "title": "The State of AI in 2024 - MIT Technology Review",
                                                             "url": "https://www.technologyreview.com/2024/01/10/the-state-of-ai-2024/",
-                                                            "snippet": "2024 has seen significant advancements in multimodal AI systems, regulatory frameworks for AI governance, and increased focus on AI safety and alignment. Companies are investing billions in AI research and infrastructure.", # noqa: E501
+                                                            "snippet": "2024 has seen significant advancements in multimodal AI systems, regulatory frameworks for AI governance, and increased focus on AI safety and alignment. Companies are investing billions in AI research and infrastructure.",  # noqa: E501
                                                         },
                                                     ]
                                                 else:
@@ -539,17 +539,17 @@ Examples:
                                                         {
                                                             "title": f"Search result 1 for: {query}",
                                                             "url": "https://example.com/result1",
-                                                            "snippet": f"This is a simulated search result for '{query}'. In a real implementation, this would connect to an actual search API and return relevant results.", # noqa: E501
+                                                            "snippet": f"This is a simulated search result for '{query}'. In a real implementation, this would connect to an actual search API and return relevant results.",  # noqa: E501
                                                         },
                                                         {
                                                             "title": f"Search result 2 for: {query}",
                                                             "url": "https://example.com/result2",
-                                                            "snippet": f"More information about '{query}'. This is a demonstration of the search capability, showing how search results would be formatted.", # noqa: E501
+                                                            "snippet": f"More information about '{query}'. This is a demonstration of the search capability, showing how search results would be formatted.",  # noqa: E501
                                                         },
                                                         {
                                                             "title": f"Search result 3 for: {query}",
                                                             "url": "https://example.com/result3",
-                                                            "snippet": f"Additional details related to '{query}'. In a production environment, these results would be from actual web sources.", # noqa: E501
+                                                            "snippet": f"Additional details related to '{query}'. In a production environment, these results would be from actual web sources.",  # noqa: E501
                                                         },
                                                     ]
 
@@ -603,7 +603,7 @@ The function returned this result:
 
 Based on this information, provide a helpful, conversational response that directly answers the user's question.
 Be engaging and natural in your tone. If the search results are not sufficient, you can still draw on your built-in knowledge to provide a complete answer.
-If appropriate, suggest follow-up questions the user might be interested in.""" # noqa: E501
+If appropriate, suggest follow-up questions the user might be interested in."""  # noqa: E501
 
                                             new_response = model.generate_content(function_result_prompt)
                                             if new_response and hasattr(new_response, "candidates") and new_response.candidates:

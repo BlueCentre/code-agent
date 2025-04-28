@@ -53,7 +53,7 @@ local_ops_agent = Agent(
     - Use `load_memory` to recall past information.
     - Use `run_native_command` for shell interactions (e.g., listing files `find . -name ... | cat`, checking status `git status | cat`).
     Do not perform web searches.
-    """, # noqa: E501
+    """,  # noqa: E501
     description="Handles local tasks: reading/writing files, running commands, and accessing agent memory.",
 )
 

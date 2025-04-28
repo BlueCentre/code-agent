@@ -34,7 +34,7 @@ load_dotenv()
 
 print("Initializing configuration...")
 # Ensure config is initialized (reads config files, env vars)
-initialize_config() # Now defined
+initialize_config()  # Now defined
 config = get_config()
 
 print(f"Resolved Provider: {config.default_provider}")
@@ -61,7 +61,7 @@ print(f"Model reference created: {type(model_ref)}")
 # --- Define the agent --- #
 # Simple LlmAgent for testing. Replace with get_root_agent() for multi-agent.
 print("Defining agent instance...")
-root_agent = LlmAgent( # Now defined
+root_agent = LlmAgent(  # Now defined
     model=model_ref,  # Pass the string or BaseLlm instance
     name="adk_cli_runner_agent",
     instruction="You are a helpful assistant responding via the ADK CLI runner.",
