@@ -26,7 +26,7 @@ async def test_memory_integration():
     await agent.add_assistant_message("I can help you with that. OpenAI provides great embeddings APIs for semantic search.")
 
     # Store the session in memory
-    session = await agent.session_manager.get_session(agent.session_id)
+    # session = await agent.session_manager.get_session(agent.session_id)
     memory_service = get_memory_service()
     # Remove incorrect call - memory is added via memory_service.add now
     # memory_service.add_session_to_memory(session)

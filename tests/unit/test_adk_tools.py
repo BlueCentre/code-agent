@@ -366,13 +366,14 @@ async def test_run_terminal_cmd_with_background(mock_tool_context):
         mock.patch("code_agent.tools.native_tools.print"),
         mock.patch("code_agent.tools.progress_indicators.print"),
         # Correct mock target for async subprocess
-        mock.patch("asyncio.create_subprocess_exec", return_value=mock_process) as mock_create_subprocess,
+        mock.patch("asyncio.create_subprocess_exec", return_value=mock_process), # as mock_create_subprocess,
     ):
         # Setup mock Text to return a string-like object
         mock_text.return_value = "EXECUTE COMMAND"
 
         # Act
-        result = await tool.func(mock_tool_context, command, is_background=True)
+        # result = await tool.func(mock_tool_context, command, is_background=True) # Commented out unused assignment
+        await tool.func(mock_tool_context, command, is_background=True)
 
         # Assert
         # NOTE: The ADK wrapper currently logs a warning and doesn't support background.

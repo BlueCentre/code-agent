@@ -291,9 +291,10 @@ def test_build_effective_config_defaults(mock_load_config):
     assert isinstance(effective_config.api_keys, ApiKeys)
     # Compare specific attributes to avoid model_dump linter issue
     api_keys: ApiKeys = effective_config.api_keys
-    assert api_keys.openai is None
-    assert api_keys.ai_studio is None
-    assert api_keys.groq is None
+    assert isinstance(api_keys, ApiKeys)
+    assert api_keys.openai is None # type: ignore[attr-defined]
+    assert api_keys.ai_studio is None # type: ignore[attr-defined]
+    assert api_keys.groq is None # type: ignore[attr-defined]
 
 
 @patch("code_agent.config.settings_based_config.load_config_from_file")
@@ -315,11 +316,12 @@ def test_build_effective_config_file_values(mock_load_config, valid_config_data)
     # Ensure api_keys is an ApiKeys instance when loaded from file
     assert isinstance(effective_config.api_keys, ApiKeys)
     api_keys: ApiKeys = effective_config.api_keys
+    assert isinstance(api_keys, ApiKeys)
     expected_keys_dict = valid_config_data["api_keys"]
     # Compare specific attributes
-    assert api_keys.openai == expected_keys_dict["openai"]
-    assert api_keys.ai_studio == expected_keys_dict["ai_studio"]
-    assert api_keys.groq == expected_keys_dict["groq"]
+    assert api_keys.openai == expected_keys_dict["openai"] # type: ignore[attr-defined]
+    assert api_keys.ai_studio == expected_keys_dict["ai_studio"] # type: ignore[attr-defined]
+    assert api_keys.groq == expected_keys_dict["groq"] # type: ignore[attr-defined]
     assert effective_config.max_tokens == valid_config_data["max_tokens"]
 
 
@@ -386,9 +388,10 @@ def test_build_effective_config_cli_overrides(
     expected_keys_dict = valid_config_data["api_keys"]
 
     # Use model_dump().get() for safety
-    assert api_keys.model_dump().get("openai") == expected_keys_dict.get("openai")
-    assert api_keys.model_dump().get("ai_studio") == expected_keys_dict.get("ai_studio")
-    assert api_keys.model_dump().get("groq") == expected_keys_dict.get("groq")
+    assert isinstance(api_keys, ApiKeys)
+    assert api_keys.model_dump().get("openai") == expected_keys_dict.get("openai") # type: ignore[attr-defined]
+    assert api_keys.model_dump().get("ai_studio") == expected_keys_dict.get("ai_studio") # type: ignore[attr-defined]
+    assert api_keys.model_dump().get("groq") == expected_keys_dict.get("groq") # type: ignore[attr-defined]
 
     # Optionally, compare the whole object if needed
     expected_api_keys_obj = ApiKeys.model_validate(expected_keys_dict)
@@ -476,12 +479,13 @@ def test_build_effective_config_env_vars(
         expected_keys_dict.update(expected_values["api_keys"])
 
     # Use model_dump().get() for safety
-    assert api_keys.model_dump().get("openai") == expected_keys_dict.get("openai")
-    assert api_keys.model_dump().get("ai_studio") == expected_keys_dict.get("ai_studio")
-    assert api_keys.model_dump().get("groq") == expected_keys_dict.get("groq")
+    assert isinstance(api_keys, ApiKeys)
+    assert api_keys.model_dump().get("openai") == expected_keys_dict.get("openai") # type: ignore[attr-defined]
+    assert api_keys.model_dump().get("ai_studio") == expected_keys_dict.get("ai_studio") # type: ignore[attr-defined]
+    assert api_keys.model_dump().get("groq") == expected_keys_dict.get("groq") # type: ignore[attr-defined]
     # Check any potentially added keys
     if "new_provider" in expected_keys_dict:
-        assert api_keys.model_dump().get("new_provider") == expected_keys_dict.get("new_provider")
+        assert api_keys.model_dump().get("new_provider") == expected_keys_dict.get("new_provider") # type: ignore[attr-defined]
 
     # Compare the whole object
     expected_api_keys_obj = ApiKeys.model_validate(expected_keys_dict)
@@ -550,9 +554,10 @@ def test_build_effective_config_all_layers(mock_rich_print, mock_load_config, va
     expected_keys_dict["ai_studio"] = env_api_keys["ai_studio"]  # Env override
 
     # Use model_dump().get() for safety
-    assert api_keys.model_dump().get("openai") == expected_keys_dict.get("openai")  # From file
-    assert api_keys.model_dump().get("ai_studio") == expected_keys_dict.get("ai_studio")  # From Env
-    assert api_keys.model_dump().get("groq") == expected_keys_dict.get("groq")  # From file
+    assert isinstance(api_keys, ApiKeys)
+    assert api_keys.model_dump().get("openai") == expected_keys_dict.get("openai")  # From file # type: ignore[attr-defined]
+    assert api_keys.model_dump().get("ai_studio") == expected_keys_dict.get("ai_studio")  # From Env # type: ignore[attr-defined]
+    assert api_keys.model_dump().get("groq") == expected_keys_dict.get("groq")  # From file # type: ignore[attr-defined]
 
     # Compare the final object
     expected_api_keys_obj = ApiKeys.model_validate(expected_keys_dict)
@@ -674,7 +679,7 @@ def test_get_config_returns_existing_if_set(mock_config_global):
     """Test get_config returns the existing config if it's already set."""
     # Arrange
     existing_config = CodeAgentSettings(default_provider="existing")
-    mock_config_global = existing_config  # Set the patched global
+    # mock_config_global = existing_config  # Set the patched global
     code_agent.config.config._config = existing_config  # Also set the real one for consistency
 
     # Act

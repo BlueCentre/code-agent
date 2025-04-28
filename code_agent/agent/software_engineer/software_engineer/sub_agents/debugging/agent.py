@@ -3,15 +3,21 @@
 from google.adk.agents import Agent
 from google.genai.types import GenerateContentConfig
 
-# from google.adk.tools.tool_mixins import BaseTool
-# NOTE: SWITCH TO ADK WEB or UNCOMMENT FOR ADK RUN
-# Use absolute imports with correct directory name
-# from code_agent.agent.software_engineer.software_engineer import prompt
-# from code_agent.agent.software_engineer.software_engineer.shared_libraries.types import DebuggingResponse
-# NOTE: SWITCH TO ADK WEB or COMMENT OUT FOR ADK RUN
 from software_engineer.sub_agents.debugging import prompt
-from software_engineer.tools.filesystem import list_dir_tool, read_file_tool
-
+from software_engineer.tools.filesystem import (
+    configure_approval_tool,
+    edit_file_tool,
+    list_dir_tool,
+    read_file_tool,
+)
+# Updated import for shell command tools
+from software_engineer.tools.shell_command import (
+    configure_shell_approval,
+    configure_shell_whitelist,
+    check_shell_command_safety,
+    execute_vetted_shell_command,
+)
+from software_engineer.tools.system_info import get_os_info, check_command_exists
 # from software_engineer.tools.git_tools import (
 #     git_status_tool,
 # )
@@ -21,11 +27,23 @@ debugging_agent = Agent(
     name="debugging_agent",
     description="Helps identify and fix code issues",
     instruction=prompt.DEBUGGING_AGENT_INSTR,
-    tools=[read_file_tool, list_dir_tool],
+    tools=[
+        read_file_tool,
+        list_dir_tool,
+        configure_approval_tool,
+        edit_file_tool,
+        configure_shell_approval,
+        configure_shell_whitelist,
+        check_shell_command_safety,
+        execute_vetted_shell_command,
+        get_os_info,
+        check_command_exists,
+    ],
     output_key="debugging",
     generate_content_config=GenerateContentConfig(
-        temperature=0.2,
+        temperature=0.8,
         top_p=0.95,
+        max_output_tokens=4096,
     ),
 )
 

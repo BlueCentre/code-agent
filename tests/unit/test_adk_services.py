@@ -50,14 +50,14 @@ def mock_security_manager() -> MagicMock:
 
 
 @pytest_asyncio.fixture
-async def mock_adk_session_service_placeholder(event_loop):
+async def mock_adk_session_service_placeholder():
     """Placeholder fixture, mocking will happen in tests."""
     # Returning None or a simple object to avoid AsyncMock in fixture setup
     return None
 
 
 @pytest_asyncio.fixture
-async def session_manager(event_loop, mock_security_manager: MagicMock) -> CodeAgentADKSessionManager:  # Add mock_security_manager fixture
+async def session_manager(mock_security_manager: MagicMock) -> CodeAgentADKSessionManager:  # Add mock_security_manager fixture
     """Fixture for CodeAgentADKSessionManager, service will be mocked in tests."""
     # Initialize with None, patch the _session_service attribute in tests
     # Inject the mock security manager
@@ -69,8 +69,10 @@ async def session_manager(event_loop, mock_security_manager: MagicMock) -> CodeA
 
 
 async def test_create_session(
-    event_loop, session_manager: CodeAgentADKSessionManager, mock_session: MagicMock, mock_security_manager: MagicMock
-):  # Add mock_security_manager
+    session_manager: CodeAgentADKSessionManager,
+    mock_session: MagicMock,
+    mock_security_manager: MagicMock,
+):  # Reformat long line
     """Test creating a new session."""
     # Create and configure the mock service here
     mock_service = AsyncMock(spec=BaseSessionService)
@@ -91,9 +93,7 @@ async def test_create_session(
         mock_security_manager.register_session.assert_called_once_with(MOCK_SESSION_ID, "default_user")
 
 
-async def test_get_session(
-    event_loop, session_manager: CodeAgentADKSessionManager, mock_session: MagicMock, mock_security_manager: MagicMock
-):  # Add mock_security_manager
+async def test_get_session(session_manager: CodeAgentADKSessionManager, mock_session: MagicMock, mock_security_manager: MagicMock):  # Add mock_security_manager
     """Test retrieving an existing session."""
     session_id = MOCK_SESSION_ID
     auth_token = MOCK_AUTH_TOKEN  # Use constant
@@ -114,10 +114,9 @@ async def test_get_session(
 
 
 @patch("code_agent.adk.services.CodeAgentADKSessionManager.get_session", new_callable=AsyncMock)
-async def test_add_event(mock_get_session, event_loop, session_manager: CodeAgentADKSessionManager, mock_session: MagicMock):  # Patch manager's get_session
+async def test_add_event(mock_get_session, session_manager: CodeAgentADKSessionManager, mock_session: MagicMock):  # Patch manager's get_session
     """Test adding a generic event."""
     session_id = MOCK_SESSION_ID
-    auth_token = MOCK_AUTH_TOKEN
     event_content = genai_types.Content(parts=[genai_types.Part(text="generic")])
     event = Event(author="test_author", content=event_content)
 
@@ -129,20 +128,17 @@ async def test_add_event(mock_get_session, event_loop, session_manager: CodeAgen
     mock_service.append_event.return_value = None
 
     with patch.object(session_manager, "_session_service", mock_service):
-        await session_manager.add_event(session_id, event, auth_token=auth_token)
-        # Verify manager's get_session was called first
-        mock_get_session.assert_called_once_with(session_id, auth_token)
+        await session_manager.add_event(session_id, event)
+        # Verify manager's get_session was called first, expecting auth_token=None internally
+        mock_get_session.assert_called_once_with(session_id, None)
         # Verify underlying append_event was called with the session object
         mock_service.append_event.assert_called_once_with(session=mock_session, event=event)
 
 
 @patch("code_agent.adk.services.CodeAgentADKSessionManager.get_session", new_callable=AsyncMock)
-async def test_add_user_message(
-    mock_get_session, event_loop, session_manager: CodeAgentADKSessionManager, mock_session: MagicMock
-):  # Patch manager's get_session
+async def test_add_user_message(mock_get_session, session_manager: CodeAgentADKSessionManager, mock_session: MagicMock):  # Patch manager's get_session
     """Test adding a user message event."""
     session_id = MOCK_SESSION_ID
-    auth_token = MOCK_AUTH_TOKEN
     content = "Hello Agent"
 
     # Mock the manager's get_session directly
@@ -168,12 +164,9 @@ async def test_add_user_message(
 
 
 @patch("code_agent.adk.services.CodeAgentADKSessionManager.get_session", new_callable=AsyncMock)
-async def test_add_assistant_message(
-    mock_get_session, event_loop, session_manager: CodeAgentADKSessionManager, mock_session: MagicMock
-):  # Patch manager's get_session
+async def test_add_assistant_message(mock_get_session, session_manager: CodeAgentADKSessionManager, mock_session: MagicMock):  # Patch manager's get_session
     """Test adding an assistant message event without tool calls."""
     session_id = MOCK_SESSION_ID
-    auth_token = MOCK_AUTH_TOKEN
     content = "Hello User"
 
     # Mock the manager's get_session directly
@@ -200,11 +193,12 @@ async def test_add_assistant_message(
 
 @patch("code_agent.adk.services.CodeAgentADKSessionManager.get_session", new_callable=AsyncMock)
 async def test_add_assistant_message_with_tool_calls(
-    mock_get_session, event_loop, session_manager: CodeAgentADKSessionManager, mock_session: MagicMock
-):  # Patch manager's get_session
+    mock_get_session,
+    session_manager: CodeAgentADKSessionManager,
+    mock_session: MagicMock,
+):  # Reformat long line
     """Test adding an assistant message event with tool calls."""
     session_id = MOCK_SESSION_ID
-    auth_token = MOCK_AUTH_TOKEN
     content = "Using a tool"
     tool_calls = [genai_types.FunctionCall(name="read_file", args={"path": "a.txt"})]
 
@@ -232,12 +226,9 @@ async def test_add_assistant_message_with_tool_calls(
 
 
 @patch("code_agent.adk.services.CodeAgentADKSessionManager.get_session", new_callable=AsyncMock)
-async def test_add_tool_result(
-    mock_get_session, event_loop, session_manager: CodeAgentADKSessionManager, mock_session: MagicMock
-):  # Patch manager's get_session
+async def test_add_tool_result(mock_get_session, session_manager: CodeAgentADKSessionManager, mock_session: MagicMock):  # Patch manager's get_session
     """Test adding a tool result event."""
     session_id = MOCK_SESSION_ID
-    auth_token = MOCK_AUTH_TOKEN  # Although not passed directly, it's the context
     tool_call_id = "call_1"
     tool_name = "read_file"
     content = "File content here"
@@ -268,12 +259,9 @@ async def test_add_tool_result(
 
 
 @patch("code_agent.adk.services.CodeAgentADKSessionManager.get_session", new_callable=AsyncMock)
-async def test_add_system_message(
-    mock_get_session, event_loop, session_manager: CodeAgentADKSessionManager, mock_session: MagicMock
-):  # Patch manager's get_session
+async def test_add_system_message(mock_get_session, session_manager: CodeAgentADKSessionManager, mock_session: MagicMock):  # Patch manager's get_session
     """Test adding a system message event."""
     session_id = MOCK_SESSION_ID
-    auth_token = MOCK_AUTH_TOKEN
     content = "System instruction"
 
     # Mock the manager's get_session directly
@@ -299,10 +287,9 @@ async def test_add_system_message(
 
 
 @patch("code_agent.adk.services.CodeAgentADKSessionManager.get_session", new_callable=AsyncMock)
-async def test_get_history(mock_get_session, event_loop, session_manager: CodeAgentADKSessionManager, mock_session: MagicMock):  # Patch manager's get_session
+async def test_get_history(mock_get_session, session_manager: CodeAgentADKSessionManager, mock_session: MagicMock):  # Patch manager's get_session
     """Test retrieving history."""
     session_id = MOCK_SESSION_ID
-    auth_token = MOCK_AUTH_TOKEN
     expected_event = Event(author="user", content=genai_types.Content(parts=[genai_types.Part(text="test")]))
 
     # Mock the manager's get_session directly
@@ -322,7 +309,7 @@ async def test_get_history(mock_get_session, event_loop, session_manager: CodeAg
 @patch("code_agent.adk.services.InMemorySessionService")
 @patch("code_agent.adk.services.initialize_adk_with_api_key")  # Also patch initialization
 # Correct order: patch argument comes after fixtures
-async def test_get_adk_session_service_initialization(mock_init_key, mock_in_memory_service_class, event_loop):
+async def test_get_adk_session_service_initialization(mock_init_key, mock_in_memory_service_class):
     """Test the initialization logic of get_adk_session_service."""
     mock_service_instance = MagicMock(spec=InMemorySessionService)
     mock_in_memory_service_class.return_value = mock_service_instance

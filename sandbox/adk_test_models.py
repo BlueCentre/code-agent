@@ -36,17 +36,15 @@ from typing import Dict, Optional
 
 # Load environment variables from .env file
 from dotenv import load_dotenv
-
-load_dotenv()
-
-# Add the project root to the Python path to allow importing from code_agent
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
 from google.adk.agents import LlmAgent
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
+load_dotenv()
+
+# Add the project root to the Python path to allow importing from code_agent
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 # Simulate functions from the original models module if needed, or define statically
 def get_model_providers() -> list[str]:

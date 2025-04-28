@@ -4,18 +4,23 @@ ADK Agent definition script for use with 'adk run'.
 This script defines an agent instance that the ADK CLI runner can load.
 """
 
+# import os
+
+# Configure google.generativeai API key if using Gemini
+# This is still needed as ADK's LlmAgent might rely on this global config
+# when it receives a 'gemini-*' model string.
+import google.generativeai as genai
+
 # Load environment variables first (e.g., from .env)
 from dotenv import load_dotenv
-
-load_dotenv()
-
-import os
 
 # Import necessary ADK and local components
 from google.adk.agents import LlmAgent
 
 from code_agent.adk.models_v2 import create_model  # Use v2 models
 from code_agent.config.config import get_config, initialize_config
+
+load_dotenv()
 
 # Import tools if you want to add them
 # from your_tool_module import your_tool_function
@@ -25,11 +30,6 @@ from code_agent.config.config import get_config, initialize_config
 # relies on env vars or config file primarily.
 initialize_config()
 config = get_config()
-
-# Configure google.generativeai API key if using Gemini
-# This is still needed as ADK's LlmAgent might rely on this global config
-# when it receives a 'gemini-*' model string.
-import google.generativeai as genai
 
 google_api_key_val = config.google_api_key or config.ai_studio_api_key
 if google_api_key_val:

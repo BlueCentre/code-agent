@@ -3,14 +3,6 @@
 from google.adk.agents import Agent
 from google.genai.types import GenerateContentConfig
 
-# from software_engineer.tools.git_tools import (
-#     git_status_tool,
-# )
-# NOTE: SWITCH TO ADK WEB or UNCOMMENT FOR ADK RUN
-# Use absolute imports with correct directory name
-# from code_agent.agent.software_engineer.software_engineer import prompt
-# from code_agent.agent.software_engineer.software_engineer.shared_libraries.types import TestingResponse
-# NOTE: SWITCH TO ADK WEB or COMMENT OUT FOR ADK RUN
 from software_engineer.sub_agents.testing import prompt
 
 # from google.adk.tools.tool_mixins import BaseTool
@@ -26,6 +18,7 @@ testing_agent = Agent(
     generate_content_config=GenerateContentConfig(
         temperature=0.2,
         top_p=0.95,
+        max_output_tokens=4096,
     ),
 )
 
