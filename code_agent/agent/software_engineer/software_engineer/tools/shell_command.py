@@ -1,22 +1,28 @@
-import subprocess
-import shlex
-from pydantic import BaseModel, Field
 import logging
-from typing import Optional, Literal
+import shlex
+import subprocess
+from typing import Literal, Optional
+
 # Import ToolContext for state management
 from google.adk.tools import ToolContext
+from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
 # --- Configuration Tool --- #
 
+
 class ConfigureShellApprovalInput(BaseModel):
     """Input model for configuring shell command approval."""
+
     require_approval: bool = Field(..., description="Set to true to require approval, false to disable.")
+
 
 class ConfigureShellApprovalOutput(BaseModel):
     """Output model for configuring shell command approval."""
+
     status: str
+
 
 def configure_shell_approval(args: dict, tool_context: ToolContext) -> ConfigureShellApprovalOutput:
     """Configures whether running shell commands requires user approval for the current session.
@@ -34,22 +40,28 @@ def configure_shell_approval(args: dict, tool_context: ToolContext) -> Configure
         logger.error(message)
         return ConfigureShellApprovalOutput(status=message)
 
-    tool_context.state['require_shell_approval'] = require_approval
+    tool_context.state["require_shell_approval"] = require_approval
     status = "enabled" if require_approval else "disabled"
     logger.info(f"Shell command approval requirement set to: {status}")
     return ConfigureShellApprovalOutput(status=f"Shell command approval requirement is now {status}.")
 
+
 # --- Whitelist Configuration Tool --- #
+
 
 class ConfigureShellWhitelistInput(BaseModel):
     """Input model for configuring the shell command whitelist."""
+
     action: Literal["add", "remove", "list", "clear"] = Field(..., description="Action to perform: add, remove, list, or clear.")
     command: Optional[str] = Field(None, description="The command to add or remove (required for 'add' and 'remove' actions).")
 
+
 class ConfigureShellWhitelistOutput(BaseModel):
     """Output model for configuring the shell command whitelist."""
+
     status: str
     whitelist: Optional[list[str]] = Field(None, description="The current whitelist (only for 'list' action).")
+
 
 def configure_shell_whitelist(args: dict, tool_context: ToolContext) -> ConfigureShellWhitelistOutput:
     """Manages the whitelist of shell commands that bypass approval.
@@ -65,31 +77,67 @@ def configure_shell_whitelist(args: dict, tool_context: ToolContext) -> Configur
 
     # Default safe commands (adjust as needed)
     DEFAULT_SAFE_COMMANDS = [
-        "ls", "grep", "find", "cat", "pwd", "echo", "git status", "head", "tail", "wc",
-        "git diff", "git log", "which", "ping", "host", "dig", "nslookup", "ss",
-        "uname", "uptime", "df", "du", "free", "stat", "ps", "pgrep", "ip addr", "ip route",
-        "traceroute", "git branch", "git tag", "git remote -v", "git config --list",
-        "docker ps", "docker images",
-        "kubectl get", "kubectl describe", "kubectl logs", "kubectl cluster-info",
-        "kubectl config view", "kubectl version", "kubectl api-resources",
-        "kubectl api-versions", "kubectl top",
-        "git branch --show-current" # Specific safe variant
+        "ls",
+        "grep",
+        "find",
+        "cat",
+        "pwd",
+        "echo",
+        "git status",
+        "head",
+        "tail",
+        "wc",
+        "git diff",
+        "git log",
+        "which",
+        "ping",
+        "host",
+        "dig",
+        "nslookup",
+        "ss",
+        "uname",
+        "uptime",
+        "df",
+        "du",
+        "free",
+        "stat",
+        "ps",
+        "pgrep",
+        "ip addr",
+        "ip route",
+        "traceroute",
+        "git branch",
+        "git tag",
+        "git remote -v",
+        "git config --list",
+        "docker ps",
+        "docker images",
+        "kubectl get",
+        "kubectl describe",
+        "kubectl logs",
+        "kubectl cluster-info",
+        "kubectl config view",
+        "kubectl version",
+        "kubectl api-resources",
+        "kubectl api-versions",
+        "kubectl top",
+        "git branch --show-current",  # Specific safe variant
     ]
 
     # Initialize whitelist in state if it doesn't exist
-    if 'shell_command_whitelist' not in tool_context.state:
+    if "shell_command_whitelist" not in tool_context.state:
         # Initialize with default safe commands
-        tool_context.state['shell_command_whitelist'] = DEFAULT_SAFE_COMMANDS[:]
+        tool_context.state["shell_command_whitelist"] = DEFAULT_SAFE_COMMANDS[:]
         logger.info(f"Initialized shell command whitelist with defaults: {DEFAULT_SAFE_COMMANDS}")
 
-    whitelist: list[str] = tool_context.state['shell_command_whitelist']
+    whitelist: list[str] = tool_context.state["shell_command_whitelist"]
 
     if action == "add":
         if not command:
             return ConfigureShellWhitelistOutput(status="Error: 'command' is required for 'add' action.")
         if command not in whitelist:
             whitelist.append(command)
-            tool_context.state['shell_command_whitelist'] = whitelist # Update state
+            tool_context.state["shell_command_whitelist"] = whitelist  # Update state
             logger.info(f"Added command '{command}' to shell whitelist.")
             return ConfigureShellWhitelistOutput(status=f"Command '{command}' added to whitelist.")
         else:
@@ -99,31 +147,37 @@ def configure_shell_whitelist(args: dict, tool_context: ToolContext) -> Configur
             return ConfigureShellWhitelistOutput(status="Error: 'command' is required for 'remove' action.")
         if command in whitelist:
             whitelist.remove(command)
-            tool_context.state['shell_command_whitelist'] = whitelist # Update state
+            tool_context.state["shell_command_whitelist"] = whitelist  # Update state
             logger.info(f"Removed command '{command}' from shell whitelist.")
             return ConfigureShellWhitelistOutput(status=f"Command '{command}' removed from whitelist.")
         else:
             return ConfigureShellWhitelistOutput(status=f"Command '{command}' not found in whitelist.")
     elif action == "list":
-        return ConfigureShellWhitelistOutput(status="Current whitelist retrieved.", whitelist=list(whitelist)) # Return a copy
+        return ConfigureShellWhitelistOutput(status="Current whitelist retrieved.", whitelist=list(whitelist))  # Return a copy
     elif action == "clear":
-        tool_context.state['shell_command_whitelist'] = []
+        tool_context.state["shell_command_whitelist"] = []
         logger.info("Cleared shell command whitelist.")
         return ConfigureShellWhitelistOutput(status="Shell command whitelist cleared.")
     else:
         return ConfigureShellWhitelistOutput(status=f"Error: Invalid action '{action}'. Valid actions are: add, remove, list, clear.")
 
+
 # --- Shell Command Safety Check Tool --- #
+
 
 class CheckShellCommandSafetyInput(BaseModel):
     """Input model for checking shell command safety."""
+
     command: str = Field(..., description="The shell command to check.")
+
 
 class CheckShellCommandSafetyOutput(BaseModel):
     """Output model for checking shell command safety."""
+
     status: Literal["whitelisted", "approval_disabled", "approval_required"] = Field(..., description="The safety status of the command.")
     command: str = Field(..., description="The command that was checked.")
     message: str = Field(..., description="Explanation of the status.")
+
 
 def check_shell_command_safety(args: dict, tool_context: ToolContext) -> CheckShellCommandSafetyOutput:
     """Checks if a shell command is safe to run without explicit user approval.
@@ -143,60 +197,58 @@ def check_shell_command_safety(args: dict, tool_context: ToolContext) -> CheckSh
     if not command:
         # Technically this shouldn't happen with Pydantic validation, but belt-and-suspenders
         return CheckShellCommandSafetyOutput(
-            status="approval_required", # Default to safest option on error
+            status="approval_required",  # Default to safest option on error
             command=command or "",
-            message="Error: Command argument missing in input."
+            message="Error: Command argument missing in input.",
         )
 
-    require_approval = tool_context.state.get('require_shell_approval', True)
+    require_approval = tool_context.state.get("require_shell_approval", True)
     # Ensure whitelist is initialized if needed (accessing it via configure_shell_whitelist initializes)
-    if 'shell_command_whitelist' not in tool_context.state:
+    if "shell_command_whitelist" not in tool_context.state:
         # Temporarily call configure_shell_whitelist with 'list' action to initialize state
         # This is a slight workaround to ensure initialization happens if only check/execute are called.
         # A cleaner approach might involve a dedicated initialization step or context manager.
         _ = configure_shell_whitelist({"action": "list"}, tool_context)
 
-    shell_whitelist = tool_context.state.get('shell_command_whitelist', [])
+    shell_whitelist = tool_context.state.get("shell_command_whitelist", [])
     is_whitelisted = command in shell_whitelist
 
     if is_whitelisted:
         logger.info(f"Command '{command}' is whitelisted.")
-        return CheckShellCommandSafetyOutput(
-            status="whitelisted",
-            command=command,
-            message="Command is in the configured whitelist and can be run directly."
-        )
+        return CheckShellCommandSafetyOutput(status="whitelisted", command=command, message="Command is in the configured whitelist and can be run directly.")
     elif not require_approval:
         logger.info(f"Command '{command}' is not whitelisted, but shell approval is disabled.")
         return CheckShellCommandSafetyOutput(
-            status="approval_disabled",
-            command=command,
-            message="Command is not whitelisted, but approval is disabled for this session."
+            status="approval_disabled", command=command, message="Command is not whitelisted, but approval is disabled for this session."
         )
     else:
-        logger.warning(f"Command '{command}' requires approval (not whitelisted and approval enabled)." )
+        logger.warning(f"Command '{command}' requires approval (not whitelisted and approval enabled).")
         return CheckShellCommandSafetyOutput(
-            status="approval_required",
-            command=command,
-            message="Command requires user approval as it is not whitelisted and approval is enabled."
+            status="approval_required", command=command, message="Command requires user approval as it is not whitelisted and approval is enabled."
         )
+
 
 # --- Vetted Shell Command Execution Tool --- #
 
+
 class ExecuteVettedShellCommandInput(BaseModel):
     """Input model for the execute_vetted_shell_command tool."""
+
     command: str = Field(..., description="The shell command to execute. Should have been vetted first.")
     working_directory: Optional[str] = Field(None, description="Optional working directory to run the command in.")
     timeout: int = Field(60, description="Timeout in seconds for the command execution.")
 
+
 class ExecuteVettedShellCommandOutput(BaseModel):
     """Output model for the execute_vetted_shell_command tool."""
-    stdout: str | None = Field(None, description="The standard output of the command." )
-    stderr: str | None = Field(None, description="The standard error of the command." )
-    return_code: int | None = Field(None, description="The return code of the command." )
+
+    stdout: str | None = Field(None, description="The standard output of the command.")
+    stderr: str | None = Field(None, description="The standard error of the command.")
+    return_code: int | None = Field(None, description="The return code of the command.")
     command_executed: str | None = Field(None, description="The command that was executed.")
     status: str = Field(description="Status: 'executed' or 'error'.")
     message: str = Field(description="Additional information about the status.")
+
 
 def execute_vetted_shell_command(args: dict, tool_context: ToolContext) -> ExecuteVettedShellCommandOutput:
     """Executes a shell command that has ALREADY BEEN VETTED or explicitly approved.
@@ -222,19 +274,13 @@ def execute_vetted_shell_command(args: dict, tool_context: ToolContext) -> Execu
     timeout = args.get("timeout", 60)
 
     if not command:
-        return ExecuteVettedShellCommandOutput(
-            status="error",
-            command_executed=command,
-            message="Error: 'command' argument is missing."
-        )
+        return ExecuteVettedShellCommandOutput(status="error", command_executed=command, message="Error: 'command' argument is missing.")
 
     try:
         timeout_sec = int(timeout)
     except (ValueError, TypeError):
         return ExecuteVettedShellCommandOutput(
-            status="error",
-            command_executed=command,
-            message=f"Error: Invalid timeout value '{timeout}'. Must be an integer."
+            status="error", command_executed=command, message=f"Error: Invalid timeout value '{timeout}'. Must be an integer."
         )
 
     command_parts = shlex.split(command)
@@ -247,7 +293,7 @@ def execute_vetted_shell_command(args: dict, tool_context: ToolContext) -> Execu
             text=True,
             cwd=working_directory,
             timeout=timeout_sec,
-            check=False # Don't raise exception on non-zero exit
+            check=False,  # Don't raise exception on non-zero exit
         )
         logger.info(f"Vetted command '{command}' finished with return code {process.returncode}")
         return ExecuteVettedShellCommandOutput(
@@ -256,16 +302,16 @@ def execute_vetted_shell_command(args: dict, tool_context: ToolContext) -> Execu
             return_code=process.returncode,
             command_executed=command,
             status="executed",
-            message="Command executed successfully." if process.returncode == 0 else "Command executed with non-zero exit code."
+            message="Command executed successfully." if process.returncode == 0 else "Command executed with non-zero exit code.",
         )
     except FileNotFoundError:
         logger.error(f"Command not found during execution: {command_parts[0]}")
         return ExecuteVettedShellCommandOutput(
             stderr=f"Error: Command not found: {command_parts[0]}",
-            return_code=-1, # Using distinct negative codes for different errors
+            return_code=-1,  # Using distinct negative codes for different errors
             command_executed=command,
             status="error",
-            message=f"Command not found: {command_parts[0]}"
+            message=f"Command not found: {command_parts[0]}",
         )
     except subprocess.TimeoutExpired:
         logger.error(f"Vetted command '{command}' timed out after {timeout_sec} seconds.")
@@ -274,14 +320,10 @@ def execute_vetted_shell_command(args: dict, tool_context: ToolContext) -> Execu
             return_code=-2,
             command_executed=command,
             status="error",
-            message=f"Command timed out after {timeout_sec} seconds."
+            message=f"Command timed out after {timeout_sec} seconds.",
         )
     except Exception as e:
         logger.exception(f"An unexpected error occurred while running vetted command '{command}': {e}")
         return ExecuteVettedShellCommandOutput(
-            stderr=f"An unexpected error occurred: {e}",
-            return_code=-3,
-            command_executed=command,
-            status="error",
-            message=f"An unexpected error occurred: {e}"
-        ) 
+            stderr=f"An unexpected error occurred: {e}", return_code=-3, command_executed=command, status="error", message=f"An unexpected error occurred: {e}"
+        )

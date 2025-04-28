@@ -1,3 +1,4 @@
+# ruff: noqa
 """Prompt for the debugging agent."""
 
 DEBUGGING_AGENT_INSTR = """

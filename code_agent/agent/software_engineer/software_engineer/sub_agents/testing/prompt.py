@@ -1,3 +1,4 @@
+# ruff: noqa
 """Prompt for the testing agent."""
 
 TESTING_AGENT_INSTR = """

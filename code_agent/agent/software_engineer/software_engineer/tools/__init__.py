@@ -1,9 +1,9 @@
 """Tools for the software engineer agent."""
 
-from .shell_command import (
-    configure_shell_approval,
-    configure_shell_whitelist,
-    check_shell_command_safety,
-    execute_vetted_shell_command,
-)
-from .system_info import get_os_info, check_command_exists
+# from .shell_command import (
+#     check_shell_command_safety,
+#     configure_shell_approval,
+#     configure_shell_whitelist,
+#     execute_vetted_shell_command,
+# )
+# from .system_info import check_command_exists, get_os_info

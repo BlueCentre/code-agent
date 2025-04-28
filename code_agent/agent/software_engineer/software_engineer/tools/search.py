@@ -1,3 +1,4 @@
+# ruff: noqa
 # Copyright 2025 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,7 +23,7 @@ _search_agent = Agent(
     model="gemini-2.0-flash",
     name="google_search_grounding",
     description="An agent providing Google-search grounding capability",
-    instruction=""",
+    instruction="""
     Answer the user's question directly using google_search grounding tool; Provide a brief but concise response. 
     Rather than a detail response, provide the immediate actionable item for a software engineer, in a single sentence.
     Do not ask the user to check or look up information for themselves, that's your role; do your best to be informative.

@@ -4,37 +4,43 @@ ADK Agent definition script for use with 'adk run'.
 This script defines an agent instance that the ADK CLI runner can load.
 """
 
-# Load environment variables first (e.g., from .env)
+# import json # Removed F401
+# import sys # Removed F401
+# from typing import List # Removed F401
+
+import google.generativeai as genai  # Moved up
+
+# import typer # Removed F401
 from dotenv import load_dotenv
 
-load_dotenv()
-
-import os
-
-# Import necessary ADK and local components
+# from rich.panel import Panel # Removed F401
+# ADK Imports (ensure these are correct)
 from google.adk.agents import LlmAgent
+from rich import print
 
-from code_agent.adk.models_v2 import create_model  # Use v2 models
-from code_agent.config.config import get_config, initialize_config
+# Local application imports
+# from code_agent.adk.client import ADKClient # Removed F401
+from code_agent.adk.models_v2 import create_model
 
-# from code_agent.agent.multi_agent import get_root_agent # Optional: Use root agent later
-# Import tools if you want to add them
-# from your_tool_module import your_tool_function
+# from code_agent.adk.services import get_adk_session_manager # Removed F401
+# from code_agent.agent.cli_runner import ADKWorkflowRunner # Removed F401
+from code_agent.config import get_config, initialize_config  # Added initialize_config
+
+# from code_agent.config.settings_based_config import ApiKeys, CodeAgentSettings # Removed F401
+# from code_agent.utils import detect_environment # Removed F401
+
+# Load environment variables from .env file
+load_dotenv()
 
 print("Initializing configuration...")
 # Ensure config is initialized (reads config files, env vars)
-# Note: CLI overrides from adk run might not be directly available here,
-# relies on env vars or config file primarily.
-initialize_config()
+initialize_config() # Now defined
 config = get_config()
 
 print(f"Resolved Provider: {config.default_provider}")
 print(f"Resolved Model: {config.default_model}")
 
 # Configure google.generativeai API key if using Gemini
-# This is still needed as ADK's LlmAgent might rely on this global config
-# when it receives a 'gemini-*' model string.
-import google.generativeai as genai
 
 google_api_key_val = config.google_api_key or config.ai_studio_api_key
 if google_api_key_val:
@@ -55,7 +61,7 @@ print(f"Model reference created: {type(model_ref)}")
 # --- Define the agent --- #
 # Simple LlmAgent for testing. Replace with get_root_agent() for multi-agent.
 print("Defining agent instance...")
-root_agent = LlmAgent(
+root_agent = LlmAgent( # Now defined
     model=model_ref,  # Pass the string or BaseLlm instance
     name="adk_cli_runner_agent",
     instruction="You are a helpful assistant responding via the ADK CLI runner.",

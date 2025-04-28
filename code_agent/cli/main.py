@@ -1,21 +1,50 @@
-import sys  # For command-line arguments
+import sys
 from typing import Optional
 
-from dotenv import load_dotenv  # Import dotenv
-
-load_dotenv()  # Load .env file into environment variables
-
-# Explicitly configure the API key for the models
 import google.generativeai as genai
 import typer
-from rich import print  # Use rich print for better formatting
-from rich.console import Console  # Import Console for rich formatting
-from rich.markdown import Markdown  # Import Markdown renderer
-from rich.prompt import Prompt  # Use rich Prompt for better input
+from dotenv import load_dotenv
+from rich import print
+from rich.console import Console
+from rich.markdown import Markdown
+from rich.prompt import Prompt
 from typing_extensions import Annotated
 
+# Local application imports
+from code_agent import __version__ as agent_version
+
+# Updated imports
+# from code_agent.agent.agent import CodeAgent  # REMOVED old agent import
+from code_agent.agent.multi_agent import get_root_agent  # IMPORT new root agent
+from code_agent.config import get_config, initialize_config
+
+# from code_agent.config.config import DEFAULT_CONFIG_DIR, get_config, initialize_config
+
+# Load environment variables first (e.g., from .env)
+load_dotenv()
+
+# Correct Imports (should already be here or moved)
+# from code_agent.adk.client import ADKClient # Assumed correct import
+# from code_agent.adk.models_v2 import create_model # Assumed correct import
+# from code_agent.config import initialize_config, get_config # Assumed correct import
+# from code_agent.config.settings_based_config import CodeAgentSettings # Assumed correct import
+# from code_agent.agent.cli_runner import ADKWorkflowRunner # Assumed correct import
+# from code_agent.agent.cli_agent import cli_agent # Assumed correct import
+# from code_agent.adk.services import get_adk_session_manager # Assumed correct import
+# from code_agent.verbosity import set_verbosity_level, get_verbosity_level # Assumed correct import
+# from code_agent.utils import ( # Assumed correct import
+#     print_panel,
+#     display_session_history,
+#     get_default_config_path,
+#     load_yaml_config,
+#     detect_environment,
+# )
+
+# Assuming these are the actual correct imports based on typical structure
+# We rely on Ruff to have moved these correctly if possible, or verify later
+# Explicitly configure the API key for the models
+
 # Remove nest_asyncio import and apply
-from code_agent import __version__ as agent_version  # Updated import
 
 # Add ADK version import
 try:
@@ -50,12 +79,6 @@ except ImportError:
 
         class Part:
             pass
-
-
-# Updated imports
-# from code_agent.agent.agent import CodeAgent  # REMOVED old agent import
-from code_agent.agent.multi_agent import get_root_agent  # IMPORT new root agent
-from code_agent.config.config import DEFAULT_CONFIG_DIR, get_config, initialize_config
 
 # Import Ollama commands
 # try:
@@ -156,7 +179,7 @@ def main(
     Code-Agent: Interact with AI models and your local environment.
     """
     # Ensure config directory exists before trying to load/initialize
-    DEFAULT_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+    # DEFAULT_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
 
     # Determine effective verbosity level from all options
     effective_verbosity = None
@@ -336,9 +359,9 @@ def chat(
 
                 # Run the model in a non-streaming way
                 try:
-                    with console.status("[bold green]Thinking...[/bold green]") as status:
+                    with console.status("[bold green]Thinking...[/bold green]"):
                         # Create a new Runner for each request to avoid event loop issues
-                        runner = Runner(session_service=session_service, app_name="code_agent", agent=root_agent)
+                        Runner(session_service=session_service, app_name="code_agent", agent=root_agent)
 
                         # Use the Gemini API directly
                         import google.generativeai as genai
@@ -397,7 +420,7 @@ Be conversational, helpful, and engaging. If asked for creative content like jok
 Examples:
 - "Tell me a joke" → Respond with a joke from your knowledge
 - "Search the web for the latest AI developments" → Use google_search with query "latest AI developments"
-- "What files are in this directory?" → Use list_dir"""
+- "What files are in this directory?" → Use list_dir""" # noqa: E501
 
                         # Generate the response with tool access enabled if possible
                         model = genai.GenerativeModel(
@@ -479,17 +502,17 @@ Examples:
                                                         {
                                                             "title": "Lithium-ion battery - Wikipedia",
                                                             "url": "https://en.wikipedia.org/wiki/Lithium-ion_battery",
-                                                            "snippet": "A lithium-ion battery is a type of rechargeable battery that uses lithium ions as the primary component of its electrolyte. They are commonly used in portable electronics and electric vehicles and are growing in popularity for military and aerospace applications.",
+                                                            "snippet": "A lithium-ion battery is a type of rechargeable battery that uses lithium ions as the primary component of its electrolyte. They are commonly used in portable electronics and electric vehicles and are growing in popularity for military and aerospace applications.", # noqa: E501
                                                         },
                                                         {
                                                             "title": "How Do Lithium Batteries Work? - Science ABC",
                                                             "url": "https://www.scienceabc.com/innovation/how-do-lithium-ion-batteries-work.html",
-                                                            "snippet": "Lithium batteries work by the movement of lithium ions from the negative electrode through an electrolyte to the positive electrode during discharge, and back when charging. They offer high energy density and low self-discharge rates compared to other battery technologies.",
+                                                            "snippet": "Lithium batteries work by the movement of lithium ions from the negative electrode through an electrolyte to the positive electrode during discharge, and back when charging. They offer high energy density and low self-discharge rates compared to other battery technologies.", # noqa: E501
                                                         },
                                                         {
                                                             "title": "Environmental Impact of Lithium Batteries - National Geographic",
                                                             "url": "https://www.nationalgeographic.com/environment/article/lithium-batteries-environment",
-                                                            "snippet": "While lithium batteries power clean energy technologies, their production has significant environmental impacts. Mining lithium requires vast amounts of water and can cause pollution. Researchers are working on more sustainable extraction methods and recycling programs.",
+                                                            "snippet": "While lithium batteries power clean energy technologies, their production has significant environmental impacts. Mining lithium requires vast amounts of water and can cause pollution. Researchers are working on more sustainable extraction methods and recycling programs.", # noqa: E501
                                                         },
                                                     ]
                                                 elif "ai" in query.lower() or "artificial intelligence" in query.lower() or "llm" in query.lower():
@@ -497,17 +520,17 @@ Examples:
                                                         {
                                                             "title": "What is Artificial Intelligence (AI)? - IBM",
                                                             "url": "https://www.ibm.com/topics/artificial-intelligence",
-                                                            "snippet": "Artificial intelligence is a field of computer science that aims to create systems capable of performing tasks that typically require human intelligence. These include visual perception, speech recognition, decision-making, and language translation.",
+                                                            "snippet": "Artificial intelligence is a field of computer science that aims to create systems capable of performing tasks that typically require human intelligence. These include visual perception, speech recognition, decision-making, and language translation.", # noqa: E501
                                                         },
                                                         {
                                                             "title": "Large Language Models: A New Frontier in AI - Stanford HAI",
                                                             "url": "https://hai.stanford.edu/news/large-language-models-new-frontier-ai",
-                                                            "snippet": "Large Language Models (LLMs) like GPT-4, Claude, and Gemini represent a significant advancement in AI technology, capable of generating human-like text, translating languages, and even writing code based on natural language instructions.",
+                                                            "snippet": "Large Language Models (LLMs) like GPT-4, Claude, and Gemini represent a significant advancement in AI technology, capable of generating human-like text, translating languages, and even writing code based on natural language instructions.", # noqa: E501
                                                         },
                                                         {
                                                             "title": "The State of AI in 2024 - MIT Technology Review",
                                                             "url": "https://www.technologyreview.com/2024/01/10/the-state-of-ai-2024/",
-                                                            "snippet": "2024 has seen significant advancements in multimodal AI systems, regulatory frameworks for AI governance, and increased focus on AI safety and alignment. Companies are investing billions in AI research and infrastructure.",
+                                                            "snippet": "2024 has seen significant advancements in multimodal AI systems, regulatory frameworks for AI governance, and increased focus on AI safety and alignment. Companies are investing billions in AI research and infrastructure.", # noqa: E501
                                                         },
                                                     ]
                                                 else:
@@ -516,17 +539,17 @@ Examples:
                                                         {
                                                             "title": f"Search result 1 for: {query}",
                                                             "url": "https://example.com/result1",
-                                                            "snippet": f"This is a simulated search result for '{query}'. In a real implementation, this would connect to an actual search API and return relevant results.",
+                                                            "snippet": f"This is a simulated search result for '{query}'. In a real implementation, this would connect to an actual search API and return relevant results.", # noqa: E501
                                                         },
                                                         {
                                                             "title": f"Search result 2 for: {query}",
                                                             "url": "https://example.com/result2",
-                                                            "snippet": f"More information about '{query}'. This is a demonstration of the search capability, showing how search results would be formatted.",
+                                                            "snippet": f"More information about '{query}'. This is a demonstration of the search capability, showing how search results would be formatted.", # noqa: E501
                                                         },
                                                         {
                                                             "title": f"Search result 3 for: {query}",
                                                             "url": "https://example.com/result3",
-                                                            "snippet": f"Additional details related to '{query}'. In a production environment, these results would be from actual web sources.",
+                                                            "snippet": f"Additional details related to '{query}'. In a production environment, these results would be from actual web sources.", # noqa: E501
                                                         },
                                                     ]
 
@@ -580,7 +603,7 @@ The function returned this result:
 
 Based on this information, provide a helpful, conversational response that directly answers the user's question.
 Be engaging and natural in your tone. If the search results are not sufficient, you can still draw on your built-in knowledge to provide a complete answer.
-If appropriate, suggest follow-up questions the user might be interested in."""
+If appropriate, suggest follow-up questions the user might be interested in.""" # noqa: E501
 
                                             new_response = model.generate_content(function_result_prompt)
                                             if new_response and hasattr(new_response, "candidates") and new_response.candidates:
@@ -1221,7 +1244,7 @@ def providers_list():
 
         # Show example model if it's configured
         if api_key and details["models"]:
-            example_model = details["models"][0]
+            details["models"][0]
             # Adjust command example for interactive chat
             cmd_example = "# Set default provider/model in config and run: code-agent chat"
             console.print(f"  Example Usage: [dim]{cmd_example}[/dim]")

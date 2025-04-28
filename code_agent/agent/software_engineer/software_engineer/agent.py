@@ -22,14 +22,15 @@ from .tools.filesystem import (
 )
 from .tools.project_context import load_project_context
 from .tools.search import google_search_grounding
+
 # Updated import for shell command tools
 from .tools.shell_command import (
+    check_shell_command_safety,
     configure_shell_approval,
     configure_shell_whitelist,
-    check_shell_command_safety,
     execute_vetted_shell_command,
 )
-from .tools.system_info import get_os_info, check_command_exists
+from .tools.system_info import check_command_exists, get_os_info
 
 # REF: https://ai.google.dev/gemini-api/docs/rate-limits
 root_agent = Agent(

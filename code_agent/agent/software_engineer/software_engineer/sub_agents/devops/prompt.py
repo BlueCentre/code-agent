@@ -1,3 +1,4 @@
+# ruff: noqa
 """Prompt for the devops agent."""
 
 DEVOPS_AGENT_INSTR = """

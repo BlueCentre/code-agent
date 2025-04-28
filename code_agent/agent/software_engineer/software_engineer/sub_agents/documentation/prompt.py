@@ -1,3 +1,4 @@
+# ruff: noqa
 """Prompt for the documentation agent."""
 
 DOCUMENTATION_AGENT_INSTR = """

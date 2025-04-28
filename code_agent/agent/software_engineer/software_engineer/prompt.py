@@ -1,3 +1,4 @@
+# ruff: noqa
 """Defines the prompts for the software engineer agent."""
 
 ROOT_AGENT_INSTR = """

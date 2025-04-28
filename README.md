@@ -178,17 +178,17 @@ The project includes a Makefile with the following commands:
 If you have UV installed, these commands offer faster performance:
 
 ```bash
-make uv-test    # Run tests using UV
-make uv-lint    # Check code style using UV
-make uv-format  # Format code using UV
+make test    # Run tests using UV
+make lint    # Check code style using UV
+make format  # Format code using UV
 ```
 
 ### Running ADK Agents
 
 This project includes agents compatible with the Google Agent Development Kit (ADK).
-You can run these agents directly using the `adk run` command within the activated development environment (e.g., using `uv run adk run ...` or `poetry run adk run ...`).
+You can run these agents directly using the `adk run` command within the activated development environment (e.g., using `uv run adk run ...`).
 
-Make sure you have installed the ADK (`pip install google-adk` or `uv pip install google-adk`).
+Make sure you have installed the ADK (`uv add google-adk`).
 
 Available agents and their run commands:
 
@@ -229,9 +229,13 @@ Run tests with:
 ```bash
 # Run all tests
 make test
+# or
+uv run python -m pytest
 
 # Run with coverage report
 make test-coverage
+# or
+uv run python -m pytest tests/ --cov=code_agent --cov-report=term --cov-report=html --cov-fail-under=80
 ```
 
 ## Upgrading

@@ -1,3 +1,4 @@
+# ruff: noqa
 """Prompt for the code review agent."""
 
 CODE_REVIEW_AGENT_INSTR = """

@@ -7,19 +7,18 @@ from google.adk.agents import Agent
 from google.adk.models import Gemini
 from google.adk.tools import google_search
 
+# Intentionally avoid importing problematic ADK service modules
+# Project Tool Imports
+from code_agent.adk import tools as adk_tool_wrappers
+from code_agent.config import get_config
+from code_agent.verbosity import get_controller  # Updated import
+
 # Direct API key configuration
 api_key = os.environ.get("GOOGLE_API_KEY") or os.environ.get("AI_STUDIO_API_KEY")
 if api_key:
     genai.configure(api_key=api_key)
 else:
     print("WARNING: No API key found in environment. Check GOOGLE_API_KEY or AI_STUDIO_API_KEY. Models will not work.")
-
-# Intentionally avoid importing problematic ADK service modules
-
-# Project Tool Imports
-from code_agent.adk import tools as adk_tool_wrappers
-from code_agent.config import get_config
-from code_agent.verbosity import get_controller  # Updated import
 
 # --- Configuration and Model Instantiation ---
 config = get_config()
@@ -54,7 +53,7 @@ local_ops_agent = Agent(
     - Use `load_memory` to recall past information.
     - Use `run_native_command` for shell interactions (e.g., listing files `find . -name ... | cat`, checking status `git status | cat`).
     Do not perform web searches.
-    """,
+    """, # noqa: E501
     description="Handles local tasks: reading/writing files, running commands, and accessing agent memory.",
 )
 

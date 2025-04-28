@@ -46,6 +46,7 @@ load_dotenv()
 # Add the project root to the Python path to allow importing from code_agent
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
+
 # Simulate functions from the original models module if needed, or define statically
 def get_model_providers() -> list[str]:
     # Based on the original code_agent/adk/models.py

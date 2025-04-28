@@ -366,7 +366,7 @@ async def test_run_terminal_cmd_with_background(mock_tool_context):
         mock.patch("code_agent.tools.native_tools.print"),
         mock.patch("code_agent.tools.progress_indicators.print"),
         # Correct mock target for async subprocess
-        mock.patch("asyncio.create_subprocess_exec", return_value=mock_process), # as mock_create_subprocess,
+        mock.patch("asyncio.create_subprocess_exec", return_value=mock_process),  # as mock_create_subprocess,
     ):
         # Setup mock Text to return a string-like object
         mock_text.return_value = "EXECUTE COMMAND"
