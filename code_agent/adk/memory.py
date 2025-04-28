@@ -34,7 +34,7 @@ class MemoryResult:
 class SearchMemoryResponse:
     """Response from a memory search operation."""
 
-    def __init__(self, results: List[MemoryResult] = None):
+    def __init__(self, results: Optional[List[MemoryResult]] = None):
         self.results = results or []
 
     def to_dict(self) -> Dict[str, Any]:
@@ -286,3 +286,21 @@ class InMemoryMemoryService(BaseMemoryService):
         """
         memory_manager = get_memory_manager(session_id)
         return memory_manager.search_memories(query, MemoryType.LONG_TERM, limit=limit)
+
+
+# def add_observation(entity_name: str, observation: str) -> None:
+#     """Add an observation to an entity."""
+#     _add_observation(entity_name, observation)
+
+
+# def get_entity_observations(entity_name: str) -> List[str]:
+#     """Get all observations for an entity."""
+#     return _memory.get(entity_name, [])
+
+
+# def find_entity_by_observation(observation: str) -> Optional[str]:
+#     """Find an entity that has a specific observation."""
+#     for entity_name, observations in _memory.items():
+#         if observation in observations:
+#             return entity_name
+#     return None

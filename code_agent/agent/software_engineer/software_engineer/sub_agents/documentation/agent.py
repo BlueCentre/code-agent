@@ -3,6 +3,9 @@
 from google.adk.agents import Agent
 from google.genai.types import GenerateContentConfig
 
+# from google.adk.tools.tool_mixins import BaseTool
+from ...tools.filesystem import list_dir_tool, read_file_tool
+
 # from software_engineer.tools.git_tools import (
 #     git_status_tool,
 # )
@@ -11,10 +14,7 @@ from google.genai.types import GenerateContentConfig
 # from code_agent.agent.software_engineer.software_engineer import prompt
 # from code_agent.agent.software_engineer.software_engineer.shared_libraries.types import DocumentationResponse
 # NOTE: SWITCH TO ADK WEB or COMMENT OUT FOR ADK RUN
-from software_engineer.sub_agents.documentation import prompt
-
-# from google.adk.tools.tool_mixins import BaseTool
-from software_engineer.tools.filesystem import list_dir_tool, read_file_tool
+from . import prompt
 
 documentation_agent = Agent(
     model="gemini-2.5-flash-preview-04-17",  # "gemini-2.0-flash-001",

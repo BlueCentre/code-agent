@@ -106,20 +106,15 @@ pip install uv
 Then, install the CLI Code Agent:
 
 ```bash
-# Using pip
-pip install cli-code-agent
-
-# Or using uv (faster)
-uv pip install cli-code-agent
+# Installing code-agent from local source
+uv add cli-code-agent
+uv run code-agent chat
 
 # Or using uvx
 uvx --from cli-code-agent code-agent chat
 
-# Or uaing uvx from GitHub branch
+# Or uaing uvx from GitHub main branch
 uvx --from git+https://github.com/BlueCentre/code-agent.git@main code-agent chat
-
-# For using Ollama features, ensure you have requests and rich:
-pip install requests rich
 ```
 
 ## Development
@@ -146,12 +141,9 @@ cd code-agent
 If you prefer to set up manually:
 
 ```bash
-# Create and activate virtual environment
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-
-# Using UV (faster)
-uv pip install -e '.[dev]'
+# Create and sync virtual environment
+uv venv
+uv sync  # On Windows: .venv\Scripts\activate
 
 # Install pre-commit hooks
 pre-commit install
@@ -243,14 +235,14 @@ uv run python -m pytest tests/ --cov=code_agent --cov-report=term --cov-report=h
 To upgrade Code Agent to the latest version:
 
 ```bash
-# Using uv (faster)
+# Using uv (not required)
 uv pip install --upgrade cli-code-agent
 ```
 
 After upgrading, verify your installation:
 
 ```bash
-code-agent --version
+uv run code-agent --version
 ```
 
 If you're using Ollama integration, ensure your local Ollama installation is also up to date:
@@ -267,14 +259,8 @@ brew upgrade ollama
 After installation, make sure the executable is in your PATH. If you can't run the `code-agent` command, you may need to add the installation directory to your PATH:
 
 ```bash
-# Find where the package was installed
-pip show cli-code-agent
-
-# Add the bin directory to your PATH (example for ~/.local/bin)
-export PATH="$HOME/.local/bin:$PATH"
-
-# For permanent addition, add to your shell profile (.bashrc, .zshrc, etc.)
-echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+# Execute command with help
+uv run code-agent --help
 ```
 
 ### First Run
@@ -283,7 +269,9 @@ After installation, set up your API key (for OpenAI in this example):
 
 ```bash
 export OPENAI_API_KEY=sk-your-key-here
-code-agent run "Hello! What can you help me with today?"
+uv run code-agent run "Hello! What can you help me with today?"
+# or
+echo "Hello! What can you help me with today?" | uv run code-agent chat
 ```
 
 ## Configuration
@@ -461,9 +449,8 @@ Activate the virtual environment first: `source .venv/bin/activate`
 ## Development Installation
 
 1.  **Prerequisites:**
-    *   Python 3.10+
-    *   [Poetry](https://python-poetry.org/docs/#installation)
-    *   (Optional but recommended) [UV](https://github.com/astral-sh/uv) - for faster dependency installation
+    *   Python 3.11+
+    *   [UV](https://github.com/astral-sh/uv) - for faster dependency installation
 
 2.  **Clone the repository:**
     ```bash
@@ -473,29 +460,9 @@ Activate the virtual environment first: `source .venv/bin/activate`
 
 3.  **Create virtual environment and install dependencies:**
     ```bash
-    # Recommended: Use a Python version management tool like pyenv if needed
-    python3 -m venv .venv
-    source .venv/bin/activate
-    pip install poetry
-    poetry install
-    ```
-    *(Alternatively, if you just use `poetry install` directly, Poetry might manage the virtual environment for you.)*
-
-    **Faster Alternative using `uv`:**
-
-    If you have `uv` installed (see [Quick Start](#quick-start)), you can use it for a much faster setup:
-
-    ```bash
-    # 1. Create the virtual environment
-    uv venv .venv
-
-    # 2. Activate the environment (Linux/macOS)
-    source .venv/bin/activate
-    #    Activate the environment (Windows - Command Prompt/PowerShell)
-    #    .venv\Scripts\activate
-
-    # 3. Install dependencies
-    uv pip install '.[dev]'
+    # Recommended: Use UV as the Python package manager
+    uv venv # 1. Create the virtual environment
+    uv sync # 2. Install dependencies
     ```
 
 ## Contributors
@@ -566,25 +533,23 @@ After checking out the repository, follow these steps to test your development v
 
 ```bash
 # Set up your virtual environment
-python3 -m venv .venv
-source .venv/bin/activate
+uv venv
 
 # Install dependencies
-pip install poetry
-poetry install
+uv sync
 
 # Install the package in development mode
-pip install -e .
+uv run python -m pytest
 ```
 
 Now you can run the development version directly:
 
 ```bash
 # Test the development version with a simple command
-code-agent --version
+uv run code-agent --version
 
 # Run a simple prompt to test functionality
-code-agent run "Hello, world"
+uv run code-agent run "Hello, world"
 
 # Run unit tests to ensure your changes don't break existing functionality
 ./scripts/run_tests.sh
@@ -658,26 +623,3 @@ We are currently migrating the codebase to use the Google Agent Development Kit 
 - Potential future support for multi-agent systems
 
 The migration is following a phased approach outlined in our [planning document](docs/planning_google_adk_migration.md). Development is happening on the `feat/google-adk` branch.
-
-### Development Environment Setup
-
-If you're contributing to the ADK migration, set up your environment:
-
-```bash
-# Clone the repository
-git clone https://github.com/BlueCentre/code-agent.git
-cd code-agent
-
-# Switch to the feature branch
-git checkout feat/google-adk
-
-# Set up virtual environment
-python -m venv .venv
-source .venv/bin/activate
-
-# Install dependencies
-poetry install
-
-# Try the sandbox environment
-python sandbox/adk_sandbox.py
-```

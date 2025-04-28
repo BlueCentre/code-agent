@@ -3,6 +3,10 @@
 from google.adk.agents import Agent
 from google.genai.types import GenerateContentConfig
 
+# from software_engineer.sub_agents.code_review.shared_libraries.types import CodeReviewResponse
+from ...tools.code_analysis import analyze_code_tool
+from ...tools.filesystem import list_dir_tool, read_file_tool
+
 # from google.adk.tools.tool_mixins import BaseTool
 # NOTE: SWITCH TO ADK WEB or UNCOMMENT FOR ADK RUN
 # Use absolute imports with correct directory name
@@ -10,11 +14,8 @@ from google.genai.types import GenerateContentConfig
 # from code_agent.agent.software_engineer.software_engineer.shared_libraries.types import CodeReviewResponse
 # from code_agent.agent.software_engineer.software_engineer.tools.code_analysis import analyze_code_tool
 # NOTE: SWITCH TO ADK WEB or COMMENT OUT FOR ADK RUN
-from software_engineer.sub_agents.code_review import prompt
-
-# from software_engineer.sub_agents.code_review.shared_libraries.types import CodeReviewResponse
-from software_engineer.tools.code_analysis import analyze_code_tool
-from software_engineer.tools.filesystem import list_dir_tool, read_file_tool
+# Use relative imports for standard execution
+from . import prompt
 
 # from software_engineer.tools.git_tools import (
 #     git_status_tool,

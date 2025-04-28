@@ -3,14 +3,15 @@
 from google.adk.agents import Agent
 from google.genai.types import GenerateContentConfig
 
+from ...tools.filesystem import list_dir_tool, read_file_tool
+
 # from google.adk.tools.tool_mixins import BaseTool
 # NOTE: SWITCH TO ADK WEB or UNCOMMENT FOR ADK RUN
 # Use absolute imports with correct directory name
 # from code_agent.agent.software_engineer.software_engineer import prompt
 # from code_agent.agent.software_engineer.software_engineer.shared_libraries.types import DevOpsResponse
 # NOTE: SWITCH TO ADK WEB or COMMENT OUT FOR ADK RUN
-from software_engineer.sub_agents.devops import prompt
-from software_engineer.tools.filesystem import list_dir_tool, read_file_tool
+from . import prompt
 
 # from software_engineer.tools.git_tools import (
 #     git_status_tool,

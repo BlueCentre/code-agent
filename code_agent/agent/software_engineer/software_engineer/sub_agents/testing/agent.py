@@ -2,10 +2,10 @@
 
 from google.adk.agents import Agent
 from google.genai.types import GenerateContentConfig
-from software_engineer.sub_agents.testing import prompt
 
 # from google.adk.tools.tool_mixins import BaseTool
-from software_engineer.tools.filesystem import list_dir_tool, read_file_tool
+from ...tools.filesystem import list_dir_tool, read_file_tool
+from . import prompt
 
 testing_agent = Agent(
     model="gemini-2.5-flash-preview-04-17",  # "gemini-2.0-flash-001",

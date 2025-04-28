@@ -11,7 +11,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 from google.adk.sessions import InMemorySessionService
 
-from code_agent.agent.custom_agent.agent import CodeAgent
+# Import the root agent from the correct location
+from code_agent.agent.software_engineer.software_engineer.agent import root_agent
 from code_agent.config import CodeAgentSettings
 
 # Import ApiKeys for fixture
@@ -45,17 +46,23 @@ def adk_session_service():
 @pytest.fixture
 async def initialized_agent(mock_config_integration, adk_session_service):
     """Fixture to create and initialize a CodeAgent with real session service."""
-    # Patch get_config to use our test config
-    # Patch get_adk_session_service to return our real InMemory service instance
+    # Patch get_config and get_adk_session_service where they are likely used by the agent
+    # Assuming they might be accessed via the agent module or a dependency like adk.services
+    # Adjust these paths if necessary based on where root_agent actually retrieves them.
+    # Tentatively patching within the agent module itself.
     with (
-        patch("code_agent.agent.custom_agent.agent.get_config", return_value=mock_config_integration),
-        patch("code_agent.agent.custom_agent.agent.get_adk_session_service", return_value=adk_session_service),
+        patch("code_agent.agent.software_engineer.software_engineer.agent.get_config", return_value=mock_config_integration),
+        patch("code_agent.agent.software_engineer.software_engineer.agent.get_adk_session_service", return_value=adk_session_service),
+        # If the agent uses adk services directly, patch there instead:
+        # patch("code_agent.adk.services.get_config", return_value=mock_config_integration),
+        # patch("code_agent.adk.services.get_adk_session_service", return_value=adk_session_service),
     ):
-        agent = CodeAgent()
-        await agent.async_init()  # Initialize with the real session service
-        # Store the service instance on the agent object for easier access in tests if needed
-        agent._test_session_service = adk_session_service
-        return agent
+        # root_agent is already an instance, no need to initialize CodeAgent()
+        # We might need specific setup for root_agent if it requires it, but let's assume not for now.
+        # The fixture now essentially provides the root_agent within a patched context.
+        # Store the service instance for potential use in tests (though maybe not needed if tests use ADK API)
+        root_agent._test_session_service = adk_session_service
+        yield root_agent  # Yield the configured root_agent instance
 
 
 @pytest.fixture

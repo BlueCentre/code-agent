@@ -18,8 +18,15 @@ pass
 
 # Define the default config path
 DEFAULT_CONFIG_DIR = Path.home() / ".config" / "code-agent"
-DEFAULT_CONFIG_PATH = DEFAULT_CONFIG_DIR / "config.yaml"
-TEMPLATE_CONFIG_PATH = Path(__file__).parent / "template.yaml"
+
+# Ensure the default config directory exists
+DEFAULT_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+
+# Define the path to the default configuration file
+# DEFAULT_CONFIG_PATH = DEFAULT_CONFIG_DIR / "config.yaml" # Removed F811
+
+# Path to the template configuration file within the package
+TEMPLATE_CONFIG_PATH = Path(__file__).parent / "config_template.yaml"
 
 # --- Centralized Configuration Access ---
 

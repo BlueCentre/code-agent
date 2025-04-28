@@ -3,13 +3,14 @@
 from google.adk.agents import Agent
 from google.genai.types import GenerateContentConfig
 
+from ...tools.search import google_search_grounding
+
 # NOTE: SWITCH TO ADK WEB or UNCOMMENT FOR ADK RUN
 # Use absolute imports with correct directory name
 # from code_agent.agent.software_engineer.software_engineer import prompt
 # from code_agent.agent.software_engineer.software_engineer.shared_libraries.types import DesignPatternResponse
 # NOTE: SWITCH TO ADK WEB or COMMENT OUT FOR ADK RUN
-from software_engineer.sub_agents.design_pattern import prompt
-from software_engineer.tools.search import google_search_grounding
+from . import prompt
 
 design_pattern_agent = Agent(
     model="gemini-2.5-flash-preview-04-17",  # "gemini-2.0-flash-001",

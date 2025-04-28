@@ -2,8 +2,8 @@
 
 from google.adk.agents import Agent
 from google.genai.types import GenerateContentConfig
-from software_engineer.sub_agents.debugging import prompt
-from software_engineer.tools.filesystem import (
+
+from ...tools.filesystem import (
     configure_approval_tool,
     edit_file_tool,
     list_dir_tool,
@@ -11,13 +11,14 @@ from software_engineer.tools.filesystem import (
 )
 
 # Updated import for shell command tools
-from software_engineer.tools.shell_command import (
+from ...tools.shell_command import (
     check_shell_command_safety,
     configure_shell_approval,
     configure_shell_whitelist,
     execute_vetted_shell_command,
 )
-from software_engineer.tools.system_info import check_command_exists, get_os_info
+from ...tools.system_info import check_command_exists, get_os_info
+from . import prompt
 
 # from software_engineer.tools.git_tools import (
 #     git_status_tool,

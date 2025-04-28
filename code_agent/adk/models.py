@@ -319,16 +319,6 @@ def create_model(
             # If initial provider is unknown and no valid fallback is available, raise error
             raise ValueError(f"Unsupported provider: '{target_provider}'. Known providers: {known_providers}")
 
-    # Import Gemini here to avoid potential top-level import issues if ADK not fully available
-    try:
-        from google.adk.models import Gemini
-    except ImportError:
-        # Handle case where Gemini might not be importable even if aiplatform is installed
-        # This is unlikely but good practice
-        Gemini = None  # Set to None to indicate it's unavailable
-        if target_provider == "ai_studio":
-            raise ValueError("Google ADK Gemini model could not be imported, cannot use ai_studio provider.")
-
     # Get API key based on provider
     api_key = get_api_key(target_provider)
 

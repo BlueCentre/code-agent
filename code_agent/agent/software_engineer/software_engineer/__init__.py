@@ -1,3 +1,4 @@
+# ruff: noqa
 """
 Software Engineer Agent.
 
