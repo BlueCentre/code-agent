@@ -40,12 +40,12 @@ for FILE in $FILES; do
 done
 
 # Try running ruff directly if available
-if command -v ruff >/dev/null 2>&1; then
+if command -v uv run ruff >/dev/null 2>&1; then
     echo "Running ruff linting..."
     LINT_FILES=$(echo "$FILES" | tr '\n' ' ')
-    if ! ruff check $LINT_FILES >/dev/null 2>&1; then
+    if ! uv run ruff check $LINT_FILES >/dev/null 2>&1; then
         echo "⚠️  Ruff found issues. Running ruff with --fix..."
-        ruff check --fix $LINT_FILES >/dev/null 2>&1
+        uv run ruff check --fix $LINT_FILES >/dev/null 2>&1
         
         # Stage the fixed files
         for FILE in $FILES; do
@@ -56,9 +56,9 @@ if command -v ruff >/dev/null 2>&1; then
     fi
     
     echo "Running ruff format..."
-    if ! ruff format --check $LINT_FILES >/dev/null 2>&1; then
+    if ! uv run ruff format --check $LINT_FILES >/dev/null 2>&1; then
         echo "⚠️  Ruff format found issues. Formatting files..."
-        ruff format $LINT_FILES >/dev/null 2>&1
+        uv run ruff format $LINT_FILES >/dev/null 2>&1
         
         # Stage the formatted files
         for FILE in $FILES; do
@@ -72,4 +72,4 @@ else
 fi
 
 echo "✅ Simple pre-commit checks complete!"
-exit 0 
+exit 0
