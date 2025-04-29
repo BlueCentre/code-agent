@@ -22,17 +22,10 @@ jobs:
         enable-cache: true
         cache-dependency-glob: "pyproject.toml uv.toml"
 
-    - name: Install build dependencies
-      run: uv pip install build twine setuptools wheel
-
     - name: Build package
-      run: uv run python -m build
-
-    - name: Check package
-      run: uv run twine check dist/*
+      run: uv build
 
     - name: Publish to PyPI
-      env:
-        TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
-        TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-      run: uv run twine upload dist/*
+      # Use GitHub Actions OIDC token for trusted publishing
+      # https://docs.astral.sh/uv/guides/package/#publishing-your-package
+      run: uv publish dist/*
