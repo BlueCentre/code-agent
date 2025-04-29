@@ -82,7 +82,8 @@ class SessionTokenManager:
         token_entry = self.tokens[token]
 
         # Check if token is expired
-        if token_entry.expires_at < datetime.utcnow():
+        current_time = datetime.utcnow()
+        if token_entry.expires_at <= current_time:
             logger.debug("Token validation failed: token expired")
             return False
 
@@ -147,8 +148,8 @@ class SessionTokenManager:
         Returns:
             Number of tokens removed
         """
-        now = datetime.utcnow()
-        expired_tokens = [token for token, entry in self.tokens.items() if entry.expires_at < now]
+        current_time = datetime.utcnow()
+        expired_tokens = [token for token, entry in self.tokens.items() if entry.expires_at <= current_time]
 
         for token in expired_tokens:
             del self.tokens[token]
@@ -274,9 +275,10 @@ class SessionSecurityManager:
             return True
 
         last_activity = self.session_activity[session_id]
+        current_time = datetime.utcnow()
         expiry_time = last_activity + timedelta(seconds=self.session_expiry_seconds)
 
-        return expiry_time < datetime.utcnow()
+        return expiry_time <= current_time
 
     def cleanup_expired_sessions(self) -> int:
         """Remove expired sessions from storage.
@@ -284,12 +286,12 @@ class SessionSecurityManager:
         Returns:
             Number of sessions removed
         """
-        now = datetime.utcnow()
+        current_time = datetime.utcnow()
         expired_sessions = []
 
         for session_id, last_activity in self.session_activity.items():
             expiry_time = last_activity + timedelta(seconds=self.session_expiry_seconds)
-            if expiry_time < now:
+            if expiry_time <= current_time:
                 expired_sessions.append(session_id)
 
         for session_id in expired_sessions:

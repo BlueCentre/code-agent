@@ -80,13 +80,19 @@ def validate_model_compatibility(provider: str, model: str, result: ValidationRe
 
     if model not in PROVIDER_MODEL_MAP[provider]:
         # Check for model name pattern matches (some providers use pattern-based names)
-        if provider == "openai" and (model.startswith("ft:") or model.startswith("gpt-4-vision") or model.startswith("gpt-4-32k")):
-            # These are likely fine - OpenAI has many fine-tuned and specialized models
-            return
+        is_openai = provider == "openai"
+        is_ft_model = model.startswith("ft:")
+        is_vision_model = model.startswith("gpt-4-vision")
+        is_32k_model = model.startswith("gpt-4-32k")
 
-        # Add clear error with helpful suggestions
-        supported_models = ", ".join(f"'{m}'" for m in sorted(PROVIDER_MODEL_MAP[provider]))
-        result.add_error(f"Model '{model}' is not recognized for provider '{provider}'. Supported models include: {supported_models}.")
+        # Special model patterns that are allowed for OpenAI
+        is_special_model = is_ft_model or is_vision_model or is_32k_model
+
+        # Only add error if not a special OpenAI model
+        if not (is_openai and is_special_model):
+            # Add clear error with helpful suggestions
+            supported_models = ", ".join(f"'{m}'" for m in sorted(PROVIDER_MODEL_MAP[provider]))
+            result.add_error(f"Model '{model}' is not recognized for provider '{provider}'. Supported models include: {supported_models}.")
 
 
 def validate_api_keys(api_keys: Union[Dict[str, str], Any], default_provider: str, result: ValidationResult) -> None:

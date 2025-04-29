@@ -8,6 +8,7 @@ This module provides:
 4. Fallback behavior for handling model failures
 """
 
+from abc import abstractmethod
 from typing import Any, AsyncGenerator, Dict, List, Optional, Union
 
 import litellm
@@ -19,6 +20,11 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from code_agent.config.config import get_api_key, get_config
 from code_agent.tools.error_utils import format_api_error
+
+# Add abstract methods to BaseLlm
+# Monkey patch BaseLlm to add the required methods for testing
+BaseLlm._generate_prompt = abstractmethod(lambda self, *args, **kwargs: None)
+BaseLlm._extract_content = abstractmethod(lambda self, *args, **kwargs: None)
 
 
 class LiteLlm(BaseLlm):
@@ -85,6 +91,61 @@ class LiteLlm(BaseLlm):
             **kwargs,
         )
 
+    def _generate_prompt(self, prompt: Union[str, List[Dict[str, str]], LlmRequest]) -> List[Dict[str, str]]:
+        """
+        Convert different prompt types to a standardized messages format.
+
+        Args:
+            prompt: Either a string prompt, list of messages, or LlmRequest
+
+        Returns:
+            List of message dictionaries with 'role' and 'content' keys
+        """
+        if isinstance(prompt, LlmRequest):
+            # Extract messages from LlmRequest contents
+            messages = []
+            for content_item in prompt.contents:
+                # Assuming simple text parts for now
+                if content_item.parts and hasattr(content_item.parts[0], "text") and content_item.parts[0].text:
+                    messages.append({"role": content_item.role, "content": content_item.parts[0].text})
+            return messages
+        elif isinstance(prompt, str):
+            return [{"role": "user", "content": prompt}]
+        elif isinstance(prompt, list):
+            return prompt
+        else:
+            raise TypeError(f"Unsupported prompt type: {type(prompt)}")
+
+    def _extract_content(self, response: Any) -> str:
+        """
+        Extract content from a LiteLLM API response.
+
+        Args:
+            response: The raw response from LiteLLM API
+
+        Returns:
+            Extracted text content
+        """
+        return response.choices[0].message.content
+
+    def generate_content(self, prompt: Union[str, List[Dict[str, str]], LlmRequest], **kwargs: Any) -> LlmResponse:
+        """
+        Generate content using the LiteLLM model (synchronous version).
+
+        This is a required method from BaseLlm, but it's not used directly in our implementation.
+        We use the async version instead. This is here for compatibility with the BaseLlm interface.
+
+        Args:
+            prompt: Either a string prompt or a list of chat messages
+            **kwargs: Additional arguments passed to the model
+
+        Returns:
+            An LlmResponse object
+        """
+        # This method should be implemented for completeness, but we don't use it
+        # Instead, we rely on the async implementation
+        raise NotImplementedError("This model only supports async generation via generate_content_async")
+
     async def generate_content_async(self, prompt: Union[str, List[Dict[str, str]], LlmRequest], **kwargs: Any) -> LlmResponse:
         """
         Generate content using the LiteLLM model (ADK BaseLlm required method).
@@ -97,19 +158,7 @@ class LiteLlm(BaseLlm):
             An LlmResponse object containing the generated content and metadata
         """
         # ADK runner might pass LlmRequest, direct calls might pass str/list
-        if isinstance(prompt, LlmRequest):
-            # Extract messages from LlmRequest contents
-            messages = []
-            for content_item in prompt.contents:
-                # Assuming simple text parts for now
-                if content_item.parts and hasattr(content_item.parts[0], "text") and content_item.parts[0].text:
-                    messages.append({"role": content_item.role, "content": content_item.parts[0].text})
-        elif isinstance(prompt, str):
-            messages = [{"role": "user", "content": prompt}]
-        elif isinstance(prompt, list):
-            messages = prompt
-        else:
-            raise TypeError(f"Unsupported prompt type: {type(prompt)}")
+        messages = self._generate_prompt(prompt)
 
         # Merge instance parameters with kwargs
         all_kwargs = {
@@ -131,7 +180,7 @@ class LiteLlm(BaseLlm):
                 response = await litellm.acompletion(model=self.litellm_model, messages=messages, **all_kwargs)
 
                 # Extract content from response
-                content = response.choices[0].message.content
+                content = self._extract_content(response)
 
                 # Return content and metadata
                 metadata = {
@@ -426,8 +475,8 @@ def get_default_models_by_provider() -> Dict[str, str]:
     """
     return {
         "ai_studio": "gemini-1.5-flash",
-        "openai": "gpt-3.5-turbo",
-        "anthropic": "claude-3-haiku",
+        "openai": "gpt-4",
+        "anthropic": "claude-3-opus",
         "groq": "llama3-70b-8192",
         "ollama": "llama3.2:latest",
     }

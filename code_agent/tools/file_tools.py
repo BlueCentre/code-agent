@@ -276,26 +276,48 @@ def _get_file_metadata(file_path: Path) -> dict:
     """Get metadata for a file including size, permissions, and last modified date."""
     try:
         stat_info = file_path.stat()
+
+        # Count lines only for text files that exist
+        lines = None
+        if file_path.exists() and file_path.is_file():
+            try:
+                lines = _count_file_lines(file_path)
+            except Exception:
+                lines = "Unknown"
+
         return {
+            "path": str(file_path),
             "size": stat_info.st_size,
             "size_formatted": f"{stat_info.st_size / 1024:.2f} KB" if stat_info.st_size >= 1024 else f"{stat_info.st_size} bytes",
             "permissions": oct(stat_info.st_mode)[-3:],  # Last 3 digits of octal representation
             "modified": datetime.datetime.fromtimestamp(stat_info.st_mtime).strftime("%Y-%m-%d %H:%M:%S"),
             "created": datetime.datetime.fromtimestamp(stat_info.st_ctime).strftime("%Y-%m-%d %H:%M:%S"),
+            "lines": lines,
+            "extension": file_path.suffix,
+            "last_modified": datetime.datetime.fromtimestamp(stat_info.st_mtime).strftime("%Y-%m-%d %H:%M:%S"),
         }
     except Exception:
         return {
+            "path": str(file_path),
             "size": "Unknown",
             "size_formatted": "Unknown",
             "permissions": "Unknown",
             "modified": "Unknown",
             "created": "Unknown",
+            "lines": "Unknown",
+            "extension": file_path.suffix if hasattr(file_path, "suffix") else "Unknown",
+            "last_modified": "Unknown",
         }
 
 
 def apply_edit(target_file: str, code_edit: str) -> str:
     """Applies proposed content changes to a file after showing a diff and requesting user confirmation."""
-    config = initialize_config().agent_settings
+    config = initialize_config()
+    auto_approve_edits = False
+
+    # Check if config and agent_settings are available
+    if config and hasattr(config, "agent_settings") and config.agent_settings:
+        auto_approve_edits = getattr(config.agent_settings, "auto_approve_edits", False)
 
     is_safe, reason = is_path_safe(target_file)
     if not is_safe:
@@ -454,7 +476,7 @@ def apply_edit(target_file: str, code_edit: str) -> str:
                         console.print(" ".join(stats_text))
 
             # --- Request Confirmation ---
-            if not config.auto_approve_edits:
+            if not auto_approve_edits:
                 console.print()
                 if is_new_file:
                     confirm_text = f"[bold green]Create new file[/bold green] [bold]{target_file}[/bold] with the shown content?"
