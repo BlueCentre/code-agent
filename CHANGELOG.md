@@ -5,6 +5,52 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.3] - 2025-04-29
+
+### Added
+- Feature: Migration to Google ADK (#18)
+- Feature: Add web search tool using duckduckgo-search (#16)
+- Feature (workflow-pipelines): Add PR validation documentation and feature (#15)
+- Chore: Migrate Dev and Testing Setup to uv (#14)
+- Add E2E test scripts for basic commands, file operations, Ollama, and providers
+- Add test mode to Ollama commands
+- Add thinking indicator and step-by-step output for complex operations (#10)
+
+### Changed
+- Update documentation to reflect current codebase
+- Update and reorganize README
+- Update pyproject.toml
+- Enhance agent prompt
+- Improve test coverage and implement Ollama integration (#12)
+- Improve e2e with advanced tests
+
+### Fixed
+- Fix CLI test assertions to include quiet parameter in run_turn calls
+- Fix E2E test failure by adding specific handler for arithmetic test case
+- Fix E2E tests for JSON output, API key error handling, and context maintenance
+- Fix e2e test? 
+- Fix e2e pipeline #2
+- Fix e2e pipeline #1
+
+### Docs
+- Final revised plan for google adk
+- Additional planning refinements
+- Additional planning for adk
+- Update planning
+- Fixing diagram 3
+- Fixing diagram 2
+- Fixing diagram 1
+- Plans to migrate to google-adk fully
+- Additional prompts
+- Yet more updates =)
+- Addional docs restructuring
+- More updates to consolidate
+- Capture useful prompts
+- Minor updates renaming
+- Updated docs 2025-04-23
+- Additional instructions to our web_search planning
+- Add plans for web_search tool
+
 ## [Unreleased]
 
 ## [0.1.2] - 2024-07-22
