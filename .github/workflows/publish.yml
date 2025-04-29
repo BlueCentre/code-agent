@@ -27,8 +27,4 @@ jobs:
       run: uv build
 
     - name: Publish to PyPI
-      env:
-        # Use the API token secret from the 'publish' environment
-        UV_PUBLISH_USERNAME: __token__
-        UV_PUBLISH_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-      run: uv publish dist/*
+      run: uv publish --token ${{ secrets.PYPI_API_TOKEN }} dist/*
