@@ -40,7 +40,7 @@ Create a consistent, containerized development environment:
 Strengthen dependency management practices:
 
 - Ensure all dependencies (including dev dependencies) are explicitly declared in pyproject.toml
-- Maintain strict versioning in poetry.lock
+- Maintain strict versioning in uv.lock
 - Add automated check to verify no undeclared dependencies are used
 - Create dependency visualization/auditing
 

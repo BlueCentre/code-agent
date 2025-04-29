@@ -118,54 +118,41 @@ The following sequence diagram illustrates how security checks are performed for
 
 ```mermaid
 sequenceDiagram
-    participant Agent as CodeAgent (agent.py)
-    participant FileTool as File Tools Module
-    participant CmdTool as Command Tools Module
-    participant Security as Security Module (security.py)
+    participant Agent as CodeAgent (agent/)
+    participant FileTool as File Tools (tools/fs_tool.py)
+    participant CmdTool as Command Tool (tools/native_tool.py)
     participant Config as Configuration System
 
     Agent->>FileTool: read_file(path) or apply_edit(target_file, code_edit)
-    FileTool->>Security: check_file_read_safety(path) or check_file_write_safety(path)
+    FileTool->>Config: Get security settings
+    Config->>FileTool: Return settings
 
-    Security->>Config: Get security settings
-    Config->>Security: Return settings (disabled_checks, allowlists, etc.)
+    alt All file security checks disabled
+        FileTool->>FileTool: Proceed (bypassing checks)
+    else Some or all file security checks enabled
+        FileTool->>FileTool: check_file_read_safety(path) or check_file_write_safety(path)
+        FileTool->>FileTool: Check path validation, traversal, etc.
 
-    alt All security checks disabled
-        Security->>FileTool: Return safe (bypassing checks)
-    else Some or all security checks enabled
-        Security->>Security: Check file path against forbidden patterns
-        Security->>Security: Check file path against allowlist
-        Security->>Security: Check path traversal attempts
-        Security->>Security: Check sensitive file patterns
-
-        alt Any security check fails
-            Security->>FileTool: Return unsafe with reason
+        alt Any file security check fails
             FileTool->>Agent: Return security error
-        else All security checks pass
-            Security->>FileTool: Return safe
+        else All file security checks pass
             FileTool->>FileTool: Proceed with operation
         end
     end
 
     Agent->>CmdTool: run_native_command(command)
-    CmdTool->>Security: check_command_safety(command)
+    CmdTool->>Config: Get security settings
+    Config->>CmdTool: Return settings
 
-    Security->>Config: Get security settings
-    Config->>Security: Return settings (disabled_checks, allowlists, etc.)
+    alt All command security checks disabled
+        CmdTool->>CmdTool: Proceed (bypassing checks)
+    else Some or all command security checks enabled
+        CmdTool->>CmdTool: check_command_safety(command)
+        CmdTool->>CmdTool: Check allowlist, forbidden patterns, injection, etc.
 
-    alt All security checks disabled
-        Security->>CmdTool: Return safe (bypassing checks)
-    else Some or all security checks enabled
-        Security->>Security: Check command against allowlist
-        Security->>Security: Check for forbidden commands
-        Security->>Security: Check for command injection patterns
-        Security->>Security: Check for sensitive operations (rm, sudo, etc.)
-
-        alt Any security check fails
-            Security->>CmdTool: Return unsafe with reason
+        alt Any command security check fails
             CmdTool->>Agent: Return security error or request confirmation
-        else All security checks pass
-            Security->>CmdTool: Return safe
+        else All command security checks pass
             CmdTool->>CmdTool: Proceed with operation
         end
     end

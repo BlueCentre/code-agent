@@ -143,22 +143,20 @@ The following sequence diagram illustrates the flow of file operations, focusing
 ```mermaid
 sequenceDiagram
     participant User
-    participant CLI as CLI Application (main.py)
-    participant Agent as CodeAgent (agent.py)
-    participant LLM as LLM Client
-    participant FileTool as File Tools Module
-    participant Security as Security Module
+    participant CLI as CLI Application (cli/main.py)
+    participant Agent as CodeAgent (agent/)
+    participant LiteLLM as LLM Interface
+    participant FileTool as File Tools (tools/fs_tool.py)
     participant FS as File System
 
     User->>CLI: Request involving files
     CLI->>Agent: run_turn(prompt)
-    Agent->>LLM: Request completion with history
-    LLM->>Agent: Return completion with file tool call
+    Agent->>LiteLLM: Request completion with history
+    LiteLLM->>Agent: Return completion with file tool call
 
     alt Read File Operation
         Agent->>FileTool: read_file(path)
-        FileTool->>Security: check_file_read_safety(path)
-        Security->>FileTool: Safety check result
+        FileTool->>FileTool: check_file_read_safety(path)
 
         alt File is safe
             FileTool->>FS: Open and read file
@@ -168,14 +166,13 @@ sequenceDiagram
             FileTool->>Agent: Return security error
         end
 
-        Agent->>LLM: Request follow-up with file contents
-        LLM->>Agent: Return follow-up completion
+        Agent->>LiteLLM: Request follow-up with file contents
+        LiteLLM->>Agent: Return follow-up completion
     end
 
     alt Apply Edit Operation
         Agent->>FileTool: apply_edit(target_file, code_edit)
-        FileTool->>Security: check_file_write_safety(target_file)
-        Security->>FileTool: Safety check result
+        FileTool->>FileTool: check_file_write_safety(target_file)
 
         alt File is safe to edit
             FileTool->>FS: Check if file exists
@@ -203,8 +200,8 @@ sequenceDiagram
             FileTool->>Agent: Return security error
         end
 
-        Agent->>LLM: Request follow-up with edit result
-        LLM->>Agent: Return follow-up completion
+        Agent->>LiteLLM: Request follow-up with edit result
+        LiteLLM->>Agent: Return follow-up completion
     end
 
     Agent->>CLI: Return final response

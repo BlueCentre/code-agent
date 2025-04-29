@@ -15,7 +15,7 @@ The CLI supports multiple AI providers:
 
 | Provider | Config Command | API Key Format | Environment Variable | Default Models |
 |----------|---------------|----------------|---------------------|----------------|
-| Google AI Studio | `config aistudio` | `aip-*` | `AI_STUDIO_API_KEY` | gemini-2.0-flash, gemini-2.0-pro |
+| Google AI Studio | `config aistudio` | `aip-*` | `AI_STUDIO_API_KEY` | gemini-1.5-flash, gemini-1.5-pro |
 | OpenAI | `config openai` | `sk-*` | `OPENAI_API_KEY` | gpt-4o, gpt-4-turbo, gpt-3.5-turbo |
 | Groq | `config groq` | `gsk-*` | `GROQ_API_KEY` | llama3-70b-8192, mixtral-8x7b-32768 |
 | Anthropic | `config anthropic` | `sk-ant-*` | `ANTHROPIC_API_KEY` | claude-3-5-sonnet, claude-3-opus, claude-3-sonnet, claude-3-haiku |

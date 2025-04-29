@@ -13,7 +13,7 @@ This document outlines the requirements for the Code Agent Command-Line Interfac
 *   **Multi-Provider Support:** Seamlessly switch between different LLM providers (OpenAI, Groq, Ollama, Anthropic, Azure OpenAI, etc.) using LiteLLM.
 *   **Agentic Capabilities:** Go beyond simple Q&A to perform actions like editing local files (with user consent) and executing terminal commands (securely).
 *   **Flexible Configuration:** Allow users to configure API keys, default models, and agent behavior via CLI arguments, environment variables, and a dedicated configuration file.
-*   **Dual Interaction Modes:** Support both quick, single-shot commands and persistent interactive chat sessions.
+*   **Interaction Modes:** Primarily through an interactive chat session, with specific subcommands for tasks like configuration management and direct Ollama interaction.
 
 ## 2. Core Requirements
 
@@ -26,8 +26,8 @@ This document outlines the requirements for the Code Agent Command-Line Interfac
 
 ### 2.2 Interaction Modes
 
-*   **Single-Shot Command:** Execute a specific prompt and exit (e.g., `code-agent --model gpt-4o "Refactor this python code" < file.py`).
-*   **Interactive Chat:** Start a persistent session where conversation history is maintained (e.g., `code-agent chat`).
+*   **Interactive Chat:** The primary interaction mode via `code-agent chat`, starting a persistent session where conversation history is maintained and agentic tools can be used.
+*   **Specific Subcommands:** Dedicated commands for specific tasks like configuration (`code-agent config ...`), provider listing (`code-agent providers list`), and direct local model interaction (`code-agent ollama ...`).
 
 ### 2.3 Model Provider Management
 
@@ -60,7 +60,7 @@ This document outlines the requirements for the Code Agent Command-Line Interfac
 
 ## 3. Technology Stack
 
-*   **Programming Language:** Python 3.x (>= 3.10)
+*   **Programming Language:** Python 3.x (>= 3.11)
 *   **Core Agent Framework:** Google Agent Development Kit (`google-adk`)
 *   **LLM API Abstraction:** LiteLLM (`litellm`)
 *   **CLI Framework:** Typer (`typer`)

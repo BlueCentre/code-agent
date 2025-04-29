@@ -15,6 +15,7 @@ This directory contains comprehensive documentation for the Code Agent project. 
 - [Coverage Verification](COVERAGE_VERIFICATION.md) - Test coverage requirements and verification
 - [Hermetic Builds](hermetic_builds.md) - Plan for implementing hermetic builds
 - [Release Process](release.md) - Process for creating new releases
+- [Environment Configuration](env_configuration.md) - Details on using `.env` files for configuration.
 
 ### Project Planning
 - [Priorities](planning_priorities.md) - Consolidated list of tasks and priorities
@@ -30,6 +31,8 @@ This directory contains comprehensive documentation for the Code Agent project. 
 - [Models and Providers](feature_models_providers.md) - Supported AI providers and model configurations
 - [Diagram Validation](feature_diagram_validation.md) - Guidelines for validating Mermaid diagrams
 - [Ollama Integration](feature_ollama_integration.md) - Documentation for local model integration via Ollama
+- [Memory](memory.md) - Agent memory system overview.
+- [Prompts](prompts.md) - Overview of system prompts used.
 
 ### Contributing
 - [Contributing Guide](CONTRIBUTING.md) - Guidelines for contributing to the project
@@ -38,14 +41,15 @@ This directory contains comprehensive documentation for the Code Agent project. 
 
 | Document | Category | Status | Last Updated |
 |----------|----------|--------|--------------|
-| Requirements | Getting Started | Complete | Initial version |
-| Architecture | Getting Started | Needs validation | Initial version |
-| Implementation | Getting Started | Complete | Points to priorities |
-| Git Development | Development | Complete | Initial version |
-| Testing | Development | Complete | Initial version |
-| Coverage Verification | Development | Complete | Initial version |
-| Hermetic Builds | Development | Complete | Initial version |
-| Release Process | Development | Complete | Initial version |
+| Requirements | Getting Started | Complete | Current version |
+| Architecture | Getting Started | Needs validation | Current version |
+| Implementation | Getting Started | Complete | Current version |
+| Git Development | Development | Complete | Current version |
+| Testing | Development | Complete | Current version |
+| Coverage Verification | Development | Complete | Current version |
+| Hermetic Builds | Development | Complete | Current version |
+| Release Process | Development | Complete | Current version |
+| Environment Configuration | Development | Complete | Current version |
 | Priorities | Project Planning | Maintained | Regularly updated |
 | Improvements | Project Planning | Complete | Points to priorities |
 | MCP Support | Project Planning | Complete | Current version |
@@ -56,5 +60,7 @@ This directory contains comprehensive documentation for the Code Agent project. 
 | Chat | Feature Documentation | Complete | Current version |
 | Models and Providers | Feature Documentation | Complete | Current version |
 | Diagram Validation | Feature Documentation | Complete | Current version |
-| Ollama Integration | Feature Documentation | Complete | Added in v0.1.2 |
+| Ollama Integration | Feature Documentation | Complete | Current version |
+| Memory | Feature Documentation | Complete | Current version |
+| Prompts | Feature Documentation | Complete | Current version |
 | Contributing Guide | Contributing | Complete | Current version |

@@ -28,7 +28,6 @@ Chat mode supports several special commands that begin with a forward slash `/`:
 | `/help` | Display a list of available commands |
 | `/clear` | Clear the current conversation history |
 | `/exit` or `/quit` | Exit the chat session |
-| `/test` | Run test mode (used for automated testing) |
 
 Example usage:
 
@@ -38,7 +37,6 @@ Agent: Available commands:
   /help - Show this help message
   /clear - Clear conversation history
   /exit or /quit - Exit the chat session
-  /test - Run test mode (for unit testing)
 ```
 
 ## Conversation History
@@ -148,31 +146,31 @@ The following sequence diagram illustrates the chat interaction flow from when a
 ```mermaid
 sequenceDiagram
     participant User
-    participant CLI as CLI Application (main.py)
-    participant Agent as CodeAgent (agent.py)
-    participant LLM as LLM Client (llm.py)
+    participant CLI as CLI Application (cli/main.py)
+    participant Agent as CodeAgent (agent/)
+    participant LiteLLM as LLM Interface
     participant Provider as LLM Provider
-    participant Tools as Tool Modules
+    participant Tools as Tool Modules (tools/)
 
     User->>CLI: Submit query
     CLI->>Agent: run_turn(prompt)
 
     Agent->>Agent: add_user_message(prompt)
-    Agent->>Agent: Create system message from base_instruction_parts
+    Agent->>Agent: Create system message
     Agent->>Agent: add_system_message(instructions)
 
-    Agent->>LLM: Request completion with history
-    LLM->>Provider: Make API request via LiteLLM
-    Provider->>LLM: Return response
-    LLM->>Agent: Return completion
+    Agent->>LiteLLM: Request completion with history
+    LiteLLM->>Provider: Make API request
+    Provider->>LiteLLM: Return response
+    LiteLLM->>Agent: Return completion
 
     alt Response contains tool calls
         Agent->>Tools: Execute tool call
         Tools->>Agent: Return tool result
-        Agent->>LLM: Request follow-up completion with tool result
-        LLM->>Provider: Make API request
-        Provider->>LLM: Return response
-        LLM->>Agent: Return follow-up completion
+        Agent->>LiteLLM: Request follow-up completion with tool result
+        LiteLLM->>Provider: Make API request
+        Provider->>LiteLLM: Return response
+        LiteLLM->>Agent: Return follow-up completion
     end
 
     Agent->>Agent: add_assistant_message(response)

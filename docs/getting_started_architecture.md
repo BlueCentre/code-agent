@@ -34,36 +34,34 @@ flowchart TD
 
     user["Developer<br>Uses the CLI via terminal."]
     llm_providers["LLM Providers<br>Handles language model requests."]
-    ollama["Ollama<br>Local LLM service."]
+    ollama["Ollama<br>Local LLM service (Optional)."]
     file_system["Local File System<br>Stores files and configuration."]
     terminal["Terminal Shell<br>Runs native commands."]
+    litellm_lib["LiteLLM Library<br>Provides unified API to LLM Providers."]
 
     subgraph cli_boundary["Code Agent System"]
-        cli_app["CLI Application<br>Python (Typer)<br>Handles user commands, arguments, input/output, history."]
-        agent_core["Agent Core<br>Python<br>Orchestrates LLM calls, tool definitions, and tool execution logic."]
+        cli_app["CLI Application<br>Python (Typer)<br>Handles user commands (chat, config, ollama), args, I/O, history."]
+        agent_core["Agent Core (ADK)<br>Python (google-adk)<br>Orchestrates LLM calls via LiteLLM, tool definitions, and tool execution logic."]
         config_system["Configuration System<br>Python (Pydantic, PyYAML)<br>Loads, validates, and manages user configuration."]
-        tool_modules["Tool Modules<br>Python<br>Implementations for file operations, command execution, and security checks."]
+        tool_modules["Tool Modules<br>Python<br>Implementations for file ops, command exec, search, memory, security checks."]
         history_store[(History Store<br>JSON Files<br>Stores chat session history on the local file system.)]
-        ollama_provider["Ollama Provider<br>Python<br>Direct integration with local Ollama models."]
     end
 
     user --> |"Interacts with<br>CLI (stdin/stdout)"| cli_app
 
-    cli_app --> |"Invokes agent turn with prompt/history"| agent_core
+    cli_app --> |"Invokes agent turn (chat cmd)"| agent_core
     cli_app --> |"Gets configuration settings"| config_system
     cli_app --> |"Saves/Loads History"| history_store
-    cli_app --> |"Direct Ollama commands"| ollama_provider
+    cli_app --> |"Direct Ollama commands<br>HTTP API"| ollama
 
     agent_core --> |"Gets config for agent behavior, tools, rules"| config_system
-    agent_core --> |"Sends requests via LiteLLM<br>HTTPS/API"| llm_providers
+    agent_core --> |"Sends requests via"| litellm_lib
+    litellm_lib --> |"HTTPS/API"| llm_providers
     agent_core --> |"Delegates tool execution"| tool_modules
-
-    ollama_provider --> |"HTTP API requests"| ollama
 
     tool_modules --> |"Gets config for tool behavior (e.g., allowlist)"| config_system
     tool_modules --> |"Reads/Writes files"| file_system
     tool_modules --> |"Executes commands"| terminal
-    tool_modules --> |"Performs security checks"| tool_modules
 ```
 
 ## Level 3: Component Diagram (Agent Core and Tools)
@@ -75,55 +73,53 @@ flowchart TD
     title["Component diagram for Agent Core and Tools"]
 
     cli_app["CLI Application<br>cli/main.py"]
-    ollama_cli["Ollama CLI<br>cli_agent/main.py<br>Handles direct Ollama interactions"]
     llm_providers["LLM Providers"]
     ollama["Ollama Local Service"]
     file_system["Local File System"]
     terminal["Terminal Shell"]
     config_system["Configuration System"]
+    litellm_lib["LiteLLM Library"]
 
-    subgraph agent_boundary["Agent Core"]
-        code_agent["CodeAgent<br>agent/agent.py<br>Manages interaction cycle, message history, and tool dispatch."]
-        llm_client["LLM Client<br>llm.py<br>Handles communication with LLM providers via LiteLLM."]
+    subgraph agent_boundary["Agent Core (ADK)"]
+        code_agent["Agent Logic<br>agent/*, adk/*<br>Manages ADK agent execution, history, tool dispatch."]
     end
 
-    subgraph ollama_boundary["Ollama Integration"]
-        ollama_provider["OllamaProvider<br>cli_agent/providers/ollama.py<br>Direct communication with Ollama API."]
-        ollama_commands["Ollama Commands<br>cli_agent/commands/ollama.py<br>CLI commands for Ollama."]
+    subgraph cli_commands_boundary["CLI Commands"]
+        ollama_commands["Ollama Commands<br>cli/commands/ollama.py<br>Handles `ollama list/chat`."]
+        config_commands["Config Commands<br>cli/commands/config.py<br>Handles `config show/reset`."]
+        providers_commands["Providers Command<br>cli/commands/providers.py<br>Handles `providers list`."]
     end
 
-    subgraph tools_boundary["Tool Modules"]
-        file_tools["File Tools<br>tools/file_tools.py, simple_tools.py<br>Handles file reading, writing, and editing."]
-        command_tools["Command Tools<br>tools/native_tools.py, simple_tools.py<br>Handles command execution and validation."]
-        security_tools["Security Tools<br>tools/security.py<br>Performs security checks on file operations and commands."]
-        error_utils["Error Utilities<br>tools/error_utils.py<br>Handles error formatting and reporting."]
+    subgraph tools_boundary["Tool Modules (ADK Tools)"]
+        file_tools["File Tools<br>adk/tools.py (wraps tools/fs_tool.py)<br>read_file, apply_edit, delete_file, list_dir."]
+        command_tools["Command Tool<br>adk/tools.py (wraps tools/native_tool.py)<br>run_terminal_cmd."]
+        memory_tools["Memory Tool<br>adk/tools.py (uses adk/memory.py)<br>load_memory."]
+        search_tools["Search Tools<br>adk/tools.py<br>google_search (via ADK built-in)."]
     end
 
-    cli_app --> |"Invokes run_turn"| code_agent
-    ollama_cli --> |"Invokes"| ollama_commands
-    ollama_commands --> |"Uses"| ollama_provider
-    ollama_provider --> |"API Requests"| ollama
+    cli_app --> |"Invokes run_turn (chat cmd)"| code_agent
+    cli_app --> |"Invokes subcommands"| ollama_commands
+    cli_app --> |"Invokes subcommands"| config_commands
+    cli_app --> |"Invokes subcommands"| providers_commands
 
-    code_agent --> |"Makes API requests"| llm_client
-    llm_client --> |"Sends API requests"| llm_providers
+    ollama_commands --> |"HTTP API Requests"| ollama
 
-    code_agent --> |"Invokes tools"| file_tools
-    code_agent --> |"Invokes tools"| command_tools
+    code_agent --> |"Makes LLM requests via"| litellm_lib
+    litellm_lib --> |"Sends API requests"| llm_providers
 
-    file_tools --> |"Uses"| security_tools
-    command_tools --> |"Uses"| security_tools
+    code_agent --> |"Invokes ADK tools"| file_tools
+    code_agent --> |"Invokes ADK tools"| command_tools
+    code_agent --> |"Invokes ADK tools"| memory_tools
+    code_agent --> |"Invokes ADK tools"| search_tools
 
     file_tools --> |"Reads/Writes"| file_system
     command_tools --> |"Executes"| terminal
 
-    file_tools --> |"Uses"| error_utils
-    command_tools --> |"Uses"| error_utils
-    security_tools --> |"Uses"| error_utils
-
     code_agent --> |"Gets configuration"| config_system
     file_tools --> |"Gets configuration"| config_system
     command_tools --> |"Gets configuration"| config_system
-    security_tools --> |"Gets configuration"| config_system
+    memory_tools --> |"Gets configuration"| config_system
+    ollama_commands --> |"Gets configuration"| config_system
 ```
 
 ## Level 4: Configuration System Components

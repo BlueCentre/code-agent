@@ -8,7 +8,7 @@ Code Agent supports multiple AI providers through LiteLLM integration, allowing 
 
 | Provider | Description | Default Model | API Key Format |
 |----------|-------------|---------------|----------------|
-| Google AI Studio | Google's Gemini models | gemini-2.0-flash | `aip-...` |
+| Google AI Studio | Google's Gemini models | gemini-1.5-flash | `aip-...` |
 | OpenAI | GPT models | gpt-4o | `sk-...` |
 | Anthropic | Claude models | claude-3-sonnet | `sk-ant-...` |
 | Groq | Fast inference for open models | llama3-70b-8192 | `gsk_...` |
@@ -21,10 +21,8 @@ Code Agent supports multiple AI providers through LiteLLM integration, allowing 
 Google AI Studio is the default provider in Code Agent.
 
 **Available Models:**
-- `gemini-2.0-flash` (Default) - Fast, efficient model for most tasks
-- `gemini-2.0-pro` - More powerful model for complex tasks
-- `gemini-1.5-flash` - Previous generation fast model
-- `gemini-1.5-pro` - Previous generation capable model
+- `gemini-1.5-flash` (Default) - Fast, efficient model for most tasks
+- `gemini-1.5-pro` - More powerful model for complex tasks
 
 **API Key Setup:**
 1. Get your key from [AI Studio](https://ai.google.dev/)
@@ -37,7 +35,7 @@ Google AI Studio is the default provider in Code Agent.
 code-agent run "Explain generators in Python"
 
 # Specify a more powerful model
-code-agent --model gemini-2.0-pro run "Write a complex regex for email validation"
+code-agent --model gemini-1.5-pro run "Write a complex regex for email validation"
 ```
 
 ### OpenAI
@@ -181,8 +179,8 @@ code-agent config groq
    - Use more powerful models only when needed
 
 2. **Consider Task Complexity**:
-   - Simple code explanations: `gemini-2.0-flash`, `gpt-3.5-turbo`
-   - Complex architecture design: `gpt-4o`, `claude-3-opus`, `gemini-2.0-pro`
+   - Simple code explanations: `gemini-1.5-flash`, `gpt-3.5-turbo`
+   - Complex architecture design: `gpt-4o`, `claude-3-opus`, `gemini-1.5-pro`
 
 3. **Provider Specialties**:
    - OpenAI: Strong general coding ability
@@ -200,8 +198,8 @@ The following sequence diagram illustrates how the system communicates with diff
 ```mermaid
 sequenceDiagram
     participant User
-    participant CLI as CLI Application (main.py)
-    participant Agent as CodeAgent (agent.py)
+    participant CLI as CLI Application (cli/main.py)
+    participant Agent as CodeAgent (agent/)
     participant Config as Configuration System
     participant LiteLLM as LiteLLM Client
     participant Provider as LLM Provider (OpenAI/Anthropic/etc.)

@@ -180,25 +180,22 @@ The following sequence diagram illustrates the flow of command execution, includ
 ```mermaid
 sequenceDiagram
     participant User
-    participant CLI as CLI Application (main.py)
-    participant Agent as CodeAgent (agent.py)
-    participant LLM as LLM Client
-    participant CmdTool as Command Tools Module
-    participant Security as Security Module
+    participant CLI as CLI Application (cli/main.py)
+    participant Agent as CodeAgent (agent/)
+    participant LiteLLM as LLM Interface
+    participant CmdTool as Command Tool (tools/native_tool.py)
     participant Shell as Terminal Shell
 
     User->>CLI: Request involving command execution
     CLI->>Agent: run_turn(prompt)
-    Agent->>LLM: Request completion with history
-    LLM->>Agent: Return completion with command tool call
+    Agent->>LiteLLM: Request completion with history
+    LiteLLM->>Agent: Return completion with command tool call
 
     Agent->>CmdTool: run_native_command(command)
-    CmdTool->>Security: check_command_safety(command)
-    Security->>CmdTool: Safety check result
+    CmdTool->>CmdTool: check_command_safety(command)
 
     alt Command is in allowlist or auto_approve_commands is enabled
         CmdTool->>Shell: Execute command directly
-        Shell->>CmdTool: Command output
     else Command requires confirmation
         CmdTool->>CLI: Request confirmation for command
         CLI->>User: Display command and prompt for confirmation
@@ -219,8 +216,8 @@ sequenceDiagram
         CmdTool->>Agent: Return error message
     end
 
-    Agent->>LLM: Request follow-up with command result
-    LLM->>Agent: Return follow-up completion
+    Agent->>LiteLLM: Request follow-up with command result
+    LiteLLM->>Agent: Return follow-up completion
 
     Agent->>CLI: Return final response
     CLI->>User: Display response

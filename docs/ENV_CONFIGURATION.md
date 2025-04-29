@@ -21,15 +21,19 @@ The PR monitoring script checks GitHub pull request status and CI/CD checks afte
 Configure API keys for various services:
 
 ```bash
-# Ollama API key (if using API authentication)
-OLLAMA_API_KEY=your_key_here
-
 # Google AI Studio API key (starts with "aip-")
 AI_STUDIO_API_KEY=aip-your-key-here
 
-# Default model to use with AI services
-MODEL=gemini-2.5-pro-exp-03-25
+# OpenAI API Key (if used)
+# OPENAI_API_KEY=sk-...
+
+# Groq API Key (if used)
+# GROQ_API_KEY=gsk_...
+
+# Anthropic API Key (if used)
+# ANTHROPIC_API_KEY=sk-ant-...
 ```
+*(Note: See Configuration section in main README or `docs/feature_configuration.md` for how to set default providers/models via environment variables like CODE_AGENT_DEFAULT_PROVIDER)*
 
 ## SonarQube Integration
 

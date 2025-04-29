@@ -10,51 +10,29 @@ By participating in this project, you agree to abide by our Code of Conduct (to 
 
 ### Setup Development Environment
 
-We recommend using [`uv`](https://github.com/astral-sh/uv) for faster dependency management. If you don't have it, install it first (see [README Quick Start](../README.md#quick-start)).
+This project uses [`uv`](https://github.com/astral-sh/uv) for Python package and environment management.
 
-1. **Fork the repository** on GitHub
+1. **Fork the repository** on GitHub.
 2. **Clone your fork**:
    ```bash
    git clone https://github.com/YOUR-USERNAME/code-agent.git
    cd code-agent
    ```
-3. **Create virtual environment and install dependencies (Recommended: using `uv`)**:
+3. **Set up the environment using UV**:
    ```bash
-   # 1. Create the virtual environment
-   uv venv .venv
+   # 1. Create the virtual environment (if it doesn't exist)
+   uv venv
 
-   # 2. Activate the environment (Linux/macOS)
-   source .venv/bin/activate
-   #    Activate the environment (Windows - Command Prompt/PowerShell)
-   #    .venv\Scripts\activate
-
-   # 3. Install dependencies (including development extras)
-   uv pip install '.[dev]'
+   # 2. Install dependencies (including development dependencies)
+   uv sync --all-extras
    ```
+   *Note: `uv` commands like `uv run` or `make` targets defined in the Makefile will automatically use this `.venv` environment. Manual activation (`source .venv/bin/activate`) is usually not required but can be done if needed for direct interaction.* 
+
 4. **Install pre-commit hooks**:
    ```bash
-   pre-commit install
+   uv run pre-commit install
    ```
-
-**Alternative Setup (using `poetry`):**
-
-If you prefer not to use `uv`:
-
-1. **Follow steps 1 & 2 above (Fork & Clone).**
-2. **Create virtual environment**:
-   ```bash
-   python3 -m venv .venv
-   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-   ```
-3. **Install dependencies**:
-   ```bash
-   pip install poetry # Ensure poetry is installed
-   poetry install     # Installs main and development dependencies
-   ```
-4. **Install pre-commit hooks**:
-   ```bash
-   pre-commit install
-   ```
+   *This only needs to be run once after cloning.*
 
 ### Creating a Feature Branch
 
@@ -95,15 +73,19 @@ Where `<type>` is one of:
 - Run tests locally before submitting a PR
 - Create both unit tests and integration tests where appropriate
 
-To run tests:
+To run tests (UV automatically uses the `.venv` environment):
 
 ```bash
-# Run all tests
-./scripts/run_tests.sh
+# Run all tests via Makefile
+make test
 
-# Run tests with coverage reporting
-./scripts/run_coverage_pipeline_venv.sh
+# Run tests with coverage reporting via Makefile
+make test-coverage
+
+# Run only unit tests via Makefile
+make test-unit
 ```
+*See the main [README](../README.md#testing) or the `Makefile` for more testing commands.*
 
 ### Commit Guidelines
 

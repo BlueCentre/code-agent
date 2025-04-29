@@ -13,11 +13,10 @@ The application code automatically reads this version at runtime using `importli
 
 Before creating a new release, ensure:
 
-1. All tests are passing: `python -m pytest`
-2. Test coverage meets requirements: `python -m pytest --cov=code_agent`
-3. Code quality checks pass: `pre-commit run --all-files`
-4. Documentation is up-to-date
-5. CHANGELOG.md is updated with notable changes (if applicable)
+1. All tests are passing and coverage meets requirements: `make test-coverage`
+2. Code quality checks pass: `make lint` (or `uv run pre-commit run --all-files`)
+3. Documentation is up-to-date
+4. CHANGELOG.md is updated with notable changes (if applicable)
 
 ## Release Process
 
@@ -74,7 +73,7 @@ Before creating a new release, ensure:
    1. Check that the new version appears on PyPI: https://pypi.org/project/cli-code-agent/
    2. Optionally, install the release from PyPI to verify it works:
       ```bash
-      pip install --upgrade cli-code-agent
+      uv pip install --upgrade cli-code-agent
       code-agent --version  # Should show the new version
       ```
 

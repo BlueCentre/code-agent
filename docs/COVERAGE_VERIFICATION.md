@@ -16,40 +16,25 @@ This token is required by the `sonar-scanner` during the pipeline execution.
 
 ## Coverage Configuration
 
-Coverage is configured using the `.coveragerc` file in the project root, which specifies:
+Coverage is configured using the `[tool.coverage.*]` sections in the `pyproject.toml` file, which specify:
 
-- Source directories to measure
-- Files and patterns to exclude
-- Required minimum coverage threshold (80%)
-- Output formats and locations
+- Source directories to measure (`source = ["code_agent"]`)
+- Files and patterns to exclude (`omit = [...]`)
+- Lines to exclude based on pragmas or patterns (`exclude_lines = [...]`)
+- Required minimum coverage threshold (`fail_under = 80`)
+- Output formats and locations (e.g., `htmlcov/` for HTML report)
 
 ## Running Coverage Locally
 
-### Using System Python
-
-To run coverage with system-wide Python dependencies:
+Use the provided Makefile targets (UV will automatically use the `.venv` environment):
 
 ```bash
-./scripts/run_coverage_pipeline.sh
+# Run tests and check coverage (fails if below threshold)
+make test-coverage
+
+# Run tests, check coverage, and open the HTML report
+make test-report
 ```
-
-### Using Virtual Environment
-
-To run coverage within a Python virtual environment:
-
-```bash
-./scripts/run_coverage_pipeline_venv.sh
-```
-
-### Running Coverage for Specific Modules
-
-To run coverage tests for the `native_tools` module only:
-
-```bash
-./scripts/run_native_tools_coverage.sh
-```
-
-This script runs tests specifically for the `native_tools.py` module and verifies that it meets the 80% coverage threshold.
 
 ## Coverage Pipeline
 
