@@ -105,9 +105,11 @@ class LiteLlm(BaseLlm):
             # Extract messages from LlmRequest contents
             messages = []
             for content_item in prompt.contents:
-                # Assuming simple text parts for now
-                if content_item.parts and hasattr(content_item.parts[0], "text") and content_item.parts[0].text:
-                    messages.append({"role": content_item.role, "content": content_item.parts[0].text})
+                # Check if parts exists and is not empty
+                if hasattr(content_item, "parts") and content_item.parts:
+                    # Check if the first part has a text attribute with a value
+                    if hasattr(content_item.parts[0], "text") and content_item.parts[0].text:
+                        messages.append({"role": content_item.role, "content": content_item.parts[0].text})
             return messages
         elif isinstance(prompt, str):
             return [{"role": "user", "content": prompt}]

@@ -7,6 +7,9 @@ import os
 import unittest
 from unittest.mock import MagicMock, patch
 
+from google.adk.models import LlmRequest
+from google.genai import types
+
 from code_agent.adk.models import LiteLlm, OllamaLlm, create_model
 
 
@@ -92,6 +95,56 @@ class TestLiteLlmCoverage(unittest.TestCase):
         self.assertEqual(call_kwargs["temperature"], 0.3)
         self.assertEqual(call_kwargs["top_p"], 0.9)
         self.assertEqual(call_kwargs["stream"], False)
+
+    def test_generate_prompt_with_empty_llm_request(self):
+        """Test _generate_prompt method with an LlmRequest containing empty parts."""
+        # Create an LlmRequest with empty parts
+        content_item = types.Content(role="user", parts=[])
+        llm_request = LlmRequest(contents=[content_item])
+
+        # Call the method
+        result = self.model._generate_prompt(llm_request)
+
+        # The result should be an empty list or a list with a message with empty content
+        # Depends on the implementation, but we need to assert something
+        self.assertEqual(result, [])
+
+        # Test with a content item that has None for parts
+        content_item_none = types.Content(role="user", parts=None)
+        llm_request_none = LlmRequest(contents=[content_item_none])
+
+        # Call the method
+        result_none = self.model._generate_prompt(llm_request_none)
+
+        # The result should be an empty list
+        self.assertEqual(result_none, [])
+
+    def test_generate_prompt_with_invalid_type(self):
+        """Test _generate_prompt method with an invalid input type."""
+        # Try with an invalid type (integer)
+        with self.assertRaises(TypeError):
+            self.model._generate_prompt(42)
+
+    @patch("litellm.acompletion")
+    def test_all_retries_fail(self, mock_acompletion):
+        """Test behavior when all retry attempts fail."""
+        # Make the API call raise an error for all attempts
+        api_error = Exception("API rate limit exceeded")
+        mock_acompletion.side_effect = [api_error, api_error, api_error]  # Fail 3 times
+
+        # Create model with 2 retries (3 total attempts)
+        model = LiteLlm(provider="openai", model_name="gpt-3.5-turbo", retry_count=2)
+
+        # Call the method and verify it handles the error after all retries
+        with self.assertRaises(ValueError) as context:
+            pytest_run_awaitable(model.generate_content_async("Test prompt"))
+
+        # Check error message
+        error_message = str(context.exception)
+        self.assertIn("LiteLLM error:", error_message)
+
+        # Verify the method was called the expected number of times (3)
+        self.assertEqual(mock_acompletion.call_count, 3)
 
 
 class TestOllamaLlmCoverage(unittest.TestCase):
@@ -206,3 +259,55 @@ class TestCreateModelCoverage(unittest.TestCase):
                 # Clean up
                 if "GROQ_API_KEY" in os.environ:
                     del os.environ["GROQ_API_KEY"]
+
+    @patch("code_agent.adk.models.get_config")
+    @patch("code_agent.adk.models.get_api_key")
+    def test_unknown_provider_no_fallback(self, mock_get_api_key, mock_get_config):
+        """Test behavior with unknown provider and no valid fallback."""
+        # Setup mocks
+        mock_config = MagicMock()
+        mock_config.default_provider = "openai"
+        mock_config.default_model = "gpt-4"
+        # No fallback configured
+        mock_config.fallback_provider = None
+        mock_config.fallback_model = None
+        mock_get_config.return_value = mock_config
+
+        # Mock API key
+        mock_get_api_key.return_value = "fake-test-api-key"
+
+        # Try to create model with unknown provider and no fallback
+        with self.assertRaises(ValueError) as context:
+            create_model(provider="unknown_provider")
+
+        # Check error message
+        error_message = str(context.exception)
+        self.assertIn("Unsupported provider:", error_message)
+        self.assertIn("unknown_provider", error_message)
+
+    @patch("code_agent.adk.models.get_config")
+    @patch("code_agent.adk.models.get_api_key")
+    @patch("code_agent.adk.models.print")  # Mock print to verify warning
+    def test_ai_studio_non_gemini_model(self, mock_print, mock_get_api_key, mock_get_config):
+        """Test ai_studio provider with a non-gemini model name to trigger warning."""
+        # Setup mocks
+        mock_config = MagicMock()
+        mock_config.default_provider = "ai_studio"
+        mock_config.default_model = "gpt-4"  # Not a gemini model
+        mock_get_config.return_value = mock_config
+
+        # Mock API key
+        mock_get_api_key.return_value = "fake-test-api-key"
+
+        # Create model with ai_studio provider but non-gemini model
+        model = create_model(provider="ai_studio", model_name="non-gemini-model")
+
+        # Verify a warning was printed
+        mock_print.assert_called_once()
+        call_args = mock_print.call_args[0][0]
+        self.assertIn("Warning", call_args)
+        self.assertIn("non-gemini-model", call_args)
+        self.assertIn("doesn't start with 'gemini-'", call_args)
+
+        # Model should be returned as a string
+        self.assertEqual(model, "non-gemini-model")
