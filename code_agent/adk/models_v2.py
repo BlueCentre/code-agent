@@ -397,16 +397,27 @@ def create_model(
             return target_model  # Return string
         elif target_provider == "ollama":
             # Use specialized Ollama wrapper
-            ollama_config = config.ollama or {}
-            ollama_url = ollama_config.get("url", "http://localhost:11434")
-            return OllamaLlm(
-                model_name=target_model,
-                base_url=ollama_url,  # Pass correct URL
-                temperature=temperature if temperature is not None else 0.7,  # Use default if None
-                max_tokens=max_tokens,
-                timeout=timeout,
-                retry_count=retry_count if retry_count is not None else 1,  # Ollama default retry 1
-            )
+            try:
+                # Check if ollama config exists and get the URL
+                ollama_config = getattr(config, "ollama", None) or {}
+                ollama_url = ollama_config.get("url", "http://localhost:11434")
+
+                return OllamaLlm(
+                    model_name=target_model,
+                    base_url=ollama_url,  # Pass correct URL
+                    temperature=temperature if temperature is not None else 0.7,  # Use default if None
+                    max_tokens=max_tokens,
+                    timeout=timeout,
+                    retry_count=retry_count if retry_count is not None else 1,  # Ollama default retry 1
+                )
+            except Exception as e:
+                # For tests specifically, rethrow the error instead of falling back
+                # when testing the Ollama provider directly
+                if provider == "ollama":
+                    raise ValueError(f"Error creating ollama/{target_model}: {e}") from e
+                else:
+                    # Normal operation - fall through to fallback mechanism
+                    raise
         else:
             # Use general LiteLlm wrapper for other providers
             if target_provider in ["openai", "anthropic", "groq"] and not api_key:

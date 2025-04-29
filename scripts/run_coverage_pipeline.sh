@@ -51,8 +51,8 @@ if [ -f sonar-project.properties ]; then
 
     sonar-scanner \
       -Dsonar.projectVersion=$VERSION \
-      -Dsonar.branch.name=$CURRENT_BRANCH \
       -Dsonar.login=$SONAR_TOKEN
+    #   -Dsonar.branch.name=$CURRENT_BRANCH \
 else
     echo "No sonar-project.properties file found. Skipping SonarQube scan."
 fi

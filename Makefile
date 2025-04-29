@@ -46,6 +46,9 @@ test-report:
 	uv run pytest tests/ --cov=code_agent --cov-config=pyproject.toml --cov-report=term --cov-report=html --cov-fail-under=80
 	open htmlcov/index.html
 
+sonar-report:
+	./scripts/run_coverage_pipeline.sh
+
 # Linting and formatting
 lint:
 	uv run ruff check .
@@ -60,3 +63,13 @@ clean:
 	rm -rf .coverage htmlcov/ .pytest_cache/ *.egg-info/ dist/ build/
 	find . -type d -name __pycache__ -exec rm -rf {} +
 	find . -type d -name .ruff_cache -exec rm -rf {} +
+
+swe-run-chat:
+	uvx --from git+https://github.com/google/adk-python.git@main adk run code_agent/agent/software_engineer/software_engineer
+
+swe-web-chat:
+	uvx --from git+https://github.com/google/adk-python.git@main adk run code_agent/agent/software_engineer
+
+code-agent-chat:
+	uv run code-agent chat
+

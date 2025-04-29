@@ -6,7 +6,6 @@ import typer
 from dotenv import load_dotenv
 from rich import print
 from rich.console import Console
-from rich.markdown import Markdown
 from rich.prompt import Prompt
 from typing_extensions import Annotated
 
@@ -240,8 +239,9 @@ def main(
 # --- Helper Callbacks ---
 def _version_callback(value: bool):
     if value:
-        print(f"Code Agent version: {agent_version}")  # Updated output message
-        print(f"Google ADK version: {adk_version}")  # Show ADK version
+        console = Console()
+        console.print(f"Code Agent version: {agent_version}")  # Updated output message
+        console.print(f"Google ADK version: {adk_version}")  # Show ADK version
         raise typer.Exit()
 
 
@@ -312,40 +312,43 @@ def chat(
                         # No more lines to process in non-interactive mode
                         break
 
-                # Process special commands
+                # Process command formatting for /help command
                 if user_input.startswith("/"):
                     command = user_input[1:].strip().lower()
                     if command == "help":
-                        print("[bold magenta]Special Commands:[/bold magenta]")
-                        print("/clear - Clear conversation history (starts a new session)")
-                        print("/help  - Show this help message")
-                        print("exit or quit - End the chat session")
-                        print("\n[bold magenta]Available Tools:[/bold magenta]")
-                        print("The assistant can describe these capabilities, but the CLI implementation has limited support:")
-                        print("- Web search: Ask about current events or information")
-                        print("- File operations: Ask about reading files or directories")
-                        print("- Terminal commands: Ask about running commands")
-                        print("- Memory: The assistant will remember information from your conversation")
-                        print("\n[bold yellow]Note:[/bold yellow] This implementation has limited tool support. For full functionality,")
-                        print("use the agent API directly or the web interface.")
+                        console.print("[bold magenta]Available Commands:[/bold magenta]")
+                        console.print("/clear - Clear conversation history (starts a new session)")
+                        console.print("/help  - Show this help message")
+                        console.print("/quit or /exit - End the chat session")
+                        console.print("\n[bold magenta]Available Tools:[/bold magenta]")
+                        console.print("The assistant can describe these capabilities, but the CLI implementation has limited support:")
+                        console.print("- Web search: Ask about current events or information")
+                        console.print("- File operations: Ask about reading files or directories")
+                        console.print("- Terminal commands: Ask about running commands")
+                        console.print("- Memory: The assistant will remember information from your conversation")
+                        console.print("\n[bold yellow]Note:[/bold yellow] This implementation has limited tool support. For full functionality,")
+                        console.print("use the agent API directly or the web interface.")
                         continue
                     elif command == "clear":
                         # Create a new session when history is cleared
                         current_session = session_service.create_session(app_name="code_agent", user_id="cli_user")
                         current_session_id = current_session.id
-                        print("[bold green]History cleared. New session started.[/bold green]")
+                        console.print("[bold green]History cleared. New session started.[/bold green]")
                         verbosity_controller.show_verbose(f"Created new ADK session: {current_session_id}")
                         continue
+                    elif command in ["quit", "exit"]:
+                        console.print("[bold green]Goodbye![/bold green]")
+                        break
                     else:
-                        print(f"[bold red]Unknown command: {command}[/bold red]")
+                        console.print(f"[bold red]Unknown command: {command}[/bold red]")
                         continue
 
                 if user_input.lower() in ["quit", "exit"]:
-                    print("[bold yellow]Exiting chat session.[/bold yellow]")
+                    console.print("[bold green]Goodbye![/bold green]")
                     break
 
                 if not user_input:
-                    print("[yellow]Please enter a non-empty message.[/yellow]")
+                    console.print("[yellow]Please enter a non-empty message.[/yellow]")
                     continue
 
                 # Create content object for user message
@@ -361,327 +364,34 @@ def chat(
                 try:
                     with console.status("[bold green]Thinking...[/bold green]"):
                         # Create a new Runner for each request to avoid event loop issues
-                        Runner(session_service=session_service, app_name="code_agent", agent=root_agent)
-
-                        # Use the Gemini API directly
-                        import google.generativeai as genai
-
-                        # We're not actually using the available_tools variable, so let's skip this to avoid linter errors
-                        # available_tools = []
-                        # Safely check for sub_agents attribute
-                        # if hasattr(root_agent, "sub_agents") and isinstance(getattr(root_agent, "sub_agents", []), (list, tuple)):
-                        #     for agent in root_agent.sub_agents:
-                        #         if hasattr(agent, "tools"):
-                        #             available_tools.extend([t.name for t in agent.tools])
-
-                        # Build conversation history from session events
-                        conversation_history = []
-                        if hasattr(current_session, "events"):
-                            for event in current_session.events:
-                                if hasattr(event, "author") and hasattr(event, "content"):
-                                    role = "User" if event.author == "user" else "Assistant"
-                                    content = ""
-
-                                    # Extract text content from the event
-                                    if event.content and hasattr(event.content, "parts"):
-                                        for part in event.content.parts:
-                                            if hasattr(part, "text") and part.text:
-                                                content += part.text
-
-                                    if content:
-                                        conversation_history.append(f"{role}: {content}")
-
-                        # Log how many history items we found
-                        verbosity_controller.show_verbose(f"Found {len(conversation_history)} conversation turns in history")
-
-                        # Create a more descriptive prompt that encourages tool use and includes history
-                        history_text = "\n".join(conversation_history[-6:]) if conversation_history else "No previous conversation."
-
-                        prompt = f"""You are a helpful, friendly AI assistant with access to a wealth of built-in knowledge AND specialized tools.
-
-Conversation history:
-{history_text}
-
-User query: {user_input}
-
-IMPORTANT: When the user explicitly asks you to "search the web" or "search for" something, you MUST use the google_search tool to fetch information.
-
-For your response, prioritize as follows:
-1. For general knowledge questions, creative content requests (jokes, stories), or conceptual questions - use your built-in knowledge.
-2. For when the user explicitly asks you to search the web - ALWAYS use the google_search tool.
-3. For exploring files or directories - use the list_dir tool.
-
-Available tools:
-- google_search: Search for up-to-date information on the web
-- list_dir: List files in a directory
-
-Be conversational, helpful, and engaging. If asked for creative content like jokes, stories, or explanations, provide them directly using your built-in capabilities rather than using tools.
-
-Examples:
-- "Tell me a joke" → Respond with a joke from your knowledge
-- "Search the web for the latest AI developments" → Use google_search with query "latest AI developments"
-- "What files are in this directory?" → Use list_dir"""  # noqa: E501
-
-                        # Generate the response with tool access enabled if possible
-                        model = genai.GenerativeModel(
-                            get_config().default_model,
-                            tools=[
-                                {
-                                    "function_declarations": [
-                                        {
-                                            "name": "google_search",
-                                            "description": "Search for information on the web",
-                                            "parameters": {
-                                                "type": "object",
-                                                "properties": {"query": {"type": "string", "description": "The search query"}},
-                                                "required": ["query"],
-                                            },
-                                        },
-                                        {
-                                            "name": "list_dir",
-                                            "description": "List files in a directory",
-                                            "parameters": {
-                                                "type": "object",
-                                                "properties": {"path": {"type": "string", "description": "Path to the directory"}},
-                                                "required": ["path"],
-                                            },
-                                        },
-                                    ]
-                                }
-                            ],
-                        )
-
-                        # Log session ID and history length for debugging
-                        history_events = current_session.events if hasattr(current_session, "events") else []
-                        verbosity_controller.show_verbose(f"Session {current_session_id} has {len(history_events)} events")
-
-                        # Generate content with safety settings adjusted
-                        generation_config = {
-                            "temperature": 1.0,
-                            "top_p": 0.95,
-                            "top_k": 40,
-                            "max_output_tokens": 1024,
-                        }
-
-                        safety_settings = [
-                            {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
-                            {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
-                            {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
-                            {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
-                        ]
-
-                        response = model.generate_content(prompt, generation_config=generation_config, safety_settings=safety_settings)
-
-                        # Process the response and check for function calls
-                        if hasattr(response, "candidates") and response.candidates:
-                            candidate = response.candidates[0]
-
-                            # Check if there are function calls to execute
-                            if hasattr(candidate, "content") and hasattr(candidate.content, "parts"):
-                                for part in candidate.content.parts:
-                                    if hasattr(part, "function_call"):
-                                        function_call = part.function_call
-                                        function_name = function_call.name
-                                        function_args = function_call.args
-
-                                        print(f"\n[bold yellow]Agent is calling function:[/bold yellow] {function_name}")
-
-                                        # Execute the appropriate tool
-                                        function_response = "No function result available."
-
-                                        if function_name == "google_search" and "query" in function_args:
-                                            # In CLI mode, we use a simulated implementation
-                                            try:
-                                                query = function_args["query"]
-                                                verbosity_controller.show_verbose(f"Using simulated search for '{query}' in CLI mode")
-                                                verbosity_controller.show_warning("Note: For real Google Search, use this agent in ADK deployment mode")
-
-                                                # Simulated search results based on common queries
-                                                if "lithium" in query.lower() or "battery" in query.lower() or "batteries" in query.lower():
-                                                    search_results = [
-                                                        {
-                                                            "title": "Lithium-ion battery - Wikipedia",
-                                                            "url": "https://en.wikipedia.org/wiki/Lithium-ion_battery",
-                                                            "snippet": "A lithium-ion battery is a type of rechargeable battery that uses lithium ions as the primary component of its electrolyte. They are commonly used in portable electronics and electric vehicles and are growing in popularity for military and aerospace applications.",  # noqa: E501
-                                                        },
-                                                        {
-                                                            "title": "How Do Lithium Batteries Work? - Science ABC",
-                                                            "url": "https://www.scienceabc.com/innovation/how-do-lithium-ion-batteries-work.html",
-                                                            "snippet": "Lithium batteries work by the movement of lithium ions from the negative electrode through an electrolyte to the positive electrode during discharge, and back when charging. They offer high energy density and low self-discharge rates compared to other battery technologies.",  # noqa: E501
-                                                        },
-                                                        {
-                                                            "title": "Environmental Impact of Lithium Batteries - National Geographic",
-                                                            "url": "https://www.nationalgeographic.com/environment/article/lithium-batteries-environment",
-                                                            "snippet": "While lithium batteries power clean energy technologies, their production has significant environmental impacts. Mining lithium requires vast amounts of water and can cause pollution. Researchers are working on more sustainable extraction methods and recycling programs.",  # noqa: E501
-                                                        },
-                                                    ]
-                                                elif "ai" in query.lower() or "artificial intelligence" in query.lower() or "llm" in query.lower():
-                                                    search_results = [
-                                                        {
-                                                            "title": "What is Artificial Intelligence (AI)? - IBM",
-                                                            "url": "https://www.ibm.com/topics/artificial-intelligence",
-                                                            "snippet": "Artificial intelligence is a field of computer science that aims to create systems capable of performing tasks that typically require human intelligence. These include visual perception, speech recognition, decision-making, and language translation.",  # noqa: E501
-                                                        },
-                                                        {
-                                                            "title": "Large Language Models: A New Frontier in AI - Stanford HAI",
-                                                            "url": "https://hai.stanford.edu/news/large-language-models-new-frontier-ai",
-                                                            "snippet": "Large Language Models (LLMs) like GPT-4, Claude, and Gemini represent a significant advancement in AI technology, capable of generating human-like text, translating languages, and even writing code based on natural language instructions.",  # noqa: E501
-                                                        },
-                                                        {
-                                                            "title": "The State of AI in 2024 - MIT Technology Review",
-                                                            "url": "https://www.technologyreview.com/2024/01/10/the-state-of-ai-2024/",
-                                                            "snippet": "2024 has seen significant advancements in multimodal AI systems, regulatory frameworks for AI governance, and increased focus on AI safety and alignment. Companies are investing billions in AI research and infrastructure.",  # noqa: E501
-                                                        },
-                                                    ]
-                                                else:
-                                                    # Default results for other queries
-                                                    search_results = [
-                                                        {
-                                                            "title": f"Search result 1 for: {query}",
-                                                            "url": "https://example.com/result1",
-                                                            "snippet": f"This is a simulated search result for '{query}'. In a real implementation, this would connect to an actual search API and return relevant results.",  # noqa: E501
-                                                        },
-                                                        {
-                                                            "title": f"Search result 2 for: {query}",
-                                                            "url": "https://example.com/result2",
-                                                            "snippet": f"More information about '{query}'. This is a demonstration of the search capability, showing how search results would be formatted.",  # noqa: E501
-                                                        },
-                                                        {
-                                                            "title": f"Search result 3 for: {query}",
-                                                            "url": "https://example.com/result3",
-                                                            "snippet": f"Additional details related to '{query}'. In a production environment, these results would be from actual web sources.",  # noqa: E501
-                                                        },
-                                                    ]
-
-                                                # Format the results
-                                                formatted_results = [f"Search results for '{query}':\n"]
-
-                                                for i, result in enumerate(search_results, 1):
-                                                    formatted_results.append(f"{i}. {result['title']}")
-                                                    formatted_results.append(f"   URL: {result['url']}")
-                                                    formatted_results.append(f"   {result['snippet']}")
-                                                    formatted_results.append("")
-
-                                                function_response = "\n".join(formatted_results)
-                                                verbosity_controller.show_verbose(f"Generated search results for: {query}")
-                                            except Exception as e:
-                                                import traceback
-
-                                                error_trace = traceback.format_exc()
-                                                verbosity_controller.show_error(f"Error executing search: {e!s}")
-                                                verbosity_controller.show_debug(error_trace)
-                                                function_response = f"Error executing search: {e!s}"
-
-                                        elif function_name == "list_dir" and "path" in function_args:
-                                            import os
-
-                                            try:
-                                                path = function_args["path"]
-                                                if os.path.exists(path) and os.path.isdir(path):
-                                                    files = os.listdir(path)
-                                                    file_list = "\n".join(files)
-                                                    function_response = f"Files in {path}:\n\n{file_list}"
-                                                else:
-                                                    function_response = f"Directory not found or not a directory: {path}"
-                                            except Exception as e:
-                                                function_response = f"Error listing directory: {e!s}"
-
-                                        print(f"[dim]{function_response}[/dim]")
-
-                                        # Now get a response with the function result
-                                        try:
-                                            function_result_prompt = f"""You are a helpful, friendly AI assistant with access to various tools AND a wealth of built-in knowledge.
-
-Previous conversation:
-{history_text}
-
-User query: {user_input}
-
-You called the function {function_name} with arguments {function_args}.
-The function returned this result:
-{function_response}
-
-Based on this information, provide a helpful, conversational response that directly answers the user's question.
-Be engaging and natural in your tone. If the search results are not sufficient, you can still draw on your built-in knowledge to provide a complete answer.
-If appropriate, suggest follow-up questions the user might be interested in."""  # noqa: E501
-
-                                            new_response = model.generate_content(function_result_prompt)
-                                            if new_response and hasattr(new_response, "candidates") and new_response.candidates:
-                                                candidate = new_response.candidates[0]
-                                                if hasattr(candidate, "content") and hasattr(candidate.content, "parts"):
-                                                    parts = candidate.content.parts
-                                                    if parts and hasattr(parts[0], "text"):
-                                                        response_text = parts[0].text
-                                                    else:
-                                                        response_text = "I couldn't extract a proper response from the tool results."
-                                                else:
-                                                    response_text = "I couldn't process the tool results properly."
-                                            else:
-                                                response_text = "I wasn't able to process the tool results properly."
-                                        except Exception as e:
-                                            response_text = f"I called the {function_name} tool, but encountered an error processing the results: {e!s}"
-
-                                        # Create assistant event with the tool result
-                                        assistant_event = Event(author="assistant", content=genai_types.Content(parts=[genai_types.Part(text=response_text)]))
-                                        session_service.append_event(session=current_session, event=assistant_event)
-                                        break
-                            else:
-                                # No function call, just use the text response
-                                if hasattr(candidate.content, "text"):
-                                    response_text = candidate.content.text
-                                else:
-                                    # If no direct text property, extract from parts
-                                    if hasattr(candidate.content, "parts") and candidate.content.parts:
-                                        parts = candidate.content.parts
-                                        if parts and hasattr(parts[0], "text"):
-                                            response_text = parts[0].text
-                                        else:
-                                            response_text = "I couldn't extract a proper response."
-                                    else:
-                                        response_text = "I wasn't able to generate a proper response."
-
-                                # Create assistant event with the text
-                                assistant_event = Event(author="assistant", content=genai_types.Content(parts=[genai_types.Part(text=response_text)]))
-                                session_service.append_event(session=current_session, event=assistant_event)
-                        else:
-                            # Fallback for any other response format
-                            if hasattr(response, "text"):
-                                response_text = response.text
-
-                                # Create assistant event with the text
-                                assistant_event = Event(author="assistant", content=genai_types.Content(parts=[genai_types.Part(text=response_text)]))
-                                session_service.append_event(session=current_session, event=assistant_event)
+                        runner = Runner(session_service=session_service, app_name="code_agent", agent=root_agent)
+                        # Make sure we call run on the runner instance with required parameters
+                        runner.run(user_id="cli_user", session_id=current_session_id, new_message=message_content)
                 except Exception as e:
+                    print(f"[bold red]Error while getting response:[/bold red] {e}")
                     import traceback
 
-                    print(f"[bold red]Error while getting response:[/bold red] {e}")
                     traceback.print_exc()
                     response_text = f"Error: {e!s}"
 
-                # Display the final response
-                if response_text:
-                    print(Markdown(response_text))
-                else:
-                    print("[italic yellow]No response generated[/italic yellow]")
-
-                # Exit after first response in non-interactive mode
-                if not is_interactive:
-                    verbosity_controller.show_verbose("Exiting after first response in non-interactive mode.")
-                    break
-
+                    # Create a minimal error response to ensure the conversation can continue
+                    assistant_event = Event(author="assistant", content=genai_types.Content(parts=[genai_types.Part(text=response_text)]))
+                    session_service.append_event(session=current_session, event=assistant_event)
             except KeyboardInterrupt:
-                print("\n[bold yellow]Chat interrupted. Exiting.[/bold yellow]")
+                # Graceful exit on Ctrl+C
+                console.print("\n[bold yellow]Interrupted. Exiting chat session.[/bold yellow]")
                 break
-            except Exception as e:
-                print(f"[bold red]An unexpected error occurred:[/bold red] {e}")
-                import traceback
 
-                traceback.print_exc()
-                if not is_interactive:
-                    break
-    finally:
-        # No explicit cleanup needed for InMemorySessionService
-        pass
+        # Always print goodbye message when exiting
+        console.print("[bold green]Thank you for using the chat interface![/bold green]")
+
+    except Exception as e:
+        # Last-resort error handling
+        verbosity_controller.show_error(f"Unexpected error: {e!s}")
+        import traceback
+
+        traceback.print_exc()
+        raise typer.Exit(code=1) from e
 
 
 # --- Config Commands ---

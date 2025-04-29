@@ -8,6 +8,8 @@
 
 It allows interaction with various AI providers (OpenAI, Groq, etc. via LiteLLM) and empowers the agent with capabilities to interact with the local environment, such as reading files, applying edits (with confirmation), and executing native commands (with confirmation and allowlisting).
 
+DISCLAIMER: This repo and the tool itself is 99.95% built by LLM models such as Gemini 2.5 Pro and Claude 3.7 Sonnet! The remaining 0.05% goes to my prompts, designs, and gaurdrails to keep the agents in-check. 😜
+
 *(Work in progress)*
 
 ## Repository Structure
