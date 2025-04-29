@@ -220,18 +220,17 @@ def main(
     config = get_config()  # Get the fully processed config
 
     # Configure Google Generative AI based on the effective config
-    # Try GOOGLE_API_KEY first, then AI_STUDIO_API_KEY
-    # Access keys directly from the main config object, as dotenv loads them there
-    google_api_key_val = config.google_api_key or config.ai_studio_api_key
+    # Try ai_studio key first (formerly GOOGLE_API_KEY and AI_STUDIO_API_KEY)
+    from code_agent.config import get_api_key
+
+    google_api_key_val = get_api_key("ai_studio")
     if google_api_key_val:
-        # Determine which key was used for the message
-        key_source = "GOOGLE_API_KEY" if config.google_api_key else "AI_STUDIO_API_KEY"
-        print(f"Initializing Google Generative AI with API key from {key_source}")
+        print("Initializing Google Generative AI with API key from AI_STUDIO_API_KEY")
         genai.configure(api_key=google_api_key_val)
     else:
         # Only warn if a Google provider is likely intended
         if config.default_provider in ["google", "ai_studio", "vertexai"]:
-            print("WARNING: No Google API key found (GOOGLE_API_KEY or AI_STUDIO_API_KEY).")
+            print("WARNING: No Google API key found (AI_STUDIO_API_KEY).")
             print("         Google models may not work without an API key or appropriate ADC.")
         # Note: Other providers (OpenAI, Anthropic, etc.) are configured via litellm
 
