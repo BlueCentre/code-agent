@@ -23,7 +23,7 @@ jobs:
         cache-dependency-glob: "pyproject.toml uv.toml"
 
     - name: Install build dependencies
-      run: uv pip install --system build twine setuptools wheel
+      run: uv pip install build twine setuptools wheel
 
     - name: Build package
       run: uv run python -m build
