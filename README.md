@@ -15,38 +15,50 @@ DISCLAIMER: This repo and the tool itself is 99.95% built by LLM models such as 
 ## Repository Structure
 
 ```
-cli-agent/
+.
 ├── code_agent/       # Main package source code
-│   ├── adk/          # Google ADK integration
-├── sandbox/          # Experimentation environment
-│   └── adk_sandbox.py # ADK testing sandbox
+│   ├── agent/        # Core agent logic and ADK agent implementations
+│   ├── adk/          # Google ADK specific integration components
+│   ├── cli/          # Command-Line Interface setup (Typer)
+│   ├── config/       # Configuration management
+│   ├── tools/        # Native tool implementations for the agent
+│   └── verbosity/    # Verbosity and logging setup
+├── sandbox/          # Experimentation and ADK testing environment
+│   ├── agent_adk_runner/ # Simple ADK runner for testing
+│   └── ...           # ADK test scripts
 ├── tests/            # Unit and integration tests
 ├── docs/             # Documentation files
-│   ├── architecture.md
 │   ├── CONTRIBUTING.md
-│   ├── migration_notes/ # ADK migration documentation
+│   ├── architecture.md
 │   ├── testing.md
-│   ├── feature_*.md          # Feature-specific documentation
-│   ├── getting_started_*.md  # Getting started guides
-│   ├── planning_*.md         # Planning documents
-│   └── ...                   # Other documentation
-├── scripts/          # Utility scripts
-│   ├── run_coverage_pipeline.sh
-│   ├── run_coverage_pipeline_venv.sh
-│   └── run_tests.sh
-├── .githooks/        # Optional but good to keep AI agents from straying
+│   └── ...           # Other guides and documentation
+├── scripts/          # Utility scripts (testing, setup, etc.)
+├── .githooks/        # Git hooks for quality checks
 ├── .github/          # GitHub Actions workflows
-├── .venv/            # Virtual environment directory (if using venv)
-├── pyproject.toml    # Project dependencies and configuration
-└── README.md         # Project documentation
+├── .venv/            # Virtual environment (typically excluded)
+├── .gitignore        # Specifies intentionally untracked files
+├── .pre-commit-config.yaml # Pre-commit hook configurations
+├── .python-version   # Specifies Python version for pyenv
+├── CHANGELOG.md      # Log of changes per version
+├── LICENSE           # Project license file
+├── Makefile          # Make commands for development tasks
+├── pyproject.toml    # Project metadata, dependencies (PEP 621), and tool configs
+├── README.md         # This file
+├── sonar-project.properties # SonarCloud analysis configuration
+├── uv.lock           # Pinned dependencies for UV
+└── uv.toml           # UV project configuration (if used)
+
 ```
 
 ### Key Directories
 
-- **code_agent/**: Contains the main source code for the CLI tool
-- **tests/**: Test suite for ensuring code quality and functionality
-- **docs/**: Project documentation and guides
-- **scripts/**: Utility scripts for development, testing, and CI/CD pipelines
+- **code_agent/**: Contains the core source code for the CLI tool and agent logic.
+- **sandbox/**: Environment for experimentation and testing, particularly ADK features.
+- **tests/**: Test suite covering unit and integration tests.
+- **docs/**: Project documentation, guides, and architectural information.
+- **scripts/**: Utility scripts aiding development, testing, and CI/CD.
+- **.github/**: Contains GitHub Actions workflow definitions.
+- **.githooks/**: Local Git hooks to enforce standards before committing/pushing.
 
 ### Documentation
 
@@ -67,12 +79,14 @@ cli-agent/
     * **Interactive Chat:** Engage in conversational sessions (`code-agent chat`)
     * Special chat commands: `/help`, `/clear`, `/exit`, `/quit`
 
-*   **Local Environment Integration:**
-    * **Read files:** Agent can access and analyze local files
-    * **Apply Edits:** Propose file changes with diff preview and confirmation
-    * **Execute Commands:** Run native terminal commands with safety checks
-    * **Search Capabilities:** Find files, locate code patterns, and analyze codebases
-    * **Web Search:** Access online information directly within the CLI for research and problem-solving
+*   **Local Environment Integration (Agent Tools):**
+    * **File System Access:** Read file contents (`read_file`), list directory contents (`list_dir`).
+    * **Code Manipulation:** Propose file edits with diff preview and confirmation (`edit_file`).
+    * **Command Execution:** Run native terminal commands with safety checks and allowlisting (`run_terminal_cmd`).
+    * **Code Search:** Semantic search across the codebase (`codebase_search`).
+    * **Text/Pattern Search:** Find exact text or regex patterns within files (`grep_search`).
+    * **File Search:** Locate files using fuzzy path matching (`file_search`).
+    * **Web Search:** Access up-to-date online information (`web_search`).
 
 *   **Advanced Security Controls:**
     * Path validation to prevent path traversal attacks
@@ -93,316 +107,78 @@ cli-agent/
 
 ## Quick Start
 
+This section describes how to quickly install and run Code Agent as a user. For development or contribution, please see the [Development & Contributing](#development--contributing) section.
+
 ### Installation
 
-First, install the UV package manager (optional but recommended for faster installation):
-
-```bash
-# Install UV on macOS/Linux
-curl -fsSL https://astral.sh/uv/install.sh | bash
-
-# Or with pip
-pip install uv
-```
-
-Then, install the CLI Code Agent:
-
-```bash
-# Installing code-agent from local source
-uv add cli-code-agent
-uv run code-agent chat
-
-# Or using uvx
-uvx --from cli-code-agent code-agent chat
-
-# Or uaing uvx from GitHub main branch
-uvx --from git+https://github.com/BlueCentre/code-agent.git@main code-agent chat
-```
-
-## Development
-
-### Setting Up Development Environment
-
-The project supports two package managers: Poetry (default) and UV (recommended for faster installation).
-
-#### Quick Setup (Recommended)
-
-Run our setup script which detects available package managers and sets up the environment automatically:
-
-```bash
-# Clone the repository
-git clone https://github.com/your-username/code-agent.git
-cd code-agent
-
-# Run the setup script (automatically uses UV if available)
-./scripts/setup_dev_env.sh
-```
-
-#### Manual Setup
-
-If you prefer to set up manually:
-
-```bash
-# Create and sync virtual environment
-uv venv
-uv sync  # On Windows: .venv\Scripts\activate
-
-# Install pre-commit hooks
-pre-commit install
-```
-
-### Development Commands
-
-The project includes a Makefile with the following commands:
-
-| Command | Description |
-|---------|-------------|
-| `make setup-dev` | Set up development environment (creates .venv and installs dependencies) |
-| `make test` | Run all tests |
-| `make test-unit` | Run only unit tests |
-| `make test-integration` | Run only integration tests |
-| `make test-coverage` | Run tests with coverage report (fails if less than 80% coverage) |
-| `make test-report` | Run tests with coverage and open HTML report |
-| `make lint` | Check code style using Ruff |
-| `make format` | Format code using Ruff |
-| `make clean` | Clean build artifacts and caches |
-
-#### UV-specific Commands
-
-If you have UV installed, these commands offer faster performance:
-
-```bash
-make test    # Run tests using UV
-make lint    # Check code style using UV
-make format  # Format code using UV
-```
-
-### Running ADK Agents
-
-This project includes agents compatible with the Google Agent Development Kit (ADK).
-You can run these agents directly using the `adk run` command within the activated development environment (e.g., using `uv run adk run ...`).
-
-Make sure you have installed the ADK (`uv add google-adk`).
-
-Available agents and their run commands:
-
-*   **Software Engineer Agent:**
+1.  **Install UV:** Code Agent uses [UV](https://github.com/astral-sh/uv) for package management. Install it first:
     ```bash
-    # using uvx to run the agent and scoped to the software_engineer directory
-    cd code_agent/agent/software_engineer && uvx --from git+https://github.com/google/adk-python.git@main adk run software_engineer
-
-    # using uvx to run the agent in web mode and scoped to the software_engineer directory
-    cd code_agent/agent/software_engineer && uvx --from git+https://github.com/google/adk-python.git@main adk web
-
-    # or using uvx to run the agent and scoped to the top level directory
-    uvx --from git+https://github.com/google/adk-python.git@main adk run code_agent/agent/software_engineer/software_engineer
-
-    # or using uvx to run the agent in web mode and scoped to the top level directory
-    uvx --from git+https://github.com/google/adk-python.git@main adk web code_agent/agent/software_engineer
+    # Install UV on macOS/Linux
+    curl -fsSL https://astral.sh/uv/install.sh | sh
     ```
-*   **Travel Concierge Agent:** (Assuming similar structure)
+    *See the [UV documentation](https://astral.sh/uv/install) for other installation methods.*
+
+2.  **Install Code Agent:**
     ```bash
-    #uv run adk run code_agent/agent/travel-concierge
-    cd code_agent/agent/travel-concierge && ./start_run.sh
+    # Install using UV
+    uv pip install cli-code-agent
     ```
-*   **Sandbox ADK Runner:** (Simple test runner)
+    *(Assuming the package is published as `cli-code-agent` on PyPI)*
+
+    **Alternative (Run directly from GitHub without installing):**
     ```bash
-    uv run adk run sandbox/agent_adk_runner
+    # Using uvx to run the latest version from the main branch
+    uvx --from git+https://github.com/BlueCentre/code-agent.git@main code-agent --help
     ```
-
-### Testing
-
-Tests are written using pytest and are located in the `tests/` directory:
-
-- `tests/unit/`: Unit tests for individual components
-- `tests/integration/`: Integration tests for components working together
-- `tests/fixtures/`: Test fixtures and shared test utilities
-
-Run tests with:
-
-```bash
-# Run all tests
-make test
-# or
-uv run python -m pytest
-
-# Run with coverage report
-make test-coverage
-# or
-uv run python -m pytest tests/ --cov=code_agent --cov-report=term --cov-report=html --cov-fail-under=80
-```
-
-## Upgrading
-
-To upgrade Code Agent to the latest version:
-
-```bash
-# Using uv (not required)
-uv pip install --upgrade cli-code-agent
-```
-
-After upgrading, verify your installation:
-
-```bash
-uv run code-agent --version
-```
-
-If you're using Ollama integration, ensure your local Ollama installation is also up to date:
-
-```bash
-# On macOS with Homebrew
-brew upgrade ollama
-
-# Or download the latest version from https://ollama.ai/download
-```
 
 ### Verify Installation
 
-After installation, make sure the executable is in your PATH. If you can't run the `code-agent` command, you may need to add the installation directory to your PATH:
+After installation, check that the command is available:
 
 ```bash
-# Execute command with help
-uv run code-agent --help
+code-agent --help
 ```
+
+*If the `code-agent` command is not found, you may need to ensure the installation location's `bin` directory (where UV installs packages, often similar to pip's locations like `~/.local/bin`) is included in your system's `PATH` environment variable.*
 
 ### First Run
 
-After installation, set up your API key (for OpenAI in this example):
+Code Agent requires API keys for the LLM providers you want to use. Google AI Studio is the default provider.
 
-```bash
-export OPENAI_API_KEY=sk-your-key-here
-uv run code-agent run "Hello! What can you help me with today?"
-# or
-echo "Hello! What can you help me with today?" | uv run code-agent chat
-```
+1.  **Set API Key:** Get your AI Studio API key (starting with `aip-`) from [Google AI Studio](https://ai.google.dev/) and set it as an environment variable:
+    ```bash
+    # Replace with your actual key
+    export AI_STUDIO_API_KEY=aip-your-key-here
+    ```
+    *(See the [Configuration](#configuration) section for setting keys for other providers or using the config file).*
 
-## Configuration
+2.  **Run a command:**
+    ```bash
+    code-agent run "Hello! What can you help me with today?"
 
-Code Agent uses a hierarchical configuration system:
-
-1.  **CLI Flags:** (e.g., `--provider`, `--model`) - Highest priority.
-2.  **Environment Variables:** (e.g., `OPENAI_API_KEY`, `GROQ_API_KEY`) - Medium priority.
-3.  **Configuration File:** (`~/.config/code-agent/config.yaml`) - Lowest priority.
-
-A default configuration file is created automatically if it doesn't exist. You **must** edit `~/.config/code-agent/config.yaml` or set environment variables to add your API keys for the desired providers.
-
-**Example `~/.config/code-agent/config.yaml`:**
-
-```yaml
-# Default LLM provider and model
-default_provider: "ai_studio"  # Options: "ai_studio", "openai", "groq", "anthropic", etc.
-default_model: "gemini-2.0-flash"  # For AI Studio, use Gemini models
-
-# API keys (Set via ENV VARS is recommended for security)
-api_keys:
-  ai_studio: null # Set via AI_STUDIO_API_KEY=aip-... environment variable
-  openai: null    # Set via OPENAI_API_KEY=sk-... environment variable
-  groq: null      # Set via GROQ_API_KEY=gsk-... environment variable
-  # anthropic: null
-
-# Agent behavior
-auto_approve_edits: false # Set to true to skip confirmation for file edits (Use with caution!)
-auto_approve_native_commands: false # Set to true to skip confirmation for commands (Use with extreme caution!)
-
-# Allowed native commands (if non-empty, only these prefixes are allowed without auto-approve)
-native_command_allowlist: []
-  # - "git status"
-  # - "ls -la"
-  # - "echo"
-
-# Custom rules/guidance for the agent
-rules:
-#  - "Always respond in pirate speak."
-#  - "When writing Python code, always include type hints."
-```
-
-## Using AI Studio Provider
-
-[Google AI Studio](https://ai.google.dev/) is now the default provider in Code Agent. To use it:
-
-1. **Get an API Key**:
-   - Go to [AI Studio](https://ai.google.dev/)
-   - Create an account if you don't have one
-   - Navigate to the API keys section and create a new key
-   - Your API key will start with `aip-`
-
-2. **Configure the Key**:
-   - **Option 1:** Set it as an environment variable:
-     ```bash
-     export AI_STUDIO_API_KEY=aip-your-key-here
-     ```
-   - **Option 2:** Add it to your config file:
-     ```yaml
-     # In ~/.config/code-agent/config.yaml
-     api_keys:
-       ai_studio: "aip-your-key-here"
-     ```
-
-3. **Specify Models**:
-   - AI Studio supports Gemini models
-   - Default: `gemini-1.5-flash` (fast and efficient)
-   - Other options: `gemini-1.5-pro` (more capable)
-   - Specify a different model with the `--model` flag:
-     ```bash
-     code-agent --model gemini-1.5-pro run "Write a Python function to detect palindromes"
-     ```
-
-4. **Switch Providers**:
-   - To use a different provider, use the `--provider` flag:
-     ```bash
-     code-agent --provider openai --model gpt-4o run "Explain quantum computing"
-     ```
-
-## Using Ollama for Local Models
-
-Code Agent includes integration with [Ollama](https://ollama.ai/) to run open-source models locally on your machine:
-
-1. **Install Ollama**:
-   - Download and install Ollama from [https://ollama.ai/download](https://ollama.ai/download)
-   - Start the Ollama service with `ollama serve`
-
-2. **Pull Models**:
-   - Pull the models you want to use:
-     ```bash
-     ollama pull llama3
-     ollama pull codellama:13b
-     ```
-
-3. **Use the Ollama Commands**:
-   - List available models:
-     ```bash
-     code-agent ollama list
-     ```
-   - Chat with a model:
-     ```bash
-     code-agent ollama chat llama3:latest "Explain how to use async/await in JavaScript"
-     ```
-   - Add a system prompt:
-     ```bash
-     code-agent ollama chat codellama:13b "Write a sorting algorithm" --system "You are a helpful coding assistant"
-     ```
-
-4. **Advantages of Local Models**:
-   - No API key required
-   - Complete privacy - all data stays on your machine
-   - No usage costs
-   - Customizable with fine-tuning options
+    # Or start an interactive chat session
+    code-agent chat
+    ```
 
 ## Usage
-
-Activate the virtual environment first: `source .venv/bin/activate`
 
 **Core Commands:**
 
 *   **Run a single prompt:**
     ```bash
+    # Using default provider (AI Studio)
     code-agent run "Explain the difference between a list and a tuple in Python."
+
+    # Specifying provider and model
     code-agent --provider groq --model llama3-70b-8192 run "Write a Dockerfile for a simple Flask app."
     ```
 *   **Start interactive chat:**
     ```bash
+    # Using default provider
     code-agent chat
-    code-agent --provider openai chat # Start chat using a specific provider
+
+    # Specifying provider
+    code-agent --provider openai chat
     ```
     (Type `quit` or `exit` to leave the chat)
 
@@ -410,7 +186,13 @@ Activate the virtual environment first: `source .venv/bin/activate`
     - `/help` - Show available commands
     - `/clear` - Clear the conversation history
     - `/exit` or `/quit` - Exit the chat session
-    - `/test` - Special command used for automated testing
+
+*   **Interact with local Ollama models:**
+    ```bash
+    code-agent ollama list # List available local models
+    code-agent ollama chat llama3 "Ask a question..." # Chat with a specific model
+    ```
+    *(See the [Using Ollama](#using-ollama-for-local-models) section for details)*
 
 **Configuration Management:**
 
@@ -448,180 +230,334 @@ Activate the virtual environment first: `source .venv/bin/activate`
     code-agent config --help
     ```
 
-## Development Installation
+## Configuration
 
-1.  **Prerequisites:**
-    *   Python 3.11+
-    *   [UV](https://github.com/astral-sh/uv) - for faster dependency installation
+Code Agent uses a hierarchical configuration system:
 
-2.  **Clone the repository:**
-    ```bash
-    git clone <repository_url> # Replace with your repo URL
-    cd code-agent # Or your project directory name
-    ```
+1.  **CLI Flags:** (e.g., `--provider`, `--model`) - Highest priority.
+2.  **Environment Variables:** (e.g., `OPENAI_API_KEY`, `GROQ_API_KEY`) - Medium priority.
+3.  **Configuration File:** (`~/.config/code-agent/config.yaml`) - Lowest priority.
 
-3.  **Create virtual environment and install dependencies:**
-    ```bash
-    # Recommended: Use UV as the Python package manager
-    uv venv # 1. Create the virtual environment
-    uv sync # 2. Install dependencies
-    ```
+A default configuration file is created automatically if it doesn't exist. You **must** edit `~/.config/code-agent/config.yaml` or set environment variables to add your API keys for the desired providers.
 
-## Contributors
+**Example `~/.config/code-agent/config.yaml`:**
+
+```yaml
+# Default LLM provider and model
+default_provider: "ai_studio"  # Options: "ai_studio", "openai", "groq", "anthropic", etc.
+default_model: "gemini-1.5-flash"  # For AI Studio, use Gemini models
+
+# API keys (Set via ENV VARS is recommended for security)
+api_keys:
+  ai_studio: null # Set via AI_STUDIO_API_KEY=aip-... environment variable
+  openai: null    # Set via OPENAI_API_KEY=sk-... environment variable
+  groq: null      # Set via GROQ_API_KEY=gsk-... environment variable
+  # anthropic: null
+
+# Agent behavior
+auto_approve_edits: false # Set to true to skip confirmation for file edits (Use with caution!)
+auto_approve_native_commands: false # Set to true to skip confirmation for commands (Use with extreme caution!)
+
+# Allowed native commands (if non-empty, only these prefixes are allowed without auto-approve)
+native_command_allowlist: []
+  # - "git status"
+  # - "ls -la"
+  # - "echo"
+
+# Custom rules/guidance for the agent
+rules:
+#  - "Always respond in pirate speak."
+#  - "When writing Python code, always include type hints."
+```
+
+### Using AI Studio Provider
+
+[Google AI Studio](https://ai.google.dev/) is now the default provider in Code Agent. To use it:
+
+1. **Get an API Key**:
+   - Go to [AI Studio](https://ai.google.dev/)
+   - Create an account if you don't have one
+   - Navigate to the API keys section and create a new key
+   - Your API key will start with `aip-`
+
+2. **Configure the Key**:
+   - **Option 1:** Set it as an environment variable:
+     ```bash
+     export AI_STUDIO_API_KEY=aip-your-key-here
+     ```
+   - **Option 2:** Add it to your config file:
+     ```yaml
+     # In ~/.config/code-agent/config.yaml
+     api_keys:
+       ai_studio: "aip-your-key-here"
+     ```
+
+3. **Specify Models**:
+   - AI Studio supports Gemini models
+   - Default: `gemini-1.5-flash` (fast and efficient)
+   - Other options: `gemini-1.5-pro` (more capable)
+   - Specify a different model with the `--model` flag:
+     ```bash
+     code-agent --model gemini-1.5-pro run "Write a Python function to detect palindromes"
+     ```
+
+4. **Switch Providers**:
+   - To use a different provider, use the `--provider` flag:
+     ```bash
+     code-agent --provider openai --model gpt-4o run "Explain quantum computing"
+     ```
+
+### Using Ollama for Local Models
+
+Code Agent includes integration with [Ollama](https://ollama.ai/) to run open-source models locally on your machine:
+
+1. **Install Ollama**:
+   - Download and install Ollama from [https://ollama.ai/download](https://ollama.ai/download)
+   - Start the Ollama service with `ollama serve`
+
+2. **Pull Models**:
+   - Pull the models you want to use:
+     ```bash
+     ollama pull llama3
+     ollama pull codellama:13b
+     ```
+
+3. **Use the Ollama Commands**:
+   - List available models:
+     ```bash
+     code-agent ollama list
+     ```
+   - Chat with a model:
+     ```bash
+     code-agent ollama chat llama3:latest "Explain how to use async/await in JavaScript"
+     ```
+   - Add a system prompt:
+     ```bash
+     code-agent ollama chat codellama:13b "Write a sorting algorithm" --system "You are a helpful coding assistant"
+     ```
+
+4. **Advantages of Local Models**:
+   - No API key required
+   - Complete privacy - all data stays on your machine
+   - No usage costs
+   - Customizable with fine-tuning options
+
+## Development & Contributing
 
 We welcome contributions to the Code Agent project! Whether you're fixing bugs, adding features, improving documentation, or reporting issues, your help is appreciated.
 
-Please see our [Contributing Guide](docs/CONTRIBUTING.md) for details on:
-
-- Setting up your development environment
-- Our coding standards and requirements
-- The branch naming convention and git workflow
-- Pull request process and requirements
-- Testing guidelines
+Please see our [Contributing Guide](docs/CONTRIBUTING.md) for detailed contribution guidelines, including coding standards, branch naming conventions, and the pull request process.
 
 The project maintains high standards for code quality with:
 - Minimum 80% test coverage requirement
-- Comprehensive CI/CD pipeline
+- Comprehensive CI/CD pipeline using GitHub Actions
 - Conventional commit message format
 - Squash merging for a clean history
 
-### Development Workflow
+### Setting Up Development Environment
 
-This project follows a standardized Git workflow to ensure code quality and maintainability:
+1.  **Prerequisites:**
+    *   Python 3.11+
+    *   [UV](https://github.com/astral-sh/uv) installed (See [UV installation guide](https://astral.sh/uv/install))
 
-- All new features, bug fixes, and changes are implemented in feature branches
-- Branch names follow the convention: `<type>/<description>` (e.g., `feat/user-auth`, `fix/login-bug`)
-- Commit messages follow the [Conventional Commits](https://www.conventionalcommits.org/) format
-- Pull requests include automated test results and coverage reports as comments
-- See [Git Development Documentation](docs/git_development.md#git-workflow) for complete details
+2.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/BlueCentre/code-agent.git
+    cd code-agent
+    ```
 
-### Quick Example: Creating a Feature Branch
+3.  **Set up the environment:**
+    *   **Recommended (Quick Setup):** Run the setup script. This creates a virtual environment, installs dependencies using UV, and installs Git hooks.
+        ```bash
+        ./scripts/setup_dev_env.sh
+        ```
+    *   **Manual Setup (using UV):**
+        ```bash
+        # Create virtual environment
+        uv venv
+        # Install dependencies (including development dependencies)
+        uv sync --all-extras
+        # Install pre-commit hooks
+        uv run pre-commit install
+        ```
+
+### Development Commands
+
+The project includes a Makefile for common tasks, leveraging UV for execution. Activate your virtual environment (`source .venv/bin/activate`) before running these.
+
+| Command             | Description                                                      |
+| ------------------- | ---------------------------------------------------------------- |
+| `make test`         | Run all tests using pytest.                                       |
+| `make test-unit`    | Run only unit tests (`@pytest.mark.unit`).                       |
+| `make test-coverage`  | Run tests with coverage report (fails if below 80%).             |
+| `make test-report`  | Run tests with coverage and open the HTML report.                |
+| `make lint`         | Check code style and formatting using Ruff.                      |
+| `make format`       | Format code using Ruff.                                          |
+| `make clean`        | Remove build artifacts, caches, and coverage reports.            |
+| `make code-agent-chat`| Start the interactive chat using the development version.        |
+| `make swe-run-chat` | Run the Software Engineer ADK agent (console mode).              |
+| `make swe-web-chat` | Run the Software Engineer ADK agent (web UI mode).               |
+
+### Git Workflow
+
+This project follows a standardized Git workflow:
+
+- **Branches:** All changes are made in feature branches named `<type>/<description>` (e.g., `feat/user-auth`, `fix/login-bug`). Use the script:
+  ```bash
+  ./scripts/create-branch.sh feat new-feature
+  ```
+- **Commits:** Messages must follow the [Conventional Commits](https://www.conventionalcommits.org/) format.
+  ```bash
+  git commit -m "feat: add new feature"
+  ```
+- **Pushing:**
+  ```bash
+  git push -u origin feat/new-feature
+  ```
+- See [Git Development Documentation](docs/git_development.md#git-workflow) for complete details.
+
+### Git Hooks
+
+This project uses [pre-commit](https://pre-commit.com/) to manage Git hooks and ensure code quality before commits. The hooks are defined in `.pre-commit-config.yaml`.
+
+Hooks (like linting and formatting) are automatically run on `git commit`.
+
+**Installation:** The hooks are installed automatically when you run the setup script (`./scripts/setup_dev_env.sh`). If you set up the environment manually, ensure you run:
+```bash
+uv run pre-commit install
+```
+*This command only needs to be run once after cloning.*
+
+### Testing
+
+Tests are located in the `tests/` directory (structured into `unit`, `integration`, and `fixtures`) and use the `pytest` framework. UV automatically uses the `.venv` virtual environment for the commands below.
+
+**Running Tests:**
+
+Use the Makefile targets:
 
 ```bash
-# Create a new feature branch
-./scripts/create-branch.sh feat new-feature
+# Run all tests
+make test
 
-# Make changes and commit with conventional format
-git commit -m "feat: add new feature"
+# Run only unit tests
+make test-unit
 
-# Push and create a PR
-git push -u origin feat/new-feature
+# Run tests with coverage (fails below 80%)
+make test-coverage
+
+# Run tests with coverage and open HTML report
+make test-report
 ```
+*See `Makefile` or `docs/testing.md` for more details or specific test runs.*
 
-### Running Tests
+**Development Workflow & Testing:**
 
-The project maintains a minimum of 80% test coverage. You can run tests using:
+When developing:
 
-```bash
-# Run tests using the test script
-./scripts/run_tests.sh
-
-# Run tests with coverage report
-./scripts/run_coverage_pipeline_venv.sh
-
-# Run tests for a specific module
-./scripts/run_native_tools_coverage.sh
-```
-
-Test coverage can also be viewed in HTML format with:
-
-```bash
-./scripts/run_tests.sh --html
-```
-
-### Testing Development Code
-
-After checking out the repository, follow these steps to test your development version:
-
-```bash
-# Set up your virtual environment
-uv venv
-
-# Install dependencies
-uv sync
-
-# Install the package in development mode
-uv run python -m pytest
-```
-
-Now you can run the development version directly:
-
-```bash
-# Test the development version with a simple command
-uv run code-agent --version
-
-# Run a simple prompt to test functionality
-uv run code-agent run "Hello, world"
-
-# Run unit tests to ensure your changes don't break existing functionality
-./scripts/run_tests.sh
-```
-
-When making changes to the code:
-1. Make your changes in a feature branch
-2. Run tests to ensure functionality is preserved
-3. Run the linter to ensure code quality standards are met
-4. Test the development version with relevant commands
-
-If you add new commands or features, be sure to add appropriate tests to maintain code coverage.
+1.  Make your changes in a feature branch.
+2.  Test the development version directly using `uv run` or `make`:
+    ```bash
+    # Example: Check version
+    uv run code-agent --version
+    # Example: Run a command
+    uv run code-agent run "Test prompt for my new feature"
+    # Example: Use a make target
+    make code-agent-chat
+    ```
+3.  Run the test suite to check for regressions:
+    ```bash
+    make test
+    # Or run specific tests like 'make test-unit'
+    ```
+4.  Run the linter/formatter:
+    ```bash
+    make lint
+    make format # If needed
+    ```
+5.  If adding new features, ensure you add corresponding tests to maintain coverage >= 80%.
 
 ### Pull Request Process
 
 When submitting a PR:
 
-1. The GitHub Actions CI pipeline will automatically run tests
-2. Coverage reports are posted as comments on the PR
-3. All checks must pass and coverage cannot drop below 80%
-4. At least one reviewer must approve the PR
-5. Use "Squash and merge" to maintain a clean history
+1. The GitHub Actions CI pipeline automatically runs tests, linting, and checks coverage.
+2. Coverage reports are posted as comments on the PR.
+3. All checks must pass, and coverage must remain >= 80%.
+4. At least one reviewer must approve.
+5. Use "Squash and merge" for a clean `main` branch history.
 
-## PR Validation
+### GitHub Actions Workflows
 
-This repository includes an optional PR validation feature that provides immediate feedback on CI/CD checks after pushing changes. See [PR Validation Documentation](docs/PR_VALIDATION.md) for setup instructions.
+This project uses GitHub Actions for automation:
 
-## Development
+- **Pull Request Checks (`pr-workflow.yml`, `test-coverage.yml`, `test-e2e.yml`):** Automatically run on every pull request and push to the `main` branch. These workflows perform:
+    - Linting and code formatting checks.
+    - Unit and integration tests across Python versions.
+    - End-to-end tests.
+    - Code coverage calculation and reporting (including posting results to the PR).
+- **Manual Trigger (`test-coverage.yml`):** The test coverage workflow can also be manually triggered via the GitHub Actions tab (`workflow_dispatch`), useful for testing changes on demand.
+- **Publish (`publish.yml`):** Automatically publishes the package to PyPI when a new release tag is pushed.
+- **Nightly (`nightly.yml`):** Runs scheduled tasks (e.g., checks, updates). *(Verify exact purpose if needed)*
 
-### Git Hooks
+### PR Validation & Monitoring
 
-This project uses Git hooks to maintain code quality and consistency. These hooks are managed in the `.githooks` directory.
+- **Validation:** An optional feature provides immediate feedback on CI/CD checks after pushing changes. See [PR Validation Documentation](docs/PR_VALIDATION.md) for setup.
+- **Monitoring:** Since Git lacks a reliable post-push hook, use a script to monitor PR status:
+  ```bash
+  # Run after pushing to check CI status
+  ./scripts/monitor-pr.sh
+  ```
+  See the [PR Monitoring Script Documentation](./docs/git_development.md#pr-monitoring-and-validation) for details.
 
-- **Pre-commit:** Runs quick checks like linting and formatting.
-- **Post-commit:** Provides commit summaries and guidance.
-- **Pre-push:** Runs more thorough checks before pushing.
+### Running ADK Agents
 
-**Important:** After cloning, install the hooks using:
+This project includes agents compatible with the Google Agent Development Kit (ADK). Ensure you have installed the ADK (`uv add google-adk` or add to `pyproject.toml` and run `uv sync`).
+
+Run agents using `uv run adk run ...` or `uvx ... adk run ...` within the activated environment.
+
+Available agents and example commands:
+
+*   **Software Engineer Agent:**
+    ```bash
+    # Run scoped to agent dir
+    cd code_agent/agent/software_engineer && uvx --from git+https://github.com/google/adk-python.git@main adk run software_engineer
+    # Run web mode scoped to agent dir
+    cd code_agent/agent/software_engineer && uvx --from git+https://github.com/google/adk-python.git@main adk web
+    # Run scoped to top level
+    uvx --from git+https://github.com/google/adk-python.git@main adk run code_agent/agent/software_engineer/software_engineer
+    # Run web mode scoped to top level
+    uvx --from git+https://github.com/google/adk-python.git@main adk web code_agent/agent/software_engineer
+    ```
+*   **Travel Concierge Agent:** (Assuming similar structure)
+    ```bash
+    cd code_agent/agent/travel-concierge && ./start_run.sh
+    ```
+*   **Sandbox ADK Runner:**
+    ```bash
+    uv run adk run sandbox/agent_adk_runner
+    ```
+
+## Upgrading
+
+To upgrade Code Agent to the latest published version:
+
 ```bash
-./scripts/install-hooks.sh
-```
-Or configure Git to use them directly:
-```bash
-git config core.hooksPath .githooks
+# Using UV
+uv pip install --upgrade cli-code-agent
 ```
 
-For detailed information on the hooks, see [docs/git_development.md](./docs/git_development.md#automated-quality-controls).
-
-### PR Monitoring
-
-Since Git doesn't offer a reliable post-push hook, we use a standalone script to monitor Pull Request status after pushing changes.
+After upgrading, verify the new version:
 
 ```bash
-# Run after pushing to check CI status
-./scripts/monitor-pr.sh
+code-agent --version
 ```
 
-For details on usage and configuration, see the [PR Monitoring Script Documentation](./docs/git_development.md#pr-monitoring-and-validation).
+If you're using the Ollama integration, ensure your local Ollama installation is also up-to-date:
 
-## Current Development
+```bash
+# Example: On macOS with Homebrew
+brew upgrade ollama
 
-### Google ADK Migration
-
-We are currently migrating the codebase to use the Google Agent Development Kit (ADK). This migration will provide several benefits:
-
-- Reduced custom framework code to maintain
-- Standardized agent framework with better extensibility
-- Improved session management and context handling
-- Better support for evaluation and testing
-- Enhanced safety and security features
-- Potential future support for multi-agent systems
-
-The migration is following a phased approach outlined in our [planning document](docs/planning_google_adk_migration.md). Development is happening on the `feat/google-adk` branch.
+# Or download the latest version from https://ollama.ai/download
+```
