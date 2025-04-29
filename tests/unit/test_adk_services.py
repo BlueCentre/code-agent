@@ -125,7 +125,7 @@ async def test_add_event(mock_get_session, session_manager: CodeAgentADKSessionM
 
     # Create and configure the underlying service mock
     mock_service = AsyncMock(spec=BaseSessionService)
-    mock_service.append_event.return_value = None
+    mock_service.append_event = AsyncMock(return_value=None)
 
     with patch.object(session_manager, "_session_service", mock_service):
         await session_manager.add_event(session_id, event)
@@ -146,7 +146,7 @@ async def test_add_user_message(mock_get_session, session_manager: CodeAgentADKS
 
     # Create and configure the underlying service mock
     mock_service = AsyncMock(spec=BaseSessionService)
-    mock_service.append_event.return_value = None
+    mock_service.append_event = AsyncMock(return_value=None)
 
     with patch.object(session_manager, "_session_service", mock_service):
         # Remove auth_token from this call
@@ -174,7 +174,7 @@ async def test_add_assistant_message(mock_get_session, session_manager: CodeAgen
 
     # Create and configure the underlying service mock
     mock_service = AsyncMock(spec=BaseSessionService)
-    mock_service.append_event.return_value = None
+    mock_service.append_event = AsyncMock(return_value=None)
 
     with patch.object(session_manager, "_session_service", mock_service):
         # Remove auth_token from this call
@@ -207,7 +207,7 @@ async def test_add_assistant_message_with_tool_calls(
 
     # Create and configure the underlying service mock
     mock_service = AsyncMock(spec=BaseSessionService)
-    mock_service.append_event.return_value = None
+    mock_service.append_event = AsyncMock(return_value=None)
 
     with patch.object(session_manager, "_session_service", mock_service):
         # Remove auth_token from this call
@@ -238,7 +238,7 @@ async def test_add_tool_result(mock_get_session, session_manager: CodeAgentADKSe
 
     # Create and configure the underlying service mock
     mock_service = AsyncMock(spec=BaseSessionService)
-    mock_service.append_event.return_value = None
+    mock_service.append_event = AsyncMock(return_value=None)
 
     with patch.object(session_manager, "_session_service", mock_service):
         # Remove auth_token from this call
@@ -269,7 +269,7 @@ async def test_add_system_message(mock_get_session, session_manager: CodeAgentAD
 
     # Create and configure the underlying service mock
     mock_service = AsyncMock(spec=BaseSessionService)
-    mock_service.append_event.return_value = None
+    mock_service.append_event = AsyncMock(return_value=None)
 
     with patch.object(session_manager, "_session_service", mock_service):
         # Remove auth_token from this call

@@ -444,8 +444,22 @@ def _get_file_metadata(file_path: Path) -> dict:
 
 
 def apply_edit(target_file: str, code_edit: str) -> str:
-    """Applies proposed content changes to a file after showing a diff and requesting user confirmation."""
-    config = initialize_config()
+    """Apply a code edit to a file.
+
+    Args:
+        target_file: The path to the file to edit.
+        code_edit: The edit to apply.
+
+    Returns:
+        A message indicating the result of the operation.
+    """
+    from code_agent.config.config import get_config
+
+    # Early return if the edit is empty
+    if not code_edit or code_edit.strip() == "":
+        return f"No changes to apply: The edit is empty for '{target_file}'."
+
+    config = get_config()
     auto_approve_edits = False
 
     # Check if config and agent_settings are available
@@ -682,7 +696,10 @@ def apply_edit(target_file: str, code_edit: str) -> str:
 
 # Legacy function that accepts ReadFileArgs for compatibility
 def read_file_legacy(args: ReadFileArgs) -> str:
-    return read_file(args)
+    """Legacy wrapper for read_file that handles async properly."""
+    import asyncio
+
+    return asyncio.run(read_file(args))
 
 
 # Legacy function that accepts ApplyEditArgs for compatibility

@@ -196,16 +196,18 @@ class CodeAgentADKSessionManager:
                 # Return the session if it exists and passes checks
                 if session:
                     return session
+                else:
+                    raise ValueError(f"Session not found: {session_id}")
             except Exception as e:
                 # If any error occurs during retrieval, create a new session
-                if "not found" in str(e).lower():
-                    # Session doesn't exist, continue to create a new one
-                    pass
+                if "not found" in str(e).lower() or "Session not found" in str(e):
+                    # Re-raise ValueError for session not found
+                    raise ValueError(f"Session not found: {session_id}") from e
                 else:
                     # Re-raise other errors
-                    raise
+                    raise e from e
 
-        # Get the session or create if it doesn't exist
+        # Get the session
         session = self._session_service.get_session(app_name="code_agent", user_id="default_user", session_id=session_id)
 
         if not session:
@@ -223,6 +225,7 @@ class CodeAgentADKSessionManager:
 
         Raises:
             SessionAccessError: If access to the session is denied
+            ValueError: If the session has reached the maximum number of events
         """
         # Retrieve session (with access check)
         session = await self.get_session(session_id, auth_token)
@@ -232,7 +235,7 @@ class CodeAgentADKSessionManager:
             raise ValueError(f"Session has reached the maximum number of events: {self.config.max_events_per_session}")
 
         # Add the event
-        self._session_service.append_event(session=session, event=event)
+        await self._session_service.append_event(session=session, event=event)
 
     async def add_user_message(self, session_id: str, content: str, invocation_id: Optional[str] = None) -> None:  # SessionId -> str
         """Adds a user message event."""
@@ -414,7 +417,7 @@ class CodeAgentADKSessionManager:
         """
         session = await self.get_session(session_id)
         memory_manager = self._get_memory_manager(session_id)
-        return memory_manager.summarize_conversation(session)
+        return memory_manager.get_conversation_summary(session)
 
     async def extract_session_memories(self, session_id: str) -> None:
         """Extract memories from the session and store them in the memory manager.
@@ -424,7 +427,7 @@ class CodeAgentADKSessionManager:
         """
         session = await self.get_session(session_id)
         memory_manager = self._get_memory_manager(session_id)
-        memory_manager.extract_memories_from_session(session)
+        memory_manager.extract_memories_from_history(session)
 
     async def get_memories(self, session_id: str, memory_type: Optional[MemoryType] = None, min_importance: float = 0.0) -> List[Dict[str, Any]]:
         """Get memories for a session of a specific type with minimum importance.
@@ -441,10 +444,17 @@ class CodeAgentADKSessionManager:
         memories = memory_manager.get_memories(memory_type, min_importance)
 
         # Convert to dictionaries for easier handling in the agent
-        return [
-            {"content": memory.content, "memory_type": memory.memory_type.value, "importance": memory.importance, "metadata": memory.metadata}
-            for memory in memories
-        ]
+        result = []
+        for memory in memories:
+            # Handle both Memory objects and dictionary responses
+            if isinstance(memory, dict):
+                result.append(memory)
+            else:
+                # Assume it's a Memory object with attributes
+                result.append(
+                    {"content": memory.content, "memory_type": memory.memory_type.value, "importance": memory.importance, "metadata": memory.metadata}
+                )
+        return result
 
     async def close_session(self, session_id: str, auth_token: Optional[str] = None) -> None:
         """Closes a session, cleaning up resources.
