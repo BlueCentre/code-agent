@@ -41,9 +41,12 @@ jobs:
           uv run pytest tests/test_native_tools.py tests/test_native_tools_additional.py --cov=code_agent.tools.native_tools --cov-report=xml --cov-report=term --cov-fail-under=80
         else
           echo "Running tests for all modules"
+          # uv run pytest tests/ --cov=code_agent \
+          #     --cov-omit="code_agent/agent/custom_agent/*,code_agent/agent/cli_runner/*,code_agent/agent/software_engineer/*,code_agent/agent/travel-concierge/*" \
+          #     --cov-report=xml --cov-report=term --cov-fail-under=80
           uv run pytest tests/ --cov=code_agent \
-              --cov-omit="code_agent/agent/custom_agent/*,code_agent/agent/cli_runner/*,code_agent/agent/software_engineer/*,code_agent/agent/travel-concierge/*" \
-              --cov-report=xml --cov-report=term --cov-fail-under=80
+          --cov-config=pyproject.toml \
+          --cov-report=xml --cov-report=term --cov-fail-under=80
         fi
 
     - name: Upload coverage report

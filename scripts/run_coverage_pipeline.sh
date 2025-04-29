@@ -26,7 +26,9 @@ fi
 
 # Run tests with coverage
 echo "Running tests with coverage..."
-uv run python -m pytest tests/ --cov=code_agent --cov-report=term --cov-report=xml --cov-report=html --cov-fail-under=80
+uv run pytest tests/ --cov=code_agent \
+        --cov-config=pyproject.toml \
+        --cov-report=xml --cov-report=html --cov-report=term --cov-fail-under=80
 
 # Extract project version
 echo "Extracting project version..."

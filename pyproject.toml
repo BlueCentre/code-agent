@@ -102,7 +102,6 @@ omit = [
     "*/__pycache__/*",
     "*/site-packages/*",
     "*/.venv/*",
-    "code_agent/agent/custom_agent/*",
     "code_agent/agent/cli_runner/*",
     "code_agent/agent/software_engineer/*",
     "code_agent/agent/travel-concierge/*"
