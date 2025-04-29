@@ -29,22 +29,21 @@ setup-venv:
 # Test targets
 test:
 	@echo "Running all tests..."
-	uv run python -m pytest
+	uv run pytest
 
 test-unit:
 	@echo "Running unit tests only..."
-	uv run python -m pytest -m unit tests/
+	uv run pytest -m unit tests/
 
 test-integration:
-	@echo "Running integration tests only..."
-	uv run python -m pytest -m integration tests/
+	@echo "pytest -m integration tests/
 
 test-coverage:
 	@echo "Running tests with coverage..."
-	uv run python -m pytest tests/ --cov=code_agent --cov-report=term --cov-report=html --cov-fail-under=80
+	uv run pytest tests/ --cov=code_agent --cov-config=pyproject.toml --cov-report=term --cov-report=html --cov-fail-under=80
 
 test-report:
-	uv run python -m pytest tests/ --cov=code_agent --cov-report=term --cov-report=html --cov-fail-under=80
+	uv run pytest tests/ --cov=code_agent --cov-config=pyproject.toml --cov-report=term --cov-report=html --cov-fail-under=80
 	open htmlcov/index.html
 
 # Linting and formatting

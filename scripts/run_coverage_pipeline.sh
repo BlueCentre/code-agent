@@ -10,7 +10,8 @@ echo "Starting coverage pipeline..."
 # Check for .env file and load environment variables
 if [ -f .env ]; then
     echo "Loading environment variables from .env"
-    export $(grep -v '^#' .env | xargs)
+    # export $(grep -v '^#' .env | xargs)
+    source .env
 fi
 
 # Ensure uv is available (user should install it: https://github.com/astral-sh/uv)
@@ -26,7 +27,7 @@ fi
 
 # Run tests with coverage
 echo "Running tests with coverage..."
-uv run pytest tests/ --cov=code_agent \
+uv run pytest --cov=code_agent \
         --cov-config=pyproject.toml \
         --cov-report=xml --cov-report=html --cov-report=term --cov-fail-under=80
 
@@ -34,6 +35,10 @@ uv run pytest tests/ --cov=code_agent \
 echo "Extracting project version..."
 VERSION=$(grep "^version" pyproject.toml | sed -E 's/version = "(.*)"/\1/g')
 echo "Project version: $VERSION"
+
+# Get current Git branch name
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+echo "Current branch: $CURRENT_BRANCH"
 
 # Run SonarQube scan if properties file exists
 if [ -f sonar-project.properties ]; then
@@ -46,6 +51,7 @@ if [ -f sonar-project.properties ]; then
 
     sonar-scanner \
       -Dsonar.projectVersion=$VERSION \
+      -Dsonar.branch.name=$CURRENT_BRANCH \
       -Dsonar.login=$SONAR_TOKEN
 else
     echo "No sonar-project.properties file found. Skipping SonarQube scan."
