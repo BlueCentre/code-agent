@@ -26,7 +26,7 @@ from code_agent.adk.models_v2 import create_model
 
 # from code_agent.adk.services import get_adk_session_manager # Removed F401
 # from code_agent.agent.cli_runner import ADKWorkflowRunner # Removed F401
-from code_agent.config import get_config, initialize_config  # Added initialize_config
+from code_agent.config import get_api_key, get_config, initialize_config  # Added get_api_key
 
 # from code_agent.config.settings_based_config import ApiKeys, CodeAgentSettings # Removed F401
 # from code_agent.utils import detect_environment # Removed F401
@@ -58,13 +58,13 @@ def initialize_agent():
     agent_print(f"Resolved Model: {config.default_model}")
 
     # Configure google.generativeai API key if using Gemini
-    google_api_key_val = config.google_api_key or config.ai_studio_api_key
+    # Use the get_api_key helper function to access the api key
+    google_api_key_val = get_api_key("ai_studio")
     if google_api_key_val:
-        key_source = "GOOGLE_API_KEY" if config.google_api_key else "AI_STUDIO_API_KEY"
-        agent_print(f"Configuring genai globally with key from {key_source}")
+        agent_print("Configuring genai globally with key from AI_STUDIO_API_KEY")
         genai.configure(api_key=google_api_key_val)
     elif config.default_provider == "ai_studio":
-        agent_print("Warning: ai_studio provider selected but no GOOGLE_API_KEY/AI_STUDIO_API_KEY found.")
+        agent_print("Warning: ai_studio provider selected but no AI_STUDIO_API_KEY found.")
         agent_print("         Agent might rely on Application Default Credentials (ADC).")
 
     agent_print("Creating model reference...")
