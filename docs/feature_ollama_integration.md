@@ -237,3 +237,82 @@ This diagram illustrates:
 2. The API endpoints used to communicate with the local Ollama service
 3. How system prompts are handled in the chat flow
 4. The data flow for both listing models and chat completions
+
+## Using Ollama with Google ADK Integration
+
+Our application now supports using Ollama with the Google Agent Development Kit (ADK) framework, which provides a more structured approach to building agents with various model providers.
+
+### Using Ollama with ADK from CLI
+
+You can use Ollama with the ADK integration by adding the appropriate flags to the `run` command:
+
+```bash
+code-agent run "Your prompt here" --use-adk --use-ollama --model llama3
+```
+
+Options:
+- `--use-adk`: Enables the Google ADK-based implementation
+- `--use-ollama`: Uses Ollama with ADK via LiteLLM wrapper
+- `--model`: Specifies which Ollama model to use (default from config)
+- `--ollama-url`: Specifies the URL of the Ollama server (default: http://localhost:11434)
+
+### Using Ollama with ADK in Python Code
+
+You can also directly use Ollama with ADK in your Python code:
+
+```python
+from google.adk.agents import LlmAgent
+from code_agent.adk.models import OllamaLlm
+from code_agent.adk.tools import read_file, create_apply_edit_tool, create_run_terminal_cmd_tool
+
+# Create Ollama model for ADK
+model = OllamaLlm(
+    model_name="llama3:latest",  # Use any model you've pulled in Ollama
+    base_url="http://localhost:11434",  # Default Ollama server URL
+    temperature=0.7,
+)
+
+# Create tools
+apply_edit_tool = create_apply_edit_tool()
+run_cmd_tool = create_run_terminal_cmd_tool()
+
+# Create agent
+agent = LlmAgent(
+    model=model,
+    name="ollama_agent",
+    instruction="You are a helpful assistant running locally on Ollama.",
+    tools=[read_file, apply_edit_tool, run_cmd_tool],
+)
+
+# Run the agent
+async def run_agent():
+    result = await agent.invoke("What is 2+2?")
+    print(result.response.value)
+
+# Call the async function
+import asyncio
+asyncio.run(run_agent())
+```
+
+### Advantages of Using ADK with Ollama
+
+1. **Structured Agent Framework**: ADK provides a more structured approach to building agents with well-defined components.
+2. **Tool Integration**: ADK has a robust tool system that makes it easy to define, manage, and execute tools.
+3. **Future Compatibility**: As ADK evolves, your agent code will be more maintainable and compatible with future features.
+4. **Multi-Agent Systems**: ADK supports advanced features like workflow agents and multi-agent systems.
+
+### Limitations
+
+- API compatibility between Ollama, LiteLLM, and ADK may change over time
+- Local models may have different capabilities than cloud-based models
+- Tool calling support varies by model
+
+## Test Script
+
+A simple test script is included in the repository to demonstrate how to use Ollama with ADK directly. You can run it with:
+
+```bash
+python test_ollama_adk.py
+```
+
+This script will connect to your local Ollama instance, create an ADK agent with the Ollama model, and process a simple prompt.

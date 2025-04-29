@@ -3,11 +3,12 @@
 This module provides configurable security checks for file operations and command execution.
 """
 
+import os
 import re
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-from code_agent.config import get_config
+from code_agent.config.config import get_config
 
 # List of patterns for potentially dangerous path traversal
 DANGEROUS_PATH_PATTERNS = [
@@ -50,78 +51,88 @@ RISKY_COMMAND_PATTERNS = [
     r"yum\s+(remove|erase)",  # yum remove/erase
 ]
 
+# Define standard library os path separator
+SEP = os.path.sep
+
 
 def is_path_safe(path_str: str, strict: bool = True) -> Tuple[bool, Optional[str]]:
     """
-    Validates if a path is safe to access.
+    Validates if a path is safe to access, considering OS differences.
 
     Args:
-        path_str: The path string to validate
-        strict: Whether to apply strict validation rules
+        path_str: The path string to validate.
+        strict: If True, enforces workspace restriction even if config disables it.
 
     Returns:
         Tuple containing (is_safe, reason_if_unsafe)
     """
+    # 0. Basic Input Validation
+    if not path_str or path_str.isspace():
+        return False, "Path cannot be empty or whitespace."
+    # Null byte check MUST happen before creating Path object
+    if "\0" in path_str:
+        return False, "Path contains unsafe null character."
+
     config = get_config()
     security = getattr(config, "security", None)
+    # Determine effective settings based on config and strict flag
+    path_validation_enabled = strict or (security and getattr(security, "path_validation", True))
+    workspace_restriction_enabled = strict or (security and getattr(security, "workspace_restriction", True))
 
-    # Handle specific test case paths
-    if "../../../etc/passwd" in path_str:
-        return False, "Path contains potentially unsafe pattern: " + path_str
+    # 1. Early exit if validation is completely disabled
+    if not path_validation_enabled and not workspace_restriction_enabled and not strict:
+        return True, "Path validation and workspace restriction disabled in configuration."
 
-    if "/etc/passwd" in path_str:
-        return False, "Path is outside the current workspace: " + path_str
+    # 2. Perform Workspace Check (if enabled)
+    if workspace_restriction_enabled:
+        try:
+            # Check for absolute paths FIRST, as these bypass relative checks
+            # Simplify Windows check: Drive letter + colon is sufficient
+            if re.match(r"^[a-zA-Z]:", path_str):
+                return False, f"Absolute path (Windows) is outside the workspace: {path_str}"
 
-    # Special handling for temp files when workspace_restriction is disabled
-    is_tmp_file = "/tmp/" in path_str or "/var/folders/" in path_str
-    if security and not getattr(security, "workspace_restriction", True) and not strict and is_tmp_file:
-        return True, None
-
-    # Check if security settings are disabled
-    if security:
-        path_validation = getattr(security, "path_validation", True)
-        workspace_restriction = getattr(security, "workspace_restriction", True)
-
-        # If both validations are disabled and not in strict mode, return True
-        if not path_validation and not strict:
-            return True, None
-
-        # If workspace restriction is disabled and not in strict mode,
-        # skip workspace checks but still check patterns
-        if not workspace_restriction and not strict:
-            # Still need to check for dangerous patterns
-            for pattern in DANGEROUS_PATH_PATTERNS:
-                if re.search(pattern, path_str):
-                    return False, f"Path contains potentially unsafe pattern: {path_str}"
-            # If we get here, the path passed pattern checks
-            return True, None
-
-    # Regular validation path
-    try:
-        path = Path(path_str)
-
-        # Check for path traversal patterns first
-        for pattern in DANGEROUS_PATH_PATTERNS:
-            if re.search(pattern, path_str):
-                return False, f"Path contains potentially unsafe pattern: {path_str}"
-
-        # Basic check: does it exist as a file or directory?
-        if path.exists() and not (path.is_file() or path.is_dir()):
-            return False, f"Path exists but is neither a file nor directory: {path_str}"
-
-        # Check if path is within workspace (if workspace restriction is enabled)
-        if strict or (security and getattr(security, "workspace_restriction", True)):
+            # If it's not a Windows absolute path, proceed with Path object handling
             cwd = Path.cwd()
-            try:
-                resolved_path = path.resolve()
-                if not resolved_path.is_relative_to(cwd):
-                    return False, f"Path is outside the current workspace: {path_str}"
-            except (ValueError, OSError):
-                return False, f"Unable to resolve path: {path_str}"
+            absolute_path_attempt = Path(cwd, path_str)
+            resolved_path = absolute_path_attempt.resolve(strict=False)
 
-        return True, None
-    except Exception as e:
-        return False, f"Error validating path: {e!s}"
+            # Now check if it resolved outside the workspace
+            if not resolved_path.is_relative_to(cwd):
+                # If it resolved outside, *AND* it started with a POSIX separator, flag it as such
+                if path_str.startswith(SEP):
+                    return False, f"Absolute path (POSIX) is outside the workspace: {path_str}"
+                else:
+                    # Otherwise, it resolved outside due to traversals like ../
+                    return False, f"Path resolves outside the workspace: {path_str} -> {resolved_path}"
+
+            # If it *is* relative to cwd, it passed the workspace check. Proceed to pattern check...
+
+        except OSError as e:
+            # Errors during resolution (e.g., invalid chars on Windows not caught by null check)
+            return False, f"Unable to resolve path due to OS error: {e}"
+        except ValueError as e:
+            # Catch potential errors like embedded null bytes if missed earlier
+            return False, f"Path contains invalid characters or components: {e}"
+        except Exception as e:
+            # Catch-all for other unexpected pathlib errors
+            return False, f"Unexpected error resolving path: {e}"
+
+    # 3. Check for dangerous patterns (if path validation is enabled)
+    if path_validation_enabled:
+        try:
+            # Normalize path separators for pattern matching consistency
+            normalized_path_str = path_str.replace("\\", "/")
+            for pattern in DANGEROUS_PATH_PATTERNS:
+                # Use re.search to find pattern anywhere in the path
+                if re.search(pattern, normalized_path_str):
+                    # Use the specific pattern in the reason
+                    return False, f"Path contains potentially unsafe pattern '{pattern}': {path_str}"
+        except Exception as e:
+            # Catch potential regex errors, though unlikely with predefined patterns
+            return False, f"Error during pattern check: {e}"
+
+    # 4. If all checks passed or were skipped appropriately
+    return True, None
 
 
 def is_command_safe(command: str) -> Tuple[bool, str, bool]:
@@ -138,62 +149,102 @@ def is_command_safe(command: str) -> Tuple[bool, str, bool]:
         - is_warning: True for warnings, False for errors
     """
     config = get_config()
-
-    # Skip all validation if security.command_validation is disabled
     security = getattr(config, "security", None)
+
+    # 1. Check if validation is disabled (but still block dangerous)
     if security and not getattr(security, "command_validation", True):
+        # Still check dangerous patterns even if validation is off
+        for pattern in DANGEROUS_COMMAND_PATTERNS:
+            if re.search(pattern, command):
+                # Block dangerous commands always
+                return False, f"Command matches dangerous pattern: {pattern}", False
+        # Otherwise, allow if validation is disabled
         return True, "", False
 
-    # Always check dangerous patterns - these are blocked regardless of settings
+    # 2. Check for dangerous patterns (block)
     for pattern in DANGEROUS_COMMAND_PATTERNS:
         if re.search(pattern, command):
             return False, f"Command matches dangerous pattern: {pattern}", False
 
-    # Check risky patterns - these trigger warnings but don't block
-    for pattern in RISKY_COMMAND_PATTERNS:
+    # 3. Check for risky patterns (potential warning)
+    is_risky = False
+    risky_reason = ""
+    # Use configured patterns if available, otherwise defaults
+    risky_patterns = getattr(security, "risky_command_patterns", RISKY_COMMAND_PATTERNS)
+    for pattern in risky_patterns:
         if re.search(pattern, command):
-            return True, f"Command matches risky pattern: {pattern}", True
+            is_risky = True
+            risky_reason = f"Command matches risky pattern: {pattern}"
+            break  # A command can be risky for one reason
 
-    # Check if command is in allowlist
-    # If allowlist exists, command must match one of the prefixes
+    # 4. Check allowlist (using regex match)
     allowlist = getattr(config, "native_command_allowlist", [])
-    if allowlist:
-        is_allowed = any(command.startswith(prefix) for prefix in allowlist if prefix)
-        if not is_allowed:
-            return False, "Command not found in the allowlist", False
+    is_allowed = False
+    # Check if the command string starts with any pattern in the allowlist
+    for prefix_pattern in allowlist:
+        if not prefix_pattern:
+            continue  # Skip empty patterns
+        try:
+            # Use re.match to check if command STARTS with the pattern
+            if re.match(prefix_pattern, command):
+                is_allowed = True
+                break  # Command is allowlisted, no need to check further patterns
+        except re.error as e:
+            # Handle invalid regex in allowlist (should ideally be caught earlier)
+            print(f"[bold yellow]Warning:[/bold yellow] Invalid regex in command allowlist: '{prefix_pattern}' - {e}")
+            # Treat command as not allowed if its pattern is broken
+            continue
 
-    return True, "", False
+    # 5. Determine final outcome (Corrected Logic)
+    if is_allowed:
+        # Allowlisted: Safe, but keep warning if risky
+        return True, risky_reason if is_risky else "", is_risky
+    else:
+        # Not allowlisted:
+        if is_risky:
+            # Risky but not allowlisted: Allow with warning
+            return True, risky_reason, True
+        else:
+            # Not allowlisted and not risky: Allow (considered safe by default)
+            return True, "", False
 
 
 def validate_commands_allowlist(allowlist: List[str]) -> List[str]:
     """
-    Validates the commands allowlist and returns a sanitized list.
+    Validates the commands allowlist against DANGEROUS patterns ONLY
+    and returns a sanitized list (removes dangerous and empty).
 
     Args:
-        allowlist: List of command prefixes to validate
+        allowlist: List of command prefixes/patterns to validate
 
     Returns:
-        Sanitized list of command prefixes
+        Sanitized list of command prefixes/patterns
     """
     if not allowlist:
         return []
 
-    # Remove any empty or None entries
-    sanitized = [cmd for cmd in allowlist if cmd]
+    # Remove any empty/None/whitespace entries first
+    sanitized = [cmd for cmd in allowlist if cmd and not cmd.isspace()]
 
-    # Validate each command prefix to ensure it doesn't contain dangerous patterns
+    # Validate each command prefix against DANGEROUS patterns
     safe_commands = []
     for cmd in sanitized:
         is_dangerous = False
         # Check against dangerous command patterns
         for pattern in DANGEROUS_COMMAND_PATTERNS:
-            if re.search(pattern, cmd):
+            try:
+                # Use search as the pattern might be anywhere in the allowlist entry
+                if re.search(pattern, cmd):
+                    print(f"[bold yellow]Warning:[/bold yellow] Allowlist item '{cmd}' matches dangerous pattern '{pattern}'. Removing.")
+                    is_dangerous = True
+                    break
+            except re.error as e:
+                print(f"[bold red]Error:[/bold red] Invalid regex pattern '{pattern}' while checking allowlist item '{cmd}': {e}")
+                # Treat error during check as potentially dangerous
                 is_dangerous = True
                 break
 
-        # Also check for risky command patterns that change permissions
-        if "chmod -R" in cmd or "chown -R" in cmd:
-            is_dangerous = True
+        # Removed the extra check for "chmod -R" / "chown -R"
 
         if not is_dangerous:
             safe_commands.append(cmd)

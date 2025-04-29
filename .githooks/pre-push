@@ -21,8 +21,8 @@ if command_exists ruff; then
   PYTHON_FILES=$(find . -name "*.py" -not -path "*/\.*" -not -path "*/venv/*" -not -path "*/.venv/*" -not -path "*/build/*" -not -path "*/dist/*")
   if [ -n "$PYTHON_FILES" ]; then
     echo "Formatting Python files with ruff..."
-    ruff format $PYTHON_FILES
-    ruff check --fix $PYTHON_FILES
+    uv run ruff format $PYTHON_FILES
+    uv run ruff check --fix $PYTHON_FILES
   fi
 else
   echo "⚠️ Ruff not found. Skipping automatic formatting."
@@ -34,7 +34,7 @@ echo "Running linting checks..."
 if command_exists ruff; then
   CHANGED_PYTHON_FILES=$(git diff --name-only --cached | grep "\.py$" || true)
   if [ -n "$CHANGED_PYTHON_FILES" ]; then
-    if ! ruff check $CHANGED_PYTHON_FILES; then
+    if ! uv run ruff check --fix --force-exit $CHANGED_PYTHON_FILES; then
       echo "❌ Linting checks failed. Please fix the issues before pushing."
       exit 1
     fi
@@ -71,7 +71,6 @@ for FILE in $COMMITTED_FILES; do
 done
 
 echo "✅ All pre-push checks passed!"
-
 echo "ℹ️ After pushing completes, run ./scripts/monitor-pr.sh to monitor CI checks"
 
 exit 0 

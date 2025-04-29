@@ -8,3 +8,17 @@
   - Ok can you show me how I can test this new feature? I want to test this new feature end to end with code-agent.
   - @testing.md as an agent, you need to use these approaches to validate chat feature.
 - Stick to the plan and don't deviate from it.
+
+- In this prompt, I want you to use:
+  - uv command for all commands in this repository
+  - always use the official google adk docs for all code implementation
+  - always use the official google adk docs if you encounter any issues
+  - only address my request, don't add any other text or comments
+  - clean up old code when replacing it with new code
+  - update relevant files and documentation
+  - @testing.md to validate the new feature
+  - @monitor-pr.sh to monitor the PR
+  - @git_development.md to follow the contributor's guide
+  - @planning_web_search.md to plan the work
+  - @code_agent.md to write code
+  - @code_review.md to review the code

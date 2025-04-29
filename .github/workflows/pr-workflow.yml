@@ -5,48 +5,68 @@ on:
     branches: [ main ]
 
 jobs:
-  test-and-report:
-    name: Test and Report
+  lint:
+    name: Lint Code
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Needed for PR comments
+  
+    - name: Install UV and setup Python
+      uses: astral-sh/setup-uv@v5
+      with:
+        python-version: '3.11'
+        enable-cache: true
+        cache-dependency-glob: "pyproject.toml uv.toml"
+        
+    - name: Install dependencies
+      run: uv sync --all-extras --dev
+        
+    - name: Run linting
+      run: uv run ruff check . --output-format=github
+
+  test:
+    name: Tests with Coverage
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.10']
+        python-version: ['3.11']
 
     steps:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0  # Needed for PR comments
 
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+    - name: Install UV and setup Python ${{ matrix.python-version }}
+      uses: astral-sh/setup-uv@v5
       with:
         python-version: ${{ matrix.python-version }}
-
-    # Install uv
-    - name: Install uv
-      run: curl -LsSf https://astral.sh/uv/install.sh | sh
-      env:
-        # Prevent the installer from modifying GitHub Actions environment files
-        UV_BOOTSTRAP_SKIP_MODIFY_PATH: 1
+        enable-cache: true
+        cache-dependency-glob: "pyproject.toml uv.toml"
 
     # Install dependencies using uv
     - name: Install dependencies
-      run: |
-        # Add uv to the PATH
-        export PATH="$HOME/.cargo/bin:$PATH"
-        # Install project, dev dependencies, AND explicitly list test requirements into the system environment
-        uv pip install --system -e '.[dev]' pytest pytest-cov pytest-mock tomli
+      run: uv sync --all-extras --dev
 
     - name: Run tests with coverage
       run: |
-        # Add uv to the PATH (optional but safe)
-        export PATH="$HOME/.cargo/bin:$PATH"
-        python -m pytest tests/ --cov=code_agent --cov=cli_agent --cov-report=xml --cov-report=term --cov-fail-under=80
+        uv run pytest tests/ --cov=code_agent \
+        --cov-config=pyproject.toml \
+        --cov-report=xml --cov-report=term --cov-fail-under=80 --junitxml=test-results.xml
 
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      if: always()  # Upload test results even if tests fail
+      with:
+        name: test-results
+        path: |
+          test-results.xml
+          coverage.xml
+          
     - name: Generate Coverage Report
       run: |
-        # Add uv to the PATH (optional but safe)
-        export PATH="$HOME/.cargo/bin:$PATH"
         # Use a multi-line Python script instead of one-liners to avoid f-string backslash issues
         cat > generate_coverage.py << 'EOF'
         import xml.etree.ElementTree as ET
@@ -72,9 +92,20 @@ jobs:
                 f.write(f"| {pkg_name} | {pkg_coverage:.2f}% |\n")
         EOF
 
-        # Run the script
-        python generate_coverage.py
+        # Generate HTML coverage for artifact
+        uv run pytest tests/ --cov=code_agent \
+        --cov-config=pyproject.toml \
+        --cov-report=html
 
+        # Run the script
+        uv run python generate_coverage.py
+        
+    - name: Upload coverage HTML report
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-html-report
+        path: htmlcov/
+        
     - name: Find Comment
       uses: peter-evans/find-comment@v2
       id: fc
@@ -90,11 +121,3 @@ jobs:
         issue-number: ${{ github.event.pull_request.number }}
         body-file: coverage_report.md
         edit-mode: replace
-
-    - name: Run linting
-      run: |
-        # Add uv to the PATH (optional but safe)
-        export PATH="$HOME/.cargo/bin:$PATH"
-        # Ensure ruff is installed (should be via .[dev]) and run it into the system environment
-        uv pip install --system ruff
-        python -m ruff check . --output-format=github

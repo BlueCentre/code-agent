@@ -19,34 +19,31 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.10']
+        python-version: ['3.11']
 
     steps:
     - uses: actions/checkout@v4
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+    
+    - name: Install UV and setup Python ${{ matrix.python-version }}
+      uses: astral-sh/setup-uv@v5
       with:
         python-version: ${{ matrix.python-version }}
-
-    - name: Install uv
-      run: curl -LsSf https://astral.sh/uv/install.sh | sh
-      env:
-        UV_BOOTSTRAP_SKIP_MODIFY_PATH: 1
+        enable-cache: true
+        cache-dependency-glob: "pyproject.toml uv.toml"
 
     - name: Install dependencies
-      run: |
-        export PATH="$HOME/.cargo/bin:$PATH"
-        uv pip install --system -e '.[dev]' pytest pytest-cov pytest-mock tomli
-
+      run: uv sync --all-extras --dev
+      
     - name: Run tests with coverage
       run: |
-        export PATH="$HOME/.cargo/bin:$PATH"
         if [[ "${{ github.event.inputs.modules }}" == "code_agent.tools.native_tools" ]]; then
           echo "Running tests for native_tools module only"
-          python -m pytest tests/test_native_tools.py tests/test_native_tools_additional.py --cov=code_agent.tools.native_tools --cov-report=xml --cov-report=term --cov-fail-under=80
+          uv run pytest tests/test_native_tools.py tests/test_native_tools_additional.py --cov=code_agent.tools.native_tools --cov-report=xml --cov-report=term --cov-fail-under=80
         else
           echo "Running tests for all modules"
-          python -m pytest tests/ --cov=code_agent --cov=cli_agent --cov-report=xml --cov-report=term --cov-fail-under=80
+          uv run pytest --cov=code_agent \
+          --cov-config=pyproject.toml \
+          --cov-report=xml --cov-report=term --cov-fail-under=80
         fi
 
     - name: Upload coverage report
@@ -85,3 +82,4 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           PROJECT_VERSION: ${{ env.PROJECT_VERSION }}
+          # SONAR_SCANNER_OPTS: "-Dsonar.branch.name=${{ github.ref_name }}"

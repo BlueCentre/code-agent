@@ -8,6 +8,8 @@
 
 It allows interaction with various AI providers (OpenAI, Groq, etc. via LiteLLM) and empowers the agent with capabilities to interact with the local environment, such as reading files, applying edits (with confirmation), and executing native commands (with confirmation and allowlisting).
 
+DISCLAIMER: This repo and the tool itself is 99.95% built by LLM models such as Gemini 2.5 Pro and Claude 3.7 Sonnet! The remaining 0.05% goes to my prompts, designs, and gaurdrails to keep the agents in-check. 😜
+
 *(Work in progress)*
 
 ## Repository Structure
@@ -15,14 +17,14 @@ It allows interaction with various AI providers (OpenAI, Groq, etc. via LiteLLM)
 ```
 cli-agent/
 ├── code_agent/       # Main package source code
-├── cli_agent/        # Ollama integration and extensions
-│   ├── providers/    # Provider implementations (Ollama)
-│   ├── commands/     # CLI commands for providers
-│   └── main.py       # CLI entry point for extensions
+│   ├── adk/          # Google ADK integration
+├── sandbox/          # Experimentation environment
+│   └── adk_sandbox.py # ADK testing sandbox
 ├── tests/            # Unit and integration tests
 ├── docs/             # Documentation files
 │   ├── architecture.md
 │   ├── CONTRIBUTING.md
+│   ├── migration_notes/ # ADK migration documentation
 │   ├── testing.md
 │   ├── feature_*.md          # Feature-specific documentation
 │   ├── getting_started_*.md  # Getting started guides
@@ -42,7 +44,6 @@ cli-agent/
 ### Key Directories
 
 - **code_agent/**: Contains the main source code for the CLI tool
-- **cli_agent/**: Contains the Ollama integration and extensions
 - **tests/**: Test suite for ensuring code quality and functionality
 - **docs/**: Project documentation and guides
 - **scripts/**: Utility scripts for development, testing, and CI/CD pipelines
@@ -107,14 +108,128 @@ pip install uv
 Then, install the CLI Code Agent:
 
 ```bash
-# Using pip
-pip install cli-code-agent
+# Installing code-agent from local source
+uv add cli-code-agent
+uv run code-agent chat
 
-# Or using uv (faster)
-uv pip install cli-code-agent
+# Or using uvx
+uvx --from cli-code-agent code-agent chat
 
-# For using Ollama features, ensure you have requests and rich:
-pip install requests rich
+# Or uaing uvx from GitHub main branch
+uvx --from git+https://github.com/BlueCentre/code-agent.git@main code-agent chat
+```
+
+## Development
+
+### Setting Up Development Environment
+
+The project supports two package managers: Poetry (default) and UV (recommended for faster installation).
+
+#### Quick Setup (Recommended)
+
+Run our setup script which detects available package managers and sets up the environment automatically:
+
+```bash
+# Clone the repository
+git clone https://github.com/your-username/code-agent.git
+cd code-agent
+
+# Run the setup script (automatically uses UV if available)
+./scripts/setup_dev_env.sh
+```
+
+#### Manual Setup
+
+If you prefer to set up manually:
+
+```bash
+# Create and sync virtual environment
+uv venv
+uv sync  # On Windows: .venv\Scripts\activate
+
+# Install pre-commit hooks
+pre-commit install
+```
+
+### Development Commands
+
+The project includes a Makefile with the following commands:
+
+| Command | Description |
+|---------|-------------|
+| `make setup-dev` | Set up development environment (creates .venv and installs dependencies) |
+| `make test` | Run all tests |
+| `make test-unit` | Run only unit tests |
+| `make test-integration` | Run only integration tests |
+| `make test-coverage` | Run tests with coverage report (fails if less than 80% coverage) |
+| `make test-report` | Run tests with coverage and open HTML report |
+| `make lint` | Check code style using Ruff |
+| `make format` | Format code using Ruff |
+| `make clean` | Clean build artifacts and caches |
+
+#### UV-specific Commands
+
+If you have UV installed, these commands offer faster performance:
+
+```bash
+make test    # Run tests using UV
+make lint    # Check code style using UV
+make format  # Format code using UV
+```
+
+### Running ADK Agents
+
+This project includes agents compatible with the Google Agent Development Kit (ADK).
+You can run these agents directly using the `adk run` command within the activated development environment (e.g., using `uv run adk run ...`).
+
+Make sure you have installed the ADK (`uv add google-adk`).
+
+Available agents and their run commands:
+
+*   **Software Engineer Agent:**
+    ```bash
+    # using uvx to run the agent and scoped to the software_engineer directory
+    cd code_agent/agent/software_engineer && uvx --from git+https://github.com/google/adk-python.git@main adk run software_engineer
+
+    # using uvx to run the agent in web mode and scoped to the software_engineer directory
+    cd code_agent/agent/software_engineer && uvx --from git+https://github.com/google/adk-python.git@main adk web
+
+    # or using uvx to run the agent and scoped to the top level directory
+    uvx --from git+https://github.com/google/adk-python.git@main adk run code_agent/agent/software_engineer/software_engineer
+
+    # or using uvx to run the agent in web mode and scoped to the top level directory
+    uvx --from git+https://github.com/google/adk-python.git@main adk web code_agent/agent/software_engineer
+    ```
+*   **Travel Concierge Agent:** (Assuming similar structure)
+    ```bash
+    #uv run adk run code_agent/agent/travel-concierge
+    cd code_agent/agent/travel-concierge && ./start_run.sh
+    ```
+*   **Sandbox ADK Runner:** (Simple test runner)
+    ```bash
+    uv run adk run sandbox/agent_adk_runner
+    ```
+
+### Testing
+
+Tests are written using pytest and are located in the `tests/` directory:
+
+- `tests/unit/`: Unit tests for individual components
+- `tests/integration/`: Integration tests for components working together
+- `tests/fixtures/`: Test fixtures and shared test utilities
+
+Run tests with:
+
+```bash
+# Run all tests
+make test
+# or
+uv run python -m pytest
+
+# Run with coverage report
+make test-coverage
+# or
+uv run python -m pytest tests/ --cov=code_agent --cov-report=term --cov-report=html --cov-fail-under=80
 ```
 
 ## Upgrading
@@ -122,17 +237,14 @@ pip install requests rich
 To upgrade Code Agent to the latest version:
 
 ```bash
-# Using pip
-pip install --upgrade cli-code-agent
-
-# Or using uv (faster)
+# Using uv (not required)
 uv pip install --upgrade cli-code-agent
 ```
 
 After upgrading, verify your installation:
 
 ```bash
-code-agent --version
+uv run code-agent --version
 ```
 
 If you're using Ollama integration, ensure your local Ollama installation is also up to date:
@@ -149,14 +261,8 @@ brew upgrade ollama
 After installation, make sure the executable is in your PATH. If you can't run the `code-agent` command, you may need to add the installation directory to your PATH:
 
 ```bash
-# Find where the package was installed
-pip show cli-code-agent
-
-# Add the bin directory to your PATH (example for ~/.local/bin)
-export PATH="$HOME/.local/bin:$PATH"
-
-# For permanent addition, add to your shell profile (.bashrc, .zshrc, etc.)
-echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+# Execute command with help
+uv run code-agent --help
 ```
 
 ### First Run
@@ -165,7 +271,9 @@ After installation, set up your API key (for OpenAI in this example):
 
 ```bash
 export OPENAI_API_KEY=sk-your-key-here
-code-agent run "Hello! What can you help me with today?"
+uv run code-agent run "Hello! What can you help me with today?"
+# or
+echo "Hello! What can you help me with today?" | uv run code-agent chat
 ```
 
 ## Configuration
@@ -343,9 +451,8 @@ Activate the virtual environment first: `source .venv/bin/activate`
 ## Development Installation
 
 1.  **Prerequisites:**
-    *   Python 3.10+
-    *   [Poetry](https://python-poetry.org/docs/#installation)
-    *   (Optional but recommended) [UV](https://github.com/astral-sh/uv) - for faster dependency installation
+    *   Python 3.11+
+    *   [UV](https://github.com/astral-sh/uv) - for faster dependency installation
 
 2.  **Clone the repository:**
     ```bash
@@ -355,29 +462,9 @@ Activate the virtual environment first: `source .venv/bin/activate`
 
 3.  **Create virtual environment and install dependencies:**
     ```bash
-    # Recommended: Use a Python version management tool like pyenv if needed
-    python3 -m venv .venv
-    source .venv/bin/activate
-    pip install poetry
-    poetry install
-    ```
-    *(Alternatively, if you just use `poetry install` directly, Poetry might manage the virtual environment for you.)*
-
-    **Faster Alternative using `uv`:**
-
-    If you have `uv` installed (see [Quick Start](#quick-start)), you can use it for a much faster setup:
-
-    ```bash
-    # 1. Create the virtual environment
-    uv venv .venv
-
-    # 2. Activate the environment (Linux/macOS)
-    source .venv/bin/activate
-    #    Activate the environment (Windows - Command Prompt/PowerShell)
-    #    .venv\Scripts\activate
-
-    # 3. Install dependencies
-    uv pip install '.[dev]'
+    # Recommended: Use UV as the Python package manager
+    uv venv # 1. Create the virtual environment
+    uv sync # 2. Install dependencies
     ```
 
 ## Contributors
@@ -448,25 +535,23 @@ After checking out the repository, follow these steps to test your development v
 
 ```bash
 # Set up your virtual environment
-python3 -m venv .venv
-source .venv/bin/activate
+uv venv
 
 # Install dependencies
-pip install poetry
-poetry install
+uv sync
 
 # Install the package in development mode
-pip install -e .
+uv run python -m pytest
 ```
 
 Now you can run the development version directly:
 
 ```bash
 # Test the development version with a simple command
-code-agent --version
+uv run code-agent --version
 
 # Run a simple prompt to test functionality
-code-agent run "Hello, world"
+uv run code-agent run "Hello, world"
 
 # Run unit tests to ensure your changes don't break existing functionality
 ./scripts/run_tests.sh
@@ -525,3 +610,18 @@ Since Git doesn't offer a reliable post-push hook, we use a standalone script to
 ```
 
 For details on usage and configuration, see the [PR Monitoring Script Documentation](./docs/git_development.md#pr-monitoring-and-validation).
+
+## Current Development
+
+### Google ADK Migration
+
+We are currently migrating the codebase to use the Google Agent Development Kit (ADK). This migration will provide several benefits:
+
+- Reduced custom framework code to maintain
+- Standardized agent framework with better extensibility
+- Improved session management and context handling
+- Better support for evaluation and testing
+- Enhanced safety and security features
+- Potential future support for multi-agent systems
+
+The migration is following a phased approach outlined in our [planning document](docs/planning_google_adk_migration.md). Development is happening on the `feat/google-adk` branch.
