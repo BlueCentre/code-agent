@@ -9,8 +9,7 @@ jobs:
   publish:
     name: Publish to PyPI
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write # Required for trusted publishing
+    environment: publish # Use the 'publish' environment
 
     steps:
     - uses: actions/checkout@v4
@@ -28,6 +27,7 @@ jobs:
       run: uv build
 
     - name: Publish to PyPI
-      # Use GitHub Actions OIDC token for trusted publishing
-      # https://docs.astral.sh/uv/guides/package/#publishing-your-package
+      env:
+        # Use the API token secret from the 'publish' environment
+        UV_PUBLISH_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
       run: uv publish dist/*
