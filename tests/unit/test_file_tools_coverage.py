@@ -235,8 +235,6 @@ class TestApplyEdit(unittest.TestCase):
 
         edit = "def example():\n" "    return 'Hello World'\n" "\n" "# ... existing code ...\n"
 
-        expected_result = "def example():\n" "    return 'Hello World'\n" "\n" "# Some comment\n"
-
         # Use mocks to bypass actual file operations
         result = apply_edit(target_file=str(self.test_file), code_edit=edit)
 

@@ -87,7 +87,7 @@ class TestLiteLlmCoverage(unittest.TestCase):
             "stream": False,  # New parameter
         }
 
-        response = pytest_run_awaitable(self.model.generate_content_async("Test prompt", **custom_options))
+        pytest_run_awaitable(self.model.generate_content_async("Test prompt", **custom_options))
 
         # Check options were passed correctly
         mock_acompletion.assert_called_once()
@@ -216,7 +216,7 @@ class TestCreateModelCoverage(unittest.TestCase):
             mock_lite_llm.return_value = mock_model
 
             # Not providing provider or model_name
-            model = create_model()
+            create_model()
 
             # Should use config defaults
             mock_lite_llm.assert_called_once()
@@ -247,7 +247,7 @@ class TestCreateModelCoverage(unittest.TestCase):
 
             try:
                 # Create a model with groq provider
-                model = create_model(provider="groq", model_name="llama3-70b-8192")
+                create_model(provider="groq", model_name="llama3-70b-8192")
 
                 # Check correct parameters passed to LiteLlm
                 mock_lite_llm.assert_called_once()

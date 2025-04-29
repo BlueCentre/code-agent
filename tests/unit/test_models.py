@@ -301,7 +301,7 @@ class TestCreateModel(unittest.TestCase):
         mock_lite_llm.return_value = mock_model
 
         # Create model instance
-        model = create_model(provider="openai", model_name="gpt-4")
+        create_model(provider="openai", model_name="gpt-4")
 
         # Verify LiteLlm was instantiated correctly
         mock_lite_llm.assert_called_once_with(
@@ -334,7 +334,7 @@ class TestCreateModel(unittest.TestCase):
         mock_lite_llm.return_value = mock_model
 
         # Create model instance
-        model = create_model(provider="anthropic", model_name="claude-3-opus")
+        create_model(provider="anthropic", model_name="claude-3-opus")
 
         # Verify LiteLlm was instantiated correctly
         mock_lite_llm.assert_called_once_with(
@@ -404,7 +404,7 @@ class TestCreateModel(unittest.TestCase):
         mock_ollama_llm.return_value = mock_model
 
         # Create model instance
-        model = create_model(provider="ollama", model_name="llama3.2:latest")
+        create_model(provider="ollama", model_name="llama3.2:latest")
 
         # Verify OllamaLlm was instantiated correctly
         mock_ollama_llm.assert_called_once_with(
