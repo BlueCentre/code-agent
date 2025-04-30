@@ -5,4 +5,4 @@ try:
 
     __version__ = version("cli-code-agent")
 except ImportError:
-    __version__ = "0.2.0"  # Fallback version
+    __version__ = "0.2.1"  # Fallback version
