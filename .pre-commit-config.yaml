@@ -9,8 +9,7 @@ repos:
     -   id: check-yaml
     -   id: check-toml
 -   repo: https://github.com/astral-sh/ruff-pre-commit
-    # Ruff version. Must be synced with pyproject.toml
-    rev: v0.4.10
+    rev: v0.4.10 # Ruff version. Must be synced with pyproject.toml
     hooks:
     -   id: ruff
         args: [--fix, --force-exit]
@@ -20,4 +19,4 @@ repos:
     hooks:
     -   id: conventional-pre-commit
         stages: [commit-msg]
-        args: [] # optional: list of Conventional Commits types to allow e.g. [feat, fix, ci, chore, test]
+        args: ["feat", "fix", "ci", "chore", "test", "docs", "style", "refactor", "perf", "revert", "build", "ops", "release"] # optional: list of Conventional Commits types to allow e.g. [feat, fix, ci, chore, test]
