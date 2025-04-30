@@ -5,7 +5,10 @@ import subprocess
 from typing import Literal, Optional
 
 # Import ToolContext for state management
-from google.adk.tools import ToolContext
+from google.adk.tools import (
+    FunctionTool,  # Ensure FunctionTool is imported if not already
+    ToolContext,
+)
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
@@ -392,7 +395,6 @@ def execute_vetted_shell_command(args: dict, tool_context: ToolContext) -> Execu
 
 # Wrap functions with FunctionTool
 # Note: This assumes FunctionTool is imported or available in the scope
-from google.adk.tools import FunctionTool  # Ensure FunctionTool is imported if not already
 
 configure_shell_approval_tool = FunctionTool(configure_shell_approval)
 configure_shell_whitelist_tool = FunctionTool(configure_shell_whitelist)

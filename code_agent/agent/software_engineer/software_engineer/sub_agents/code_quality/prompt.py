@@ -1,3 +1,4 @@
+# ruff: noqa
 """Prompts for the code quality sub-agent."""
 
 CODE_QUALITY_AGENT_INSTR = """

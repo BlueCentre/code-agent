@@ -1,3 +1,4 @@
+# ruff: noqa
 """Prompt for the design pattern agent."""
 
 DESIGN_PATTERN_AGENT_INSTR = """

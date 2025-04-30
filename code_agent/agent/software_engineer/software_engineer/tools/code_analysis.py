@@ -24,7 +24,7 @@ except ImportError:
 try:
     # NOTE: flake8.api.legacy is no longer available in newer versions of flake8
     # We'll use a different approach for flake8
-    import flake8
+    import flake8  # noqa: F401
     from flake8.main.application import Application
 
     FLAKE8_AVAILABLE = True
@@ -143,6 +143,8 @@ def analyze_python_code(file_path: str, code: str) -> Dict[str, Any]:
             pylint.lint.Run([file_path, "--output-format=text"], reporter=reporter, exit=False)
 
             pylint_output = output.getvalue()
+            # TODO: Sonar Report - https://sonarcloud.io/project/security_hotspots?id=BlueCentre_code-agent&pullRequest=19&issueStatuses=OPEN,CONFIRMED&sinceLeakPeriod=true
+            # NOTE: Make sure the regex used here, which is vulnerable to polynomial runtime due to backtracking, cannot lead to denial of service.
             # Parse pylint output
             pattern = r"([A-Z]):\s*(\d+),\s*(\d+):\s*(.+)\s*\(([A-Z0-9]+)\)"
             for match in re.finditer(pattern, pylint_output):
@@ -180,7 +182,8 @@ def analyze_python_code(file_path: str, code: str) -> Dict[str, Any]:
             for file_errors in flake8_app.guide.stats.statistics_for(""):
                 for error in file_errors:
                     if len(error) >= 4:  # Make sure the error has all components
-                        line_num, col_num, message, code_obj = error[0], error[1], error[2], error[3]
+                        line_num, col_num, message = error[0], error[1], error[2]
+                        # line_num, col_num, message, code_obj = error[0], error[1], error[2], error[3]
 
                         severity = AnalysisSeverity.WARNING
                         if message.startswith("E"):
