@@ -1,45 +1,45 @@
-"""Debugging agent implementation."""
+"""Debugging Agent Implementation."""
 
-from google.adk.agents import Agent
+from google.adk.agents import LlmAgent
 from google.genai.types import GenerateContentConfig
 
+# Import codebase search tool from the tools module
+from ...tools import codebase_search_tool
 from ...tools.filesystem import (
     configure_approval_tool,
     edit_file_tool,
     list_dir_tool,
     read_file_tool,
 )
-
-# Updated import for shell command tools
+from ...tools.search import google_search_grounding
 from ...tools.shell_command import (
-    check_shell_command_safety,
-    configure_shell_approval,
-    configure_shell_whitelist,
-    execute_vetted_shell_command,
+    check_command_exists_tool,
+    check_shell_command_safety_tool,
+    configure_shell_approval_tool,
+    configure_shell_whitelist_tool,
+    execute_vetted_shell_command_tool,
 )
-from ...tools.system_info import check_command_exists, get_os_info
+from ...tools.system_info import get_os_info
 from . import prompt
 
-# from software_engineer.tools.git_tools import (
-#     git_status_tool,
-# )
-
-debugging_agent = Agent(
-    model="gemini-2.5-flash-preview-04-17",  # "gemini-2.5-pro-exp-03-25", #"gemini-2.0-flash-001",
+debugging_agent = LlmAgent(
+    model="gemini-1.5-pro-001",
     name="debugging_agent",
-    description="Helps identify and fix code issues",
+    description="Agent specialized in debugging code and fixing issues",
     instruction=prompt.DEBUGGING_AGENT_INSTR,
     tools=[
         read_file_tool,
         list_dir_tool,
         configure_approval_tool,
         edit_file_tool,
-        configure_shell_approval,
-        configure_shell_whitelist,
-        check_shell_command_safety,
-        execute_vetted_shell_command,
+        configure_shell_approval_tool,
+        configure_shell_whitelist_tool,
+        check_command_exists_tool,
+        check_shell_command_safety_tool,
+        execute_vetted_shell_command_tool,
         get_os_info,
-        check_command_exists,
+        google_search_grounding,
+        codebase_search_tool,
     ],
     output_key="debugging",
     generate_content_config=GenerateContentConfig(

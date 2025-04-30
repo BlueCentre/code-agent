@@ -1,24 +1,28 @@
-"""Testing agent implementation."""
+"""Testing Agent Implementation."""
 
-from google.adk.agents import Agent
-from google.genai.types import GenerateContentConfig
+from google.adk.agents import LlmAgent
 
-# from google.adk.tools.tool_mixins import BaseTool
-from ...tools.filesystem import list_dir_tool, read_file_tool
+# Import codebase search tool from the tools module
+from ...tools import codebase_search_tool
+from ...tools.filesystem import edit_file_tool, list_dir_tool, read_file_tool
+from ...tools.search import google_search_grounding
+from ...tools.shell_command import execute_vetted_shell_command_tool
 from . import prompt
 
-testing_agent = Agent(
-    model="gemini-2.5-flash-preview-04-17",  # "gemini-2.0-flash-001",
+testing_agent = LlmAgent(
+    model="gemini-1.5-pro-001",
     name="testing_agent",
-    description="Helps generate test cases and testing strategies",
+    description="Agent specialized in writing and running tests",
     instruction=prompt.TESTING_AGENT_INSTR,
-    tools=[read_file_tool, list_dir_tool],
+    tools=[
+        read_file_tool,
+        list_dir_tool,
+        edit_file_tool,
+        codebase_search_tool,
+        execute_vetted_shell_command_tool,
+        google_search_grounding,
+    ],
     output_key="testing",
-    generate_content_config=GenerateContentConfig(
-        temperature=0.2,
-        top_p=0.95,
-        max_output_tokens=4096,
-    ),
 )
 
 # Placeholder for actual tool implementation

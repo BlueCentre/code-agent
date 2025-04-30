@@ -38,6 +38,10 @@ test-unit:
 test-integration:
 	@echo "pytest -m integration tests/
 
+test-e2e:
+	@echo "Running end-to-end tests..."
+	./scripts/run_e2e_tests.sh
+
 test-coverage:
 	@echo "Running tests with coverage..."
 	uv run pytest tests/ --cov=code_agent --cov-config=pyproject.toml --cov-report=term --cov-report=html --cov-fail-under=80

@@ -7,11 +7,12 @@ This sample demonstrates the use of Agent Development Kit to create an AI-powere
 The Software Engineer Agent consists of multiple specialized sub-agents, each responsible for a specific aspect of software development:
 
 1. **Code Review Agent**: Reviews code, identifies issues, and suggests improvements
-2. **Design Pattern Agent**: Recommends design patterns for specific problems
-3. **Testing Agent**: Helps generate test cases and testing strategies
-4. **Debugging Agent**: Assists with debugging issues
-5. **Documentation Agent**: Helps create documentation
-6. **DevOps Agent**: Provides guidance on CI/CD, deployment
+2. **Code Quality Agent**: Performs static analysis and provides detailed code quality improvements
+3. **Design Pattern Agent**: Recommends design patterns for specific problems
+4. **Testing Agent**: Helps generate test cases and testing strategies
+5. **Debugging Agent**: Assists with debugging issues
+6. **Documentation Agent**: Helps create documentation
+7. **DevOps Agent**: Provides guidance on CI/CD, deployment
 
 ## Agent Details
 
@@ -30,6 +31,7 @@ The Software Engineer Agent uses a hierarchical architecture with a root agent o
 ```
 root_agent
 ├── code_review_agent
+├── code_quality_agent
 ├── design_pattern_agent
 ├── testing_agent
 ├── debugging_agent
@@ -41,13 +43,16 @@ root_agent
 
 * **Agents:**
   * `code_review_agent` - Reviews code, identifies issues, and suggests improvements
+  * `code_quality_agent` - Performs static analysis and provides detailed code quality metrics and improvements
   * `design_pattern_agent` - Recommends design patterns for specific problems
   * `testing_agent` - Helps generate test cases and testing strategies
   * `debugging_agent` - Assists with debugging issues
   * `documentation_agent` - Helps create documentation
   * `devops_agent` - Provides guidance on CI/CD, deployment
 * **Tools:**
-  * `code_analysis_tool` - Analyzes code for patterns, complexity, and potential issues
+  * `analyze_code_tool` - Analyzes code for patterns, complexity, and potential issues using multiple static analysis engines
+  * `get_analysis_issues_by_severity_tool` - Filters code issues by severity level
+  * `suggest_code_fixes_tool` - Suggests specific fixes for identified code issues
   * `memory_tool` - Stores and retrieves information about the project context
 * **AgentTools:**
   * `pattern_recommendation_tool` - Recommends design patterns for specific problems
@@ -100,16 +105,21 @@ root_agent
    poetry install
    ```
 
-3. Set up environment variables:
+3. Install code analysis tool dependencies:
+   ```bash
+   pip install -r code_analysis_requirements.txt
+   ```
+
+4. Set up environment variables:
    - Copy `.env.example` to `.env`
    - Set the required environment variables
 
-4. Authenticate your GCloud account:
+5. Authenticate your GCloud account:
    ```bash
    gcloud auth application-default login
    ```
 
-5. Activate the virtual environment:
+6. Activate the virtual environment:
    ```bash
    poetry shell
    ```
@@ -143,6 +153,8 @@ adk web
 
 Example usage:
 - "Can you review my code for potential issues?"
+- "Analyze the code quality in this file"
+- "Check this file for security vulnerabilities"
 - "I need help implementing a factory pattern in Python"
 - "Generate unit tests for this function"
 - "Help me debug this error"

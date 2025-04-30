@@ -1,5 +1,6 @@
 import logging
 import shlex
+import shutil  # <-- Added import
 import subprocess
 from typing import Literal, Optional
 
@@ -160,6 +161,64 @@ def configure_shell_whitelist(args: dict, tool_context: ToolContext) -> Configur
         return ConfigureShellWhitelistOutput(status="Shell command whitelist cleared.")
     else:
         return ConfigureShellWhitelistOutput(status=f"Error: Invalid action '{action}'. Valid actions are: add, remove, list, clear.")
+
+
+# --- Check Command Existence Tool --- # <--- Added section start
+
+
+class CheckCommandExistsInput(BaseModel):
+    """Input model for checking command existence."""
+
+    command: str = Field(..., description="The command name (e.g., 'git', 'ls') to check for existence.")
+
+
+class CheckCommandExistsOutput(BaseModel):
+    """Output model for checking command existence."""
+
+    exists: bool
+    command_checked: str
+    message: str
+
+
+def check_command_exists(args: dict, tool_context: ToolContext) -> CheckCommandExistsOutput:
+    """Checks if a command exists in the system's PATH. Extracts the base command."""
+    command_name = args.get("command")
+    base_command = None
+    message = ""
+
+    if not command_name:
+        message = "Error: 'command' argument is missing."
+        logger.error(message)
+        return CheckCommandExistsOutput(exists=False, command_checked=command_name or "", message=message)
+
+    try:
+        # Extract base command if it includes arguments (shutil.which needs the command name only)
+        parts = shlex.split(command_name)
+        if parts:
+            base_command = parts[0]
+        else:
+            message = f"Could not parse base command from input: '{command_name}'"
+            logger.warning(message)
+            return CheckCommandExistsOutput(exists=False, command_checked=command_name, message=message)
+
+    except ValueError as e:
+        message = f"Error parsing command '{command_name}': {e}"
+        logger.error(message)
+        return CheckCommandExistsOutput(exists=False, command_checked=command_name, message=message)
+
+    if not base_command:  # Should not happen if parsing worked, but check anyway
+        message = "Error: Could not determine base command."
+        logger.error(message)
+        return CheckCommandExistsOutput(exists=False, command_checked=command_name, message=message)
+
+    exists = shutil.which(base_command) is not None
+    status_msg = "exists" if exists else "does not exist"
+    message = f"Command '{base_command}' {status_msg} in system PATH."
+    logger.info(f"Checked existence for command '{base_command}': {exists}")
+    return CheckCommandExistsOutput(exists=exists, command_checked=base_command, message=message)
+
+
+# <--- Added section end
 
 
 # --- Shell Command Safety Check Tool --- #
@@ -327,3 +386,16 @@ def execute_vetted_shell_command(args: dict, tool_context: ToolContext) -> Execu
         return ExecuteVettedShellCommandOutput(
             stderr=f"An unexpected error occurred: {e}", return_code=-3, command_executed=command, status="error", message=f"An unexpected error occurred: {e}"
         )
+
+
+# --- Tool Registrations --- # <-- Added section (optional but good practice)
+
+# Wrap functions with FunctionTool
+# Note: This assumes FunctionTool is imported or available in the scope
+from google.adk.tools import FunctionTool  # Ensure FunctionTool is imported if not already
+
+configure_shell_approval_tool = FunctionTool(configure_shell_approval)
+configure_shell_whitelist_tool = FunctionTool(configure_shell_whitelist)
+check_command_exists_tool = FunctionTool(check_command_exists)  # <-- Added tool
+check_shell_command_safety_tool = FunctionTool(check_shell_command_safety)
+execute_vetted_shell_command_tool = FunctionTool(execute_vetted_shell_command)
