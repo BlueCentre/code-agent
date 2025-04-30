@@ -28,7 +28,7 @@ jobs:
           cache-dependency-glob: "pyproject.toml uv.toml"
 
       - name: Install dependencies
-        run: uv sync --extras dev
+        run: uv sync --all-extras --dev
 
       - name: Run E2E tests
         run: uv run ./scripts/run_e2e_tests.sh
