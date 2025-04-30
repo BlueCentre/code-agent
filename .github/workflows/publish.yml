@@ -20,8 +20,12 @@ jobs:
       uses: astral-sh/setup-uv@v5
       with:
         python-version: '3.11'
-        enable-cache: true
-        cache-dependency-glob: "pyproject.toml uv.toml"
+        enable-cache: false
+
+    - name: Install dependencies
+      run: |
+        uv pip install build wheel setuptools
+        uv pip install -e .
 
     - name: Build package
       run: uv build
