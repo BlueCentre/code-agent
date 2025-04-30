@@ -68,7 +68,7 @@ swe-run-chat:
 	uvx --from git+https://github.com/google/adk-python.git@main adk run code_agent/agent/software_engineer/software_engineer
 
 swe-web-chat:
-	uvx --from git+https://github.com/google/adk-python.git@main adk run code_agent/agent/software_engineer
+	uvx --from git+https://github.com/google/adk-python.git@main adk web code_agent/agent/software_engineer
 
 code-agent-chat:
 	uv run code-agent chat
