@@ -1,6 +1,3 @@
-try:
-    from importlib.metadata import version
+"""Code Agent CLI"""
 
-    __version__ = version("cli-code-agent")
-except ImportError:
-    __version__ = "0.1.0"  # Fallback version
+from .version import __version__

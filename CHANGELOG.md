@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2025-05-01
+
+### Added
+- Enhanced software engineer agent with specialized sub-agents:
+  - Code Quality agent for linting and best practices
+  - Improved Code Review capabilities
+  - Enhanced Debugging sub-agent
+  - Design Pattern recommendations
+  - Improved DevOps assistant
+  - Documentation generation
+  - Testing support with framework detection
+- New code analysis tools and capabilities in the software engineer agent
+- Additional end-to-end test coverage for CLI commands and integrations
+
+### Changed
+- Improved CI/CD pipeline with uv build and publish workflows
+- Enhanced GitHub Actions with trusted publishing support
+- Updated documentation to reflect current features and usage
+- Reorganized agent prompts for better specialized assistance
+- Strengthened security in command execution
+
+### Fixed
+- Multiple end-to-end test pipeline issues
+- Corrected license specifier in package metadata
+- Fixed versioning mechanism to properly display CLI version
+- Improved error handling across various modules
+
+### Security
+- Added secure token management for package publishing
+- Enhanced validation of file operations
+
 ## [0.1.3] - 2025-04-29
 
 ### Added

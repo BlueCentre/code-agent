@@ -1,6 +1,6 @@
 [project]
 name = "cli-code-agent"
-version = "0.1.3"
+version = "0.2.0"
 description = "CLI agent for interacting with LLMs and local environment"
 authors = [
     {name = "James Nguyen", email = "git@nocentre.net"}
@@ -127,7 +127,7 @@ directory = "htmlcov"
 # projectKey = "BlueCentre_code-agent"
 # organization = "bluecentre"
 # projectName = "code-agent"
-# projectVersion = "0.1.3"
+# projectVersion = "0.2.0"
 # sources = "code_agent"
 # tests = "tests"
 # python.coverage.reportPaths = "coverage.xml"
