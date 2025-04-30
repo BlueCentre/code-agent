@@ -1,30 +1,28 @@
-"""Design pattern agent implementation."""
+"""Design Pattern Agent Implementation."""
 
-from google.adk.agents import Agent
-from google.genai.types import GenerateContentConfig
+from google.adk.agents import LlmAgent
 
+# Import codebase search tool from the tools module
+from ...tools import codebase_search_tool
+from ...tools.filesystem import edit_file_tool, list_dir_tool, read_file_tool
 from ...tools.search import google_search_grounding
-
-# NOTE: SWITCH TO ADK WEB or UNCOMMENT FOR ADK RUN
-# Use absolute imports with correct directory name
-# from code_agent.agent.software_engineer.software_engineer import prompt
-# from code_agent.agent.software_engineer.software_engineer.shared_libraries.types import DesignPatternResponse
-# NOTE: SWITCH TO ADK WEB or COMMENT OUT FOR ADK RUN
+from ...tools.shell_command import execute_vetted_shell_command_tool
 from . import prompt
 
-design_pattern_agent = Agent(
-    model="gemini-2.5-flash-preview-04-17",  # "gemini-2.0-flash-001",
+design_pattern_agent = LlmAgent(
+    model="gemini-1.5-pro-001",
     name="design_pattern_agent",
-    description="Recommends design patterns for specific problems",
+    description="Agent specialized in applying design patterns and architectural principles",
     instruction=prompt.DESIGN_PATTERN_AGENT_INSTR,
-    # output_schema=DesignPatternResponse, # NOTE: Replace with tools
+    tools=[
+        read_file_tool,
+        list_dir_tool,
+        edit_file_tool,
+        codebase_search_tool,
+        execute_vetted_shell_command_tool,
+        google_search_grounding,
+    ],
     output_key="design_pattern",
-    generate_content_config=GenerateContentConfig(
-        temperature=0.2,
-        top_p=0.95,
-        max_output_tokens=1000,
-    ),
-    tools=[google_search_grounding],
 )
 
 # Placeholder for actual tool implementation

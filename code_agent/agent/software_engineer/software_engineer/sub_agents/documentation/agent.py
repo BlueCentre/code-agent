@@ -1,32 +1,28 @@
-"""Documentation agent implementation."""
+"""Documentation Agent Implementation."""
 
-from google.adk.agents import Agent
-from google.genai.types import GenerateContentConfig
+from google.adk.agents import LlmAgent
 
-# from google.adk.tools.tool_mixins import BaseTool
-from ...tools.filesystem import list_dir_tool, read_file_tool
-
-# from software_engineer.tools.git_tools import (
-#     git_status_tool,
-# )
-# NOTE: SWITCH TO ADK WEB or UNCOMMENT FOR ADK RUN
-# Use absolute imports with correct directory name
-# from code_agent.agent.software_engineer.software_engineer import prompt
-# from code_agent.agent.software_engineer.software_engineer.shared_libraries.types import DocumentationResponse
-# NOTE: SWITCH TO ADK WEB or COMMENT OUT FOR ADK RUN
+# Import codebase search tool from the tools module
+from ...tools import codebase_search_tool
+from ...tools.filesystem import edit_file_tool, list_dir_tool, read_file_tool
+from ...tools.search import google_search_grounding
+from ...tools.shell_command import execute_vetted_shell_command_tool
 from . import prompt
 
-documentation_agent = Agent(
-    model="gemini-2.5-flash-preview-04-17",  # "gemini-2.0-flash-001",
+documentation_agent = LlmAgent(
+    model="gemini-1.5-pro-001",
     name="documentation_agent",
-    description="Helps create clear and comprehensive documentation",
+    description="Agent specialized in writing and updating documentation",
     instruction=prompt.DOCUMENTATION_AGENT_INSTR,
-    tools=[read_file_tool, list_dir_tool],
+    tools=[
+        read_file_tool,
+        list_dir_tool,
+        edit_file_tool,
+        codebase_search_tool,
+        execute_vetted_shell_command_tool,
+        google_search_grounding,
+    ],
     output_key="documentation",
-    generate_content_config=GenerateContentConfig(
-        temperature=0.2,
-        top_p=0.95,
-    ),
 )
 
 # Placeholder for actual tool implementation

@@ -1,9 +1,22 @@
-"""Tools for the software engineer agent."""
+# ruff: noqa: I001, F401
+"""Tools for the Software Engineer Agent."""
 
-# from .shell_command import (
-#     check_shell_command_safety,
-#     configure_shell_approval,
-#     configure_shell_whitelist,
-#     execute_vetted_shell_command,
-# )
-# from .system_info import check_command_exists, get_os_info
+from . import (
+    analysis_state,
+    code_analysis,
+    code_search,
+    filesystem,
+    search,
+    shell_command,
+    system_info,
+)
+
+# Export code analysis tools
+from .code_analysis import (
+    analyze_code_tool,
+    get_analysis_issues_by_severity_tool,
+    suggest_code_fixes_tool,
+)
+
+# Export the code search tool for easier imports
+from .code_search import codebase_search_tool

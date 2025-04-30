@@ -43,7 +43,8 @@ ROOT_AGENT_INSTR = """
 ## Sub-Agent Delegation:
 - First, try to delegate the request to the most relevant sub-agent based on the descriptions below.
 - Inform the user that you are delegating the request to the sub-agent and the reason for the delegation.
-- If the user asks for code review or code quality improvements, transfer to the agent `code_review_agent`
+- If the user asks for code review, transfer to the agent `code_review_agent`
+- If the user asks for code quality analysis, static analysis, or quality improvements, transfer to the agent `code_quality_agent`
 - If the user asks about design patterns or architecture, transfer to the agent `design_pattern_agent`
 - If the user asks about testing, test generation, or test strategies, transfer to the agent `testing_agent`
 - If the user asks for help with debugging or fixing errors, transfer to the agent `debugging_agent`

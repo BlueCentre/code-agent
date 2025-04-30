@@ -1,7 +1,7 @@
 import logging
 import platform
-import shutil
 
+from google.adk.tools import FunctionTool
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
@@ -27,40 +27,5 @@ def get_os_info() -> OSInfoOutput:
         return OSInfoOutput(system="Unknown", release="Unknown", version="Unknown", machine="Unknown")
 
 
-class CommandExistsInput(BaseModel):
-    """Input model for the check_command_exists tool."""
-
-    command_name: str = Field(..., description="The name of the command to check.")
-
-
-class CommandExistsOutput(BaseModel):
-    """Output model for the check_command_exists tool."""
-
-    exists: bool = Field(description="True if the command exists in the system PATH, False otherwise.")
-    path: str | None = Field(None, description="The full path to the command if found, otherwise None.")
-
-
-def check_command_exists(args: dict) -> CommandExistsOutput:
-    """Checks if a given command exists in the system's PATH.
-
-    Args:
-        args (dict): A dictionary containing:
-            command_name (str): The name of the command to check.
-    """
-    command_name = args.get("command_name")
-    if not command_name:
-        logger.error("'command_name' argument missing for check_command_exists.")
-        return CommandExistsOutput(exists=False, path=None)
-
-    logger.info(f"Checking existence of command: {command_name}")
-    try:
-        command_path = shutil.which(command_name)
-        if command_path:
-            logger.info(f"Command '{command_name}' found at: {command_path}")
-            return CommandExistsOutput(exists=True, path=command_path)
-        else:
-            logger.warning(f"Command '{command_name}' not found in PATH.")
-            return CommandExistsOutput(exists=False, path=None)
-    except Exception as e:
-        logger.exception(f"Error checking command '{command_name}': {e}")
-        return CommandExistsOutput(exists=False, path=None)
+# Wrap get_os_info with FunctionTool
+get_os_info_tool = FunctionTool(get_os_info)
