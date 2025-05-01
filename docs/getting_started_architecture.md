@@ -64,6 +64,72 @@ flowchart TD
     tool_modules --> |"Executes commands"| terminal
 ```
 
+## Level 2.5: E2E Testing with `adk run`
+
+This level focuses specifically on the End-to-End testing scenario executed by scripts like `scripts/run_e2e_tests.sh`, which typically invoke the agent via the `adk run` command-line tool multiple times.
+
+### Current E2E Testing Limitation (InMemoryMemoryService)
+
+This diagram illustrates why testing cross-session memory recall fails with the default `InMemoryMemoryService` in the current E2E setup. Each `adk run` invocation is a separate process, and the in-memory service does not persist between them.
+
+```mermaid
+flowchart TD
+    title["E2E Testing - Current State with InMemoryMemoryService"]
+
+    user["Test Script<br>(e.g., run_e2e_tests.sh)"]
+
+    subgraph run1 ["Invocation 1: 'adk run ...'"]
+        agent1["Agent Process 1"]
+        mem1["InMemoryMemoryService<br>(Ephemeral, Process-local)"]
+        agent1 --- mem1
+    end
+
+    subgraph run2 ["Invocation 2: 'adk run ...'"]
+        agent2["Agent Process 2"]
+        mem2["InMemoryMemoryService<br>(Ephemeral, Process-local)"]
+        agent2 --- mem2
+    end
+
+    user --> |"Executes"| run1
+    user --> |"Executes"| run2
+    note[Memory is lost between invocations]
+
+    style run1 fill:#f9f,stroke:#333,stroke-width:2px
+    style run2 fill:#f9f,stroke:#333,stroke-width:2px
+    style mem1 fill:#ff9,stroke:#333,stroke-width:1px
+    style mem2 fill:#ff9,stroke:#333,stroke-width:1px
+```
+
+### Future E2E Testing (Persistent MemoryService)
+
+This diagram shows the target architecture for enabling cross-session memory testing in the E2E scripts. A persistent `MemoryService` (like `VertexAiRagMemoryService`) is shared across different `adk run` invocations.
+
+```mermaid
+flowchart TD
+    title["E2E Testing - Future State with Persistent MemoryService"]
+
+    user["Test Script<br>(e.g., run_e2e_tests.sh)"]
+    shared_mem["Persistent MemoryService<br>(e.g., Vertex AI RAG Corpus)<br>Shared across invocations"]
+
+    subgraph run1 ["Invocation 1: 'adk run ...'"]
+        agent1["Agent Process 1"]
+    end
+
+    subgraph run2 ["Invocation 2: 'adk run ...'"]
+        agent2["Agent Process 2"]
+    end
+
+    user --> |"Executes"| run1
+    user --> |"Executes"| run2
+
+    agent1 --> |"Reads/Writes<br>via Runner/Tools"| shared_mem
+    agent2 --> |"Reads/Writes<br>via Runner/Tools"| shared_mem
+
+    style run1 fill:#f9f,stroke:#333,stroke-width:2px
+    style run2 fill:#f9f,stroke:#333,stroke-width:2px
+    style shared_mem fill:#9cf,stroke:#333,stroke-width:2px
+```
+
 ## Level 3: Component Diagram (Agent Core and Tools)
 
 This diagram provides a more detailed view of the components within the Agent Core and Tools modules.
