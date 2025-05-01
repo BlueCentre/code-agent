@@ -19,41 +19,30 @@ This document outlines the plan to rewrite the Code Agent Command Line Interface
 
 ## 1.5 Current Implementation Status
 
-As of the latest update, here is our progress on implementing this plan:
+Here's the current progress on the ADK CLI integration:
 
-### Milestones Progress
+### ✅ Milestone 1: Core Setup & Basic ADK `run` Integration
+- Created new CLI structure with Typer app
+- Implemented basic ADK agent loading and execution
+- Integrated with configuration system
 
-#### ✅ Milestone 1: Core Setup & Basic ADK `run` Integration - COMPLETED
-* Set up CLI structure with Typer app
-* Implemented minimal run command that can execute ADK agents
-* Successfully integrated configuration loading
-* Verified basic execution works without errors
+### ✅ Milestone 2: Enhanced `run` Command with Rich & Progressive CLI Feedback
+- Added rich progress indicators
+- Implemented interactive mode
+- Added validation and error handling for agent paths
+- Created comprehensive unit tests
 
-#### 🔄 Milestone 2: Enhanced `run` Command with Rich & Progress - IN PROGRESS (~80%)
-* Added Typer arguments/options for the `run` command
-* Integrated Rich for console output formatting 
-* Adapted progress indicators for agent execution
-* Implemented interactive mode and session management
-* Added support for default_agent_path from config
+### ✅ Milestone 3: ADK Web & API Interfaces
+- Implemented `web` command with ADK integration
+- Implemented `fastapi` command with ADK integration
+- Added command-line options for host, port, and log level
+- Created unit tests for both commands
 
-**Remaining Tasks:**
-* Create comprehensive test suite for the `run` command
-* Refine error handling and user feedback
-
-#### 🔜 Milestone 3: `web` and `fastapi` Commands Integration - NEXT UP
-* Not yet started
-
-#### 🔜 Milestone 4: Configuration & Multi-Model Provider Integration - PENDING
-* Not yet started
-
-#### 🔜 Milestone 5: Testing & Refinement - PENDING
-* Not yet started
-
-### Next Implementation Steps:
-1. Complete remaining Milestone 2 tasks
-2. Begin implementing the `web` command from Milestone 3
-3. Begin implementing the `fastapi` command from Milestone 3
-4. Build tests for new commands
+### 🔄 Next Up: Milestone 4: Enhanced Configuration & Fine-Tuning
+- Implement enhanced configuration options for all commands
+- Add model options direct via CLI
+- Support all cloud provider integrations
+- Add verbose logging and debug options
 
 ## 2. Key Requirements
 
