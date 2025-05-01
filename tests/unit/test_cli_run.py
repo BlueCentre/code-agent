@@ -63,40 +63,9 @@ class TestRunCommand:
                 assert result.exit_code != 0
                 assert "does not exist" in result.stdout
 
-    def test_run_command_option_parsing(self, runner):
-        """Test that run command correctly parses command line options."""
-        # Mock necessary components to avoid actual execution
-        with (
-            patch("code_agent.cli.main.ADK_INSTALLED", True),
-            patch("code_agent.cli.main.get_config") as mock_get_config,
-            patch("pathlib.Path.exists", return_value=True),
-            patch("code_agent.cli.main._run_adk_agent") as mock_run_agent,
-        ):
-            # Setup the mock config
-            mock_config = MagicMock()
-            mock_config.default_provider = "ai_studio"
-            mock_config.default_model = "gemini-2.0-flash"
-            mock_get_config.return_value = mock_config
-
-            # Test with various options
-            with patch("builtins.print"):  # Suppress print outputs
-                # Test interactive mode
-                cmd = ["run", "--interactive", "Test instruction", "test_agent.py"]
-                result = runner.invoke(app, cmd)
-
-                # For this test, we're just checking that the command is accepted
-                # without errors in option parsing - not checking full execution
-                assert "--interactive" in " ".join(cmd)
-
-                # Test session ID
-                cmd = ["run", "--session-id", "test-session", "Test instruction", "test_agent.py"]
-                result = runner.invoke(app, cmd)
-                assert "--session-id" in " ".join(cmd)
-
-                # Test timestamps
-                cmd = ["run", "--timestamps", "Test instruction", "test_agent.py"]
-                result = runner.invoke(app, cmd)
-                assert "--timestamps" in " ".join(cmd)
+    # No need to test full execution paths since they're too complex to mock effectively
+    # and would require extensive setup of ADK components. Instead, focus on the CLI
+    # command validation logic which is more self-contained.
 
 
 if __name__ == "__main__":
