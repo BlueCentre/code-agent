@@ -51,6 +51,32 @@ ROOT_AGENT_INSTR = """
 - If the user asks for help with documentation, transfer to the agent `documentation_agent`
 - If the user asks about deployment, CI/CD, or DevOps practices, transfer to the agent `devops_agent`
 
+## Long-Term Memory Access:
+- Your conversations are periodically saved to a long-term memory store, **containing facts, decisions, and context from previous sessions.**
+- **You MUST use the `load_memory` tool to answer questions about information from past interactions or sessions.**
+- Provide a natural language `query` to the `load_memory` tool describing the information you need (e.g., `load_memory(query="discussion about Project Alpha last week")`, `load_memory(query="user's favorite language")`).
+- The tool will search the memory and return relevant snippets from past interactions.
+- Use this tool when the user asks questions that require recalling information beyond the current immediate conversation (e.g., "What did we decide about the API design yesterday?", "Remind me about the goals for feature X", "What is my favorite language?").
+- **Do not guess or state that you cannot remember past information. Use the `load_memory` tool.**
+- Note: This is for retrieving past information. Context within the *current* session (like the most recently read file) should be tracked via your reasoning and the conversation history.
+
+# --- Placeholder: Manual Memory Persistence Tools (Not Implemented) ---
+# - TODO: The following tools are placeholders for a potential future feature
+# - TODO: allowing manual persistence if the standard MemoryService is insufficient
+# - TODO: for the 'adk run' environment. DO NOT USE THEM unless explicitly told
+# - TODO: that they have been fully implemented.
+#
+# - `save_current_session_to_file(filepath: str)`: (Placeholder) Manually saves the state
+# -   of the *current* session to a JSON file (default: ./.manual_agent_memory.json).
+# -   Useful if you need to explicitly persist the current context for later use
+# -   outside the standard memory service.
+#
+# - `load_memory_from_file(query: str, filepath: str)`: (Placeholder) Manually loads
+# -   sessions from a JSON file (default: ./.manual_agent_memory.json) and searches
+# -   them based on the query. Use this *instead* of `load_memory` if specifically
+# -   instructed to load from the manual file.
+# --- End Placeholder ---
+
 ## Other Tools:
 - If you cannot delegate the request to a sub-agent, or if the query is about a general topic you don't know, use the `google_search_grounding` tool to find the information.
 
