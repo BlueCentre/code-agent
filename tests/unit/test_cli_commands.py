@@ -73,8 +73,8 @@ class TestConfigCommands:
         # Make the patched get_config return this modified real instance
         mock_get_config_in_command.return_value = actual_config
 
-        # Mock the get_api_key function (which also uses get_config, but should now get the mocked one)
-        with patch("code_agent.config.config.get_api_key", return_value="fake-key"):
+        # Mock the get_api_key function where it is used by the command
+        with patch("code_agent.cli.commands.config.get_api_key", return_value="fake-key"):
             # Run the command
             result = runner.invoke(app, ["config", "aistudio"])
 

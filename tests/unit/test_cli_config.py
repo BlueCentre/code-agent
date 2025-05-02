@@ -72,7 +72,7 @@ class TestConfigCommands:
         assert "Current Effective Configuration" in result.stdout
         assert mock_config.model_dump_json.called
 
-    @patch("code_agent.config.get_api_key")
+    @patch("code_agent.cli.commands.config.get_api_key")
     @patch("code_agent.cli.commands.config.get_config")
     def test_config_openai_default_key_found(self, mock_get_config, mock_get_api_key, runner):
         """Test 'config openai' when it's the default provider and key exists."""
@@ -89,7 +89,7 @@ class TestConfigCommands:
         assert "✅ OpenAI API key is configured" in result.stdout
         mock_get_api_key.assert_called_once_with("openai")
 
-    @patch("code_agent.config.get_api_key")
+    @patch("code_agent.cli.commands.config.get_api_key")
     @patch("code_agent.cli.commands.config.get_config")
     def test_config_openai_not_default_key_missing(self, mock_get_config, mock_get_api_key, runner):
         """Test 'config openai' when it's not default and key is missing."""
@@ -106,7 +106,7 @@ class TestConfigCommands:
         assert "❌ No OpenAI API key found" in result.stdout
         mock_get_api_key.assert_called_once_with("openai")
 
-    @patch("code_agent.config.get_api_key")
+    @patch("code_agent.cli.commands.config.get_api_key")
     @patch("code_agent.cli.commands.config.get_config")
     def test_config_aistudio_default_key_found(self, mock_get_config, mock_get_api_key, runner):
         """Test 'config aistudio' when it's the default provider and key exists."""
@@ -123,7 +123,7 @@ class TestConfigCommands:
         assert "✅ AI Studio API key is configured" in result.stdout
         mock_get_api_key.assert_called_once_with("ai_studio")
 
-    @patch("code_agent.config.get_api_key")
+    @patch("code_agent.cli.commands.config.get_api_key")
     @patch("code_agent.cli.commands.config.get_config")
     def test_config_aistudio_not_default_key_missing(self, mock_get_config, mock_get_api_key, runner):
         """Test 'config aistudio' when it's not default and key is missing."""
@@ -141,7 +141,7 @@ class TestConfigCommands:
         mock_get_api_key.assert_called_once_with("ai_studio")
 
     # --- Add tests for groq --- #
-    @patch("code_agent.config.get_api_key")
+    @patch("code_agent.cli.commands.config.get_api_key")
     @patch("code_agent.cli.commands.config.get_config")
     def test_config_groq_default_key_found(self, mock_get_config, mock_get_api_key, runner):
         """Test 'config groq' when it's the default provider and key exists."""
@@ -158,7 +158,7 @@ class TestConfigCommands:
         assert "✅ Groq API key is configured" in result.stdout
         mock_get_api_key.assert_called_once_with("groq")
 
-    @patch("code_agent.config.get_api_key")
+    @patch("code_agent.cli.commands.config.get_api_key")
     @patch("code_agent.cli.commands.config.get_config")
     def test_config_groq_not_default_key_missing(self, mock_get_config, mock_get_api_key, runner):
         """Test 'config groq' when it's not default and key is missing."""
@@ -176,7 +176,7 @@ class TestConfigCommands:
         mock_get_api_key.assert_called_once_with("groq")
 
     # --- Add tests for anthropic --- #
-    @patch("code_agent.config.get_api_key")
+    @patch("code_agent.cli.commands.config.get_api_key")
     @patch("code_agent.cli.commands.config.get_config")
     def test_config_anthropic_default_key_found(self, mock_get_config, mock_get_api_key, runner):
         """Test 'config anthropic' when it's the default provider and key exists."""
@@ -193,7 +193,7 @@ class TestConfigCommands:
         assert "✅ Anthropic API key is configured" in result.stdout
         mock_get_api_key.assert_called_once_with("anthropic")
 
-    @patch("code_agent.config.get_api_key")
+    @patch("code_agent.cli.commands.config.get_api_key")
     @patch("code_agent.cli.commands.config.get_config")
     def test_config_anthropic_not_default_key_missing(self, mock_get_config, mock_get_api_key, runner):
         """Test 'config anthropic' when it's not default and key is missing."""

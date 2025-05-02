@@ -11,6 +11,7 @@ from code_agent.cli.utils import load_config_data, save_config_data  # Import ya
 
 # Local application imports
 from code_agent.config import (
+    get_api_key,
     get_config,
 )
 
@@ -80,7 +81,6 @@ def config_aistudio():
     """
     config = get_config()
     # Use the helper function from config module
-    from code_agent.config import get_api_key
 
     api_key = get_api_key("ai_studio")
 
@@ -145,7 +145,6 @@ def config_openai():
     Show information about using OpenAI as a provider.
     """
     config = get_config()
-    from code_agent.config import get_api_key
 
     api_key = get_api_key("openai")
 
@@ -209,7 +208,6 @@ def config_groq():
     Show information about using Groq as a provider.
     """
     config = get_config()
-    from code_agent.config import get_api_key
 
     api_key = get_api_key("groq")
 
@@ -274,7 +272,6 @@ def config_anthropic():
     Show information about using Anthropic as a provider.
     """
     config = get_config()
-    from code_agent.config import get_api_key
 
     api_key = get_api_key("anthropic")
 
