@@ -6,21 +6,31 @@ Tests for code_agent.cli.utils module.
 import asyncio
 import logging
 import signal
+import unittest  # Add this import
+from pathlib import Path  # Ensure Path is imported
 from unittest.mock import MagicMock, patch
 
 import pytest
+import typer  # Ensure typer is imported
+import yaml  # Ensure yaml is imported
 from google.adk.runners import Runner
 from google.adk.sessions.in_memory_session_service import InMemorySessionService
 from rich.console import Console
 
 from code_agent.cli.utils import (
+    _resolve_agent_path_str,  # Ensure this is imported
+    load_config_data,  # Ensure this is imported
     operation_complete,
     operation_error,
     operation_warning,
+    save_config_data,  # Ensure this is imported
     setup_logging,
     step_progress,
     thinking_indicator,
 )
+
+# Ensure settings models are imported if needed by fixtures
+from code_agent.config.settings_based_config import CodeAgentSettings
 
 
 @pytest.mark.parametrize(
@@ -315,3 +325,212 @@ def test_run_cli_sigint_interactive(
     # Check loop likely exited due to interrupt/quit prompt
     # mock_prompt_ask might have been called once for the 'quit' input
     assert mock_prompt_ask.call_count <= 1  # Called 0 or 1 times depending on timing
+
+
+@patch("builtins.open", new_callable=unittest.mock.mock_open)
+@patch("code_agent.cli.utils.yaml.safe_dump")  # Patch safe_dump used for saving
+def test_save_config_data_success(mock_yaml_dump, mock_open_func):
+    """Test successfully saving data to a YAML file."""
+    mock_path = MagicMock(spec=Path)
+    # Mock the parent attribute on the specific mock_path instance
+    mock_path.parent = MagicMock(spec=Path)
+    config_data = {"new_key": "new_value"}
+    save_config_data(mock_path, config_data)
+    # Assert mkdir was called on the mocked parent
+    mock_path.parent.mkdir.assert_called_once_with(parents=True, exist_ok=True)
+    mock_open_func.assert_called_once_with(mock_path, "w")
+    mock_file_handle = mock_open_func()
+    mock_yaml_dump.assert_called_once_with(config_data, mock_file_handle, default_flow_style=False, sort_keys=False)
+
+
+@patch("builtins.open", side_effect=IOError("Cannot write"))
+def test_save_config_data_write_error(mock_open_func):
+    """Test saving data when writing to the file fails."""
+    mock_path = MagicMock(spec=Path)
+    # Mock the parent attribute on the specific mock_path instance
+    mock_path.parent = MagicMock(spec=Path)
+    config_data = {"error_key": "error_value"}
+    # Function catches generic Exception and raises typer.Exit
+    with pytest.raises(typer.Exit):
+        save_config_data(mock_path, config_data)
+    # Assert mkdir was called on the mocked parent
+    mock_path.parent.mkdir.assert_called_once_with(parents=True, exist_ok=True)
+    mock_open_func.assert_called_once_with(mock_path, "w")
+
+
+# --- Config helper tests ... ---
+
+
+@pytest.fixture
+def mock_settings_with_default():
+    """Provides mock settings with a default agent path."""
+    # Ensure CodeAgentSettings is correctly initialized if needed
+    return CodeAgentSettings(default_agent_path=Path("path/to/default_agent"))
+
+
+@pytest.fixture
+def mock_settings_without_default():
+    """Provides mock settings without a default agent path."""
+    return CodeAgentSettings(default_agent_path=None)
+
+
+# --- _resolve_agent_path_str tests --- #
+@patch("code_agent.cli.utils.Path.resolve")
+def test_resolve_agent_path_str_cli_provided(mock_resolve):
+    """Test resolving path when CLI provides a path."""
+    # Configure mock_resolve to return an object with a mocked exists method
+    cli_path_obj = Path("path/from/cli")
+    abs_path_obj = MagicMock(spec=Path)
+    abs_path_obj.__str__.return_value = "/abs/path/from/cli"  # How it converts to string
+    abs_path_obj.exists.return_value = True  # Simulate path existing
+    mock_resolve.return_value = abs_path_obj
+
+    cfg = CodeAgentSettings()
+    resolved_path_str = _resolve_agent_path_str(cli_path_obj, cfg)
+
+    assert resolved_path_str == str(abs_path_obj)
+    # Assert that the exists method on the returned object was called
+    abs_path_obj.exists.assert_called_once()
+    # Assert resolve was called on the input path object implicitly (tricky, rely on behavior)
+
+
+@patch("code_agent.cli.utils.Path.resolve")
+def test_resolve_agent_path_str_cli_provided_not_exist(mock_resolve):
+    """Test resolving path when CLI provides a path that does not exist."""
+    cli_path_obj = Path("non/existent/cli/path")
+    abs_path_obj = MagicMock(spec=Path)
+    abs_path_obj.__str__.return_value = "/abs/non/existent/cli/path"
+    abs_path_obj.exists.return_value = False  # Simulate path NOT existing
+    mock_resolve.return_value = abs_path_obj
+
+    cfg = CodeAgentSettings()
+    resolved_path_str = _resolve_agent_path_str(cli_path_obj, cfg)
+    assert resolved_path_str is None
+    # Assert that the exists method on the returned object was called
+    abs_path_obj.exists.assert_called_once()
+
+
+@patch("code_agent.cli.utils.Path.resolve")
+def test_resolve_agent_path_str_cli_none_default_exists(mock_resolve, mock_settings_with_default):
+    """Test resolving path when CLI is None and default exists."""
+    cli_path = None
+    cfg = mock_settings_with_default
+    abs_default_path_obj = MagicMock(spec=Path)
+    abs_default_path_obj.__str__.return_value = "/abs/path/to/default_agent"
+    abs_default_path_obj.exists.return_value = True  # Simulate path existing
+    mock_resolve.return_value = abs_default_path_obj
+
+    resolved_path_str = _resolve_agent_path_str(cli_path, cfg)
+
+    assert resolved_path_str == str(abs_default_path_obj)
+    # Assert that the exists method on the returned object was called
+    abs_default_path_obj.exists.assert_called_once()
+
+
+@patch("code_agent.cli.utils.Path.resolve")
+def test_resolve_agent_path_str_cli_none_default_exists_not_exist(mock_resolve, mock_settings_with_default):
+    """Test resolving path when CLI is None and default exists but path doesn't."""
+    cli_path = None
+    cfg = mock_settings_with_default
+    abs_default_path_obj = MagicMock(spec=Path)
+    abs_default_path_obj.__str__.return_value = "/abs/path/to/default_agent"
+    abs_default_path_obj.exists.return_value = False  # Simulate path NOT existing
+    mock_resolve.return_value = abs_default_path_obj
+
+    resolved_path_str = _resolve_agent_path_str(cli_path, cfg)
+    assert resolved_path_str is None
+    # Assert that the exists method on the returned object was called
+    abs_default_path_obj.exists.assert_called_once()
+
+
+@patch("code_agent.cli.utils.Path.cwd")  # Patch cwd
+@patch("code_agent.cli.utils.Path.resolve")  # Patch resolve
+def test_resolve_agent_path_str_cli_none_default_none(mock_resolve, mock_cwd, mock_settings_without_default):
+    """Test resolving path when CLI is None and default is None."""
+    cli_path = None
+    cfg = mock_settings_without_default
+
+    cwd_path_obj = MagicMock(spec=Path)
+    cwd_path_obj.__str__.return_value = "/mock/current/dir"
+    cwd_path_obj.exists.return_value = True  # Assume CWD exists
+
+    # Mock Path('.').resolve() to return our mock CWD object
+    # We need to be careful how resolve is patched. Assume global patch works.
+    mock_resolve.return_value = cwd_path_obj
+    # We also need Path('.') to trigger the resolve mock correctly.
+    # Patching Path.cwd might be simpler if the code uses that.
+    # Let's assume the code does Path('.').resolve()
+
+    resolved_path_str = _resolve_agent_path_str(cli_path, cfg)
+    assert resolved_path_str == str(cwd_path_obj)
+
+    # Assert that the exists method on the returned object was called
+    cwd_path_obj.exists.assert_called_once()
+    # We no longer mock or assert on cwd directly if resolve handles Path('.')
+    # mock_cwd.assert_called_once()
+
+
+# --- load_config_data tests --- #
+@patch("builtins.open", new_callable=unittest.mock.mock_open, read_data="key: value")
+@patch("code_agent.cli.utils.yaml.safe_load")
+def test_load_config_data_success(mock_yaml_load, mock_open_func):
+    """Test successfully loading data from a YAML file."""
+    mock_path = MagicMock(spec=Path)
+    mock_path.exists.return_value = True
+    file_content = "key: value"
+    expected_data = {"key": "value"}
+    mock_yaml_load.return_value = expected_data
+    data = load_config_data(mock_path)
+    assert data == expected_data
+    mock_path.exists.assert_called_once()
+    mock_open_func.assert_called_once_with(mock_path, "r")
+    mock_yaml_load.assert_called_once_with(file_content)
+
+
+@patch("builtins.open", new_callable=unittest.mock.mock_open, read_data="")
+@patch("code_agent.cli.utils.yaml.safe_load")
+def test_load_config_data_empty_file(mock_yaml_load, mock_open_func):
+    """Test loading data from an empty YAML file."""
+    mock_path = MagicMock(spec=Path)
+    mock_path.exists.return_value = True
+    data = load_config_data(mock_path)
+    assert data == {}
+    mock_path.exists.assert_called_once()
+    mock_open_func.assert_called_once_with(mock_path, "r")
+    mock_yaml_load.assert_not_called()
+
+
+def test_load_config_data_not_found():
+    """Test loading data when the config file does not exist."""
+    mock_path = MagicMock(spec=Path)
+    mock_path.exists.return_value = False
+    data = load_config_data(mock_path)
+    assert data == {}
+    mock_path.exists.assert_called_once()
+
+
+@patch("builtins.open", new_callable=unittest.mock.mock_open, read_data="invalid: yaml: content")
+@patch("code_agent.cli.utils.yaml.safe_load", side_effect=yaml.YAMLError("Bad YAML"))
+def test_load_config_data_yaml_error(mock_yaml_load, mock_open_func):
+    """Test loading data when the YAML parsing fails."""
+    mock_path = MagicMock(spec=Path)
+    mock_path.exists.return_value = True
+    with pytest.raises(typer.Exit):
+        load_config_data(mock_path)
+    mock_path.exists.assert_called_once()
+    mock_open_func.assert_called_once_with(mock_path, "r")
+    mock_yaml_load.assert_called_once()
+
+
+@patch("builtins.open", side_effect=IOError("Read failed"))
+def test_load_config_data_read_error(mock_open_func):
+    """Test loading data when reading the file fails."""
+    mock_path = MagicMock(spec=Path)
+    mock_path.exists.return_value = True
+    with pytest.raises(typer.Exit):
+        load_config_data(mock_path)
+    mock_path.exists.assert_called_once()
+    mock_open_func.assert_called_once_with(mock_path, "r")
+
+
+# Ensure no duplicated tests remain at the end
