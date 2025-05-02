@@ -8,6 +8,9 @@ from typing import Optional
 
 import typer  # For typer.Exit
 import yaml
+
+# Import Runner at top level for easier patching
+from google.adk.runners import Runner
 from google.adk.sessions.in_memory_session_service import InMemorySessionService
 from google.genai import types as genai_types
 from rich.console import Console
@@ -117,7 +120,7 @@ def run_cli(
     logging.getLogger("google_genai.types").setLevel(logging.ERROR)
 
     # Import Runner here to avoid circular dependency if utils is imported by runner's module
-    from google.adk.runners import Runner
+    # from google.adk.runners import Runner # Removed local import
 
     # Set up rich console for better output
     console = Console()

@@ -78,7 +78,7 @@ runner = CliRunner(mix_stderr=False)
 @patch("code_agent.cli.commands.run._resolve_agent_path_str")
 @patch("code_agent.cli.commands.run.initialize_config")
 @patch("code_agent.cli.commands.run.get_config")
-@patch("google.adk.runners.Runner")
+@patch("code_agent.cli.utils.Runner")
 def test_run_default_config(mock_runner, mock_get_config, mock_init_config, mock_resolve, dummy_agent_file, caplog):
     """Test run command with default config (no CLI overrides)."""
     runner = CliRunner(mix_stderr=False)
@@ -124,7 +124,7 @@ def test_run_default_config(mock_runner, mock_get_config, mock_init_config, mock
 @patch("code_agent.cli.commands.run._resolve_agent_path_str")
 @patch("code_agent.cli.commands.run.initialize_config")
 @patch("code_agent.cli.commands.run.get_config")
-@patch("google.adk.runners.Runner")
+@patch("code_agent.cli.utils.Runner")
 def test_run_cli_overrides(mock_runner, mock_get_config, mock_init_config, mock_resolve, dummy_agent_file, caplog):
     """Test run command CLI args override config file."""
     runner = CliRunner(mix_stderr=False)
@@ -187,7 +187,7 @@ def test_run_cli_overrides(mock_runner, mock_get_config, mock_init_config, mock_
 @patch("code_agent.cli.commands.run._resolve_agent_path_str")
 @patch("code_agent.cli.commands.run.initialize_config")
 @patch("code_agent.cli.commands.run.get_config")
-@patch("google.adk.runners.Runner")
+@patch("code_agent.cli.utils.Runner")
 @patch("code_agent.cli.commands.run.setup_logging")  # Target where setup_logging is called within run_command
 def test_run_log_level_debug(mock_setup_logging, mock_runner, mock_get_config, mock_init_config, mock_resolve, dummy_agent_file, caplog):
     """Test --log-level DEBUG sets logging level correctly."""
@@ -239,7 +239,7 @@ def test_run_log_level_debug(mock_setup_logging, mock_runner, mock_get_config, m
 @patch("code_agent.cli.commands.run._resolve_agent_path_str")
 @patch("code_agent.cli.commands.run.initialize_config")
 @patch("code_agent.cli.commands.run.get_config")
-@patch("google.adk.runners.Runner")
+@patch("code_agent.cli.utils.Runner")
 @patch("code_agent.cli.commands.run.setup_logging")  # Target where setup_logging is called within run_command
 def test_run_log_level_overrides_verbose(mock_setup_logging, mock_runner, mock_get_config, mock_init_config, mock_resolve, dummy_agent_file, caplog):
     """Test --log-level overrides --verbose flag."""
@@ -290,7 +290,7 @@ def test_run_log_level_overrides_verbose(mock_setup_logging, mock_runner, mock_g
 @patch("code_agent.cli.commands.run._resolve_agent_path_str")
 @patch("code_agent.cli.commands.run.initialize_config")
 @patch("code_agent.cli.commands.run.get_config")
-@patch("google.adk.runners.Runner")
+@patch("code_agent.cli.utils.Runner")
 @patch("code_agent.cli.commands.run.setup_logging")  # Target where setup_logging is called within run_command
 def test_run_verbose_flag(mock_setup_logging, mock_runner, mock_get_config, mock_init_config, mock_resolve, dummy_agent_file, caplog):
     """Test --verbose flag sets logging level correctly."""
