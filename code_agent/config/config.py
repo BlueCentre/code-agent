@@ -39,20 +39,27 @@ def initialize_config(
     config_file_path: Path = DEFAULT_CONFIG_PATH,
     cli_provider: Optional[str] = None,
     cli_model: Optional[str] = None,
+    cli_agent_path: Optional[Path] = None,
     cli_auto_approve_edits: Optional[bool] = None,
     cli_auto_approve_native_commands: Optional[bool] = None,
+    cli_log_level: Optional[str] = None,
+    cli_verbose: Optional[bool] = None,
+    force_reinit: bool = False,
     validate: bool = True,  # Keep validate flag
 ) -> None:
     """Initialize the global configuration singleton using the effective builder."""
     global _config
-    if _config is None:
+    if _config is None or force_reinit:
         # Use the builder from settings_based_config
         _config = build_effective_config(
             config_file_path=config_file_path,
             cli_provider=cli_provider,
             cli_model=cli_model,
+            cli_agent_path=cli_agent_path,
             cli_auto_approve_edits=cli_auto_approve_edits,
             cli_auto_approve_native_commands=cli_auto_approve_native_commands,
+            cli_log_level=cli_log_level,
+            cli_verbose=cli_verbose,
         )
         if validate:
             # Call the validation method on the final CodeAgentSettings object

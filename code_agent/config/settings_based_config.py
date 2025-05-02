@@ -12,7 +12,7 @@ from code_agent.config.validation import validate_config
 # Define the default config path
 DEFAULT_CONFIG_DIR = Path.home() / ".config" / "code-agent"
 DEFAULT_CONFIG_PATH = DEFAULT_CONFIG_DIR / "config.yaml"
-TEMPLATE_CONFIG_PATH = Path(__file__).parent / "template.yaml"
+TEMPLATE_CONFIG_PATH = Path(__file__).parent / "config_template.yaml"
 
 # --- Pydantic Models for Validation ---
 
@@ -100,6 +100,12 @@ class CodeAgentSettings(BaseModel):
     default_model: str = Field(
         default="gemini-2.0-flash",
         description="Default model to use for the selected provider",
+    )
+
+    # Default agent path
+    default_agent_path: Optional[Path] = Field(
+        default=None,
+        description="Default path to the agent module to run with the 'run' command",
     )
 
     # API Keys
@@ -232,6 +238,10 @@ class SettingsConfig(BaseSettings):
     # Default provider and model
     default_provider: str = "ai_studio"
     default_model: str = "gemini-2.0-flash"
+
+    # Default agent path
+    default_agent_path: Optional[Path] = None
+
     api_keys: ApiKeys = Field(default_factory=ApiKeys)
 
     # Verbosity setting
@@ -289,242 +299,174 @@ class SettingsConfig(BaseSettings):
 _config: Optional[SettingsConfig] = None
 
 
-def load_config_from_file(config_path: Path = DEFAULT_CONFIG_PATH) -> Dict[str, Any]:
-    """Loads configuration purely from a YAML file, returning a dict."""
-    # Ensure config directory exists
-    config_path.parent.mkdir(parents=True, exist_ok=True)
-
-    # Check for config at old location (~/.code-agent/config.yaml) and migrate if needed
-    old_config_dir = Path.home() / "code-agent"
-    old_config_path = old_config_dir / "config.yaml"
-    if old_config_path.exists() and not config_path.exists():
-        try:
-            print(f"Migrating config from {old_config_path} to {config_path}")
-            # Copy old config to new location
-            config_path.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(old_config_path, config_path)
-            print(f"Successfully migrated configuration to {config_path}")
-        except Exception as e:
-            print(f"Warning: Could not migrate config. Error: {e}")
-
-    # If config file doesn't exist, create it from template
-    if not config_path.exists():
-        create_default_config_file(config_path)
-        print(f"Created default configuration file at {config_path}")
-        print("Edit this file to add your API keys or set appropriate environment variables.")
-
-    try:
-        with open(config_path, "r") as f:
-            return yaml.safe_load(f) or {}
-    except Exception as e:
-        print(f"Warning: Could not read config file at {config_path}. Error: {e}")
-        return {}
-
-
-def create_default_config_file(config_path: Path) -> None:
-    """Creates a default configuration file from the template."""
-    try:
-        if TEMPLATE_CONFIG_PATH.exists():
-            # Copy from template if it exists
-            shutil.copy2(TEMPLATE_CONFIG_PATH, config_path)
-        else:
-            # Fallback if template doesn't exist
-            default_config = {
-                "default_provider": "ai_studio",
-                "default_model": "gemini-2.0-flash",
-                "api_keys": {
-                    "ai_studio": None,
-                    "openai": None,
-                    "groq": None,
-                },
-                "auto_approve_edits": False,
-                "auto_approve_native_commands": False,
-                "native_command_allowlist": [],
-                "rules": [],
-            }
-
-            with open(config_path, "w") as f:
-                yaml.dump(default_config, f, default_flow_style=False, sort_keys=False)
-    except Exception as e:
-        print(f"Warning: Could not create default config file at {config_path}. Error: {e}")
-
-
 def build_effective_config(
     config_file_path: Path = DEFAULT_CONFIG_PATH,
     cli_provider: Optional[str] = None,
     cli_model: Optional[str] = None,
+    cli_agent_path: Optional[Path] = None,
     cli_auto_approve_edits: Optional[bool] = None,
     cli_auto_approve_native_commands: Optional[bool] = None,
+    cli_log_level: Optional[str] = None,
+    cli_verbose: Optional[bool] = None,
 ) -> CodeAgentSettings:
-    """Builds the effective configuration by layering sources:
-    Defaults < Config File < Environment Variables < CLI Arguments.
+    """
+    Builds the effective configuration by layering sources:
+    1. Default values from CodeAgentSettings model.
+    2. Values from the YAML configuration file.
+    3. Values from environment variables (via SettingsConfig).
+    4. Values explicitly passed via CLI arguments.
+
+    Args:
+        config_file_path: Path to the YAML config file.
+        cli_provider: Provider specified via CLI.
+        cli_model: Model specified via CLI.
+        cli_agent_path: Agent path specified via CLI.
+        cli_auto_approve_edits: Auto-approve edits flag from CLI.
+        cli_auto_approve_native_commands: Auto-approve commands flag from CLI.
+        cli_log_level: Log level string from CLI.
+        cli_verbose: Verbose flag from CLI.
+
+    Returns:
+        The final, effective CodeAgentSettings configuration object.
     """
 
-    # Helper for deep merging dictionaries (remains the same)
+    # 1. Start with Pydantic model defaults (implicitly handled by model instantiation)
+
+    # 2. Load from YAML file if it exists
+    yaml_config: Dict[str, Any] = {}
+    if config_file_path.exists():
+        yaml_config = load_config_from_file(config_file_path)
+    else:
+        # If the default config doesn't exist, create it from the template
+        if config_file_path == DEFAULT_CONFIG_PATH and TEMPLATE_CONFIG_PATH.exists():
+            try:
+                create_default_config_file(config_file_path)
+                rich_print(f"[green]Created default configuration file at:[/green] {config_file_path}")
+                yaml_config = load_config_from_file(config_file_path)
+            except Exception as e:
+                rich_print(f"[yellow]Warning:[/yellow] Could not create default config file: {e}")
+
+    # 3. Load from environment variables using pydantic-settings
+    # We instantiate SettingsConfig which automatically reads env vars based on its definition
+    try:
+        env_settings = SettingsConfig()
+        # Convert env_settings to a dict, excluding unset values to avoid overriding YAML with None
+        env_config = env_settings.model_dump(exclude_unset=True)
+    except ValidationError as e:
+        rich_print(f"[yellow]Warning:[/yellow] Error validating environment variable settings: {e}")
+        env_config = {}
+
+    # 4. Prepare CLI overrides
+    cli_overrides: Dict[str, Any] = {}
+    if cli_provider is not None:
+        cli_overrides["default_provider"] = cli_provider
+    if cli_model is not None:
+        cli_overrides["default_model"] = cli_model
+    if cli_agent_path is not None:
+        cli_overrides["default_agent_path"] = cli_agent_path
+    if cli_auto_approve_edits is not None:
+        cli_overrides["auto_approve_edits"] = cli_auto_approve_edits
+    if cli_auto_approve_native_commands is not None:
+        cli_overrides["auto_approve_native_commands"] = cli_auto_approve_native_commands
+
+    # Determine effective verbosity based on cli_verbose and cli_log_level
+    # - cli_verbose=True sets verbosity to 2 (VERBOSE) if not already higher
+    # - cli_log_level sets verbosity based on mapping (DEBUG=3, VERBOSE=2, etc.)
+    # Priority: cli_log_level > cli_verbose > env > yaml > default
+    effective_verbosity = -1  # Sentinel value
+    log_level_map = {"DEBUG": 3, "VERBOSE": 2, "INFO": 1, "NORMAL": 1, "WARNING": 0, "ERROR": 0, "CRITICAL": 0, "QUIET": 0}
+    if cli_log_level is not None:
+        level_upper = cli_log_level.upper()
+        if level_upper in log_level_map:
+            effective_verbosity = log_level_map[level_upper]
+            cli_overrides["verbosity"] = effective_verbosity
+        else:
+            rich_print(f"[yellow]Warning:[/yellow] Invalid CLI log level '{cli_log_level}'. Ignoring.")
+    elif cli_verbose is True:
+        # Apply cli_verbose only if cli_log_level wasn't set
+        # Check env/yaml/default verbosity before overriding
+        current_verbosity = env_config.get("verbosity", yaml_config.get("verbosity", 1))  # Default verbosity = 1
+        if current_verbosity < 2:  # Only increase if current is less than VERBOSE
+            effective_verbosity = 2
+            cli_overrides["verbosity"] = effective_verbosity
+
+    # Merge configurations: Defaults < Env < YAML < CLI
+    # pydantic-settings (SettingsConfig) handles Defaults < Env automatically.
+    # We need to layer YAML and CLI on top of that.
+    final_config_data: Dict[str, Any] = env_config  # Start with env/default config
+
+    # Helper for deep merging dictionaries
     def deep_update(target: Dict, source: Dict) -> Dict:
         for key, value in source.items():
-            # Filter out None values from source unless the key doesn't exist in target
-            if value is not None or key not in target:
-                if isinstance(value, dict) and key in target and isinstance(target[key], dict):
-                    deep_update(target[key], value)
-                else:
-                    target[key] = value
+            if isinstance(value, dict) and key in target and isinstance(target[key], dict):
+                deep_update(target[key], value)
+            elif value is not None:  # Only update if source value is not None
+                target[key] = value
         return target
 
-    # 1. Load defaults from CodeAgentSettings
-    effective_data = CodeAgentSettings().model_dump()
+    # Perform the merge: Update env_config with yaml_config, then with cli_overrides
+    final_config_data = deep_update(final_config_data, yaml_config)
+    final_config_data = deep_update(final_config_data, cli_overrides)
 
-    # 2. Load config file data and merge
-    settings_file_data = load_config_from_file(config_file_path)
-    effective_data = deep_update(effective_data, settings_file_data)
-
-    # 3. Load environment variables using SettingsConfig and merge
-    # Let ValidationError propagate if env vars are invalid
-    env_settings = SettingsConfig()  # Loads from .env and env vars
-    env_data = env_settings.model_dump(exclude_unset=True)
-    # Special handling for potentially empty nested dicts like api_keys
-    if "api_keys" in env_data and not env_data["api_keys"]:
-        del env_data["api_keys"]  # Don't merge empty dict over existing keys
-
-    effective_data = deep_update(effective_data, env_data)
-
-    # 4. Prepare CLI overrides (only non-None values)
-    cli_overrides = {
-        "default_provider": cli_provider,
-        "default_model": cli_model,
-        "auto_approve_edits": cli_auto_approve_edits,
-        "auto_approve_native_commands": cli_auto_approve_native_commands,
-    }
-    cli_overrides = {k: v for k, v in cli_overrides.items() if v is not None}
-
-    # 5. Merge CLI overrides
-    effective_data = deep_update(effective_data, cli_overrides)
-
-    # 6. Create the final CodeAgentSettings object
+    # Instantiate the final CodeAgentSettings model
     try:
-        final_settings = create_settings_model(effective_data)
+        final_settings = CodeAgentSettings(**final_config_data)
     except ValidationError as e:
-        print(f"Validation Error creating final CodeAgentSettings from merged config: {e}")
-        print("Merged data passed to create_settings_model:")
-        try:
-            import json
-
-            print(json.dumps(effective_data, indent=2, default=str))
-        except Exception:
-            print("Could not serialize merged data to JSON.")  # Fallback
-            print(effective_data)
-        raise
+        rich_print(f"[bold red]Error creating final configuration:[/bold red]\n{e}")
+        # Fallback to default settings on catastrophic validation error during merge
+        rich_print("[yellow]Falling back to default settings.[/yellow]")
+        final_settings = CodeAgentSettings()
 
     return final_settings
 
 
-def initialize_config(
-    config_file_path: Path = DEFAULT_CONFIG_PATH,
-    cli_provider: Optional[str] = None,
-    cli_model: Optional[str] = None,
-    cli_auto_approve_edits: Optional[bool] = None,
-    cli_auto_approve_native_commands: Optional[bool] = None,
-):
-    """Initializes the global config singleton with effective settings."""
-    global _config
-    if _config is None:
-        _config = build_effective_config(
-            config_file_path=config_file_path,
-            cli_provider=cli_provider,
-            cli_model=cli_model,
-            cli_auto_approve_edits=cli_auto_approve_edits,
-            cli_auto_approve_native_commands=cli_auto_approve_native_commands,
-        )
-    # else: config already initialized
-
-
-def get_config() -> SettingsConfig:
-    """Returns the loaded configuration, raising error if not initialized."""
-    if _config is None:
-        # This should ideally not happen if initialize_config is called in main
-        print("[bold red]Error:[/bold red] Configuration accessed before initialization.")
-        # Initialize with defaults as a fallback, though this indicates a logic error
-        initialize_config()
-    return _config
-
-
-# --- Helper Functions (Example) ---
-
-
-def get_api_key(provider: str) -> Optional[str]:
-    """Gets the API key for a specific provider from the loaded config."""
-    config = get_config()
-    api_keys_obj = config.api_keys
-
-    # 1. Try direct attribute access (for defined fields)
-    try:
-        key = getattr(api_keys_obj, provider, None)
-        if key is not None:
-            return key
-    except AttributeError:
-        pass  # Field not explicitly defined, proceed to check extras
-
-    # 2. Fallback: Check extra fields via model_dump()
-    # Use exclude_unset=True to include all fields, even defaults if needed
-    # Use exclude_none=False if you want to differentiate between unset and set-to-None
-    try:
-        # Ensure api_keys_obj is an ApiKeys instance before calling model_dump
-        if isinstance(api_keys_obj, ApiKeys):
-            keys_dict = api_keys_obj.model_dump(exclude_unset=True, exclude_none=True)
-            return keys_dict.get(provider)
-        else:
-            # Handle case where api_keys_obj is None or not the expected type
-            return None
-    except Exception:
-        # Handle potential errors during model_dump or if it's not a dict
-        return None
+# --- Utility functions for Pydantic model manipulation ---
 
 
 def create_settings_model(config_data: Dict) -> CodeAgentSettings:
-    """
-    Create a settings model from a dictionary.
-
-    Args:
-        config_data: Dictionary containing configuration data.
-
-    Returns:
-        A CodeAgentSettings instance.
-    """
-    # Handle the security section specifically
-    if "security" not in config_data:
-        config_data["security"] = {}
-
-    # Ensure we have security settings even if the config doesn't
-    security_data = config_data.get("security", {})
-    if not isinstance(security_data, dict):
-        security_data = {}
-
-    # Set default values if not present
-    for field in ["path_validation", "workspace_restriction", "command_validation"]:
-        if field not in security_data:
-            security_data[field] = True
-
-    config_data["security"] = security_data
-
-    return CodeAgentSettings(**config_data)
+    """Instantiate CodeAgentSettings from a dictionary, handling validation errors."""
+    try:
+        return CodeAgentSettings(**config_data)
+    except ValidationError as e:
+        rich_print(f"[bold red]Validation Error loading configuration:[/bold red]\n{e}")
+        raise  # Re-raise after printing for calling function to handle
 
 
-# Function to convert settings model back to dict for saving
 def settings_to_dict(settings: CodeAgentSettings) -> Dict:
-    """
-    Convert a settings model to a dictionary.
+    """Convert CodeAgentSettings instance to a dictionary, excluding defaults if needed."""
+    # Use model_dump for Pydantic v2
+    return settings.model_dump(exclude_defaults=False)  # Set exclude_defaults as needed
 
-    Args:
-        settings: A CodeAgentSettings instance.
 
-    Returns:
-        Dictionary representation of the settings.
-    """
-    settings_dict = settings.model_dump(exclude_none=True)
+# --- File Handling ---
 
-    # Handle API keys specially to avoid saving null values
-    if "api_keys" in settings_dict:
-        api_keys = settings_dict["api_keys"]
-        settings_dict["api_keys"] = {k: v for k, v in api_keys.items() if v is not None}
 
-    return settings_dict
+def load_config_from_file(config_path: Path = DEFAULT_CONFIG_PATH) -> Dict[str, Any]:
+    """Loads configuration from a YAML file."""
+    if not config_path.is_file():
+        return {}
+    try:
+        with open(config_path, "r") as f:
+            # Use safe_load to prevent arbitrary code execution
+            data = yaml.safe_load(f)
+            return data if data else {}
+    except yaml.YAMLError as e:
+        rich_print(f"[bold red]Error parsing YAML file {config_path}:[/bold red] {e}")
+        return {}
+    except IOError as e:
+        rich_print(f"[bold red]Error reading file {config_path}:[/bold red] {e}")
+        return {}
+
+
+def create_default_config_file(config_path: Path) -> None:
+    """Copies the template config file to the specified path."""
+    if not TEMPLATE_CONFIG_PATH.exists():
+        rich_print("[yellow]Warning:[/yellow] Template configuration file not found. Cannot create default config.")
+        return
+    try:
+        # Ensure the target directory exists
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(TEMPLATE_CONFIG_PATH, config_path)
+    except Exception as e:
+        rich_print(f"[bold red]Error copying template config file:[/bold red] {e}")
+        raise  # Re-raise to indicate failure
