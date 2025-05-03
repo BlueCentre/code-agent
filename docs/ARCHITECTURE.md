@@ -148,28 +148,28 @@ sequenceDiagram
     RunCmd->>SessSvc: __init__(cfg.sessions_dir)
     RunCmd->>MemSvc: __init__(cfg.memory_dir)
     RunCmd->>Client: __init__(session_svc, memory_svc, artifact_svc, tools)
-    RunCmd->>+Client: run_turn("instruction")
-    Client->>+Agt: process_turn("instruction")
+    RunCmd->>Client: run_turn("instruction")
+    Client->>Agt: process_turn("instruction")
     Note right of Agt: Agent processes instruction,<br>decides on action (reply/tool)
     alt Agent needs Tool
-        Agt->>-Client: Request Tool Call (e.g., read_file)
+        Agt->>Client: Request Tool Call (e.g., read_file)
         Client->>ToolSys: Execute Tool (read_file)
         ToolSys->>ToolSys: Perform file I/O, run command, etc.
         ToolSys-->>Client: Tool Result
         Client->>Agt: Provide Tool Result
-        Agt->>-Client: Agent Response (Text)
+        Agt->>Client: Agent Response (Text)
     else Agent replies directly
-        Agt->>-Client: Agent Response (Text)
+        Agt->>Client: Agent Response (Text)
     end
-    Client-->>-RunCmd: Agent Response
+    Client-->>RunCmd: Agent Response
     RunCmd->>User: Display Response
     loop Interactive Mode
         User->>RunCmd: Follow-up instruction
-        RunCmd->>+Client: run_turn("follow-up")
-        Client->>+Agt: process_turn("follow-up")
+        RunCmd->>Client: run_turn("follow-up")
+        Client->>Agt: process_turn("follow-up")
         Note right of Agt: Agent processes, potentially uses tools...
-        Agt->>-Client: Agent Response
-        Client-->>-RunCmd: Agent Response
+        Agt->>Client: Agent Response
+        Client-->>RunCmd: Agent Response
         RunCmd->>User: Display Response
     end
     note over RunCmd, MemSvc: After loop finishes...
