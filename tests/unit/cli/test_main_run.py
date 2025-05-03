@@ -93,7 +93,8 @@ def test_run_default_config(mock_runner, mock_get_config, mock_init_config, mock
     mock_settings.default_provider = "ai_studio"
     mock_settings.default_model = "gemini-pro"
     mock_settings.verbosity = 1  # Normal
-    mock_settings.llm = MagicMock()  # Mock sub-settings if accessed
+    mock_settings.temperature = 0.7  # Add expected top-level attributes if needed by code under test
+    mock_settings.max_tokens = 1000  # Add expected top-level attributes if needed by code under test
     mock_settings.security = MagicMock()
     mock_get_config.return_value = mock_settings
 
@@ -139,10 +140,13 @@ def test_run_cli_overrides(mock_runner, mock_get_config, mock_init_config, mock_
 
     # Mock the FINAL config state AFTER initialize_config is called
     mock_settings_final = MagicMock(spec=CodeAgentSettings)
-    mock_settings_final.default_provider = cli_provider  # Should be overridden by CLI
-    mock_settings_final.default_model = cli_model  # Should be overridden by CLI
+    mock_settings_final.provider = cli_provider  # Mock effective provider
+    mock_settings_final.model = cli_model  # Mock effective model
+    mock_settings_final.default_provider = "ai_studio"  # Keep default distinct
+    mock_settings_final.default_model = "gemini-pro"  # Keep default distinct
     mock_settings_final.verbosity = 1  # Default verbosity when no flags set
-    mock_settings_final.llm = MagicMock()
+    mock_settings_final.temperature = 0.7  # Add expected top-level attributes
+    mock_settings_final.max_tokens = 1000  # Add expected top-level attributes
     mock_settings_final.security = MagicMock()
     mock_get_config.return_value = mock_settings_final  # get_config returns this final state
 
@@ -202,7 +206,8 @@ def test_run_log_level_debug(mock_setup_logging, mock_runner, mock_get_config, m
     mock_settings_final.verbosity = 3  # DEBUG level
     mock_settings_final.default_provider = "ai_studio"  # Example defaults
     mock_settings_final.default_model = "gemini-pro"
-    mock_settings_final.llm = MagicMock()
+    mock_settings_final.temperature = 0.7  # Add expected top-level attributes
+    mock_settings_final.max_tokens = 1000  # Add expected top-level attributes
     mock_settings_final.security = MagicMock()
     mock_get_config.return_value = mock_settings_final
 
@@ -254,7 +259,8 @@ def test_run_log_level_overrides_verbose(mock_setup_logging, mock_runner, mock_g
     mock_settings_final.verbosity = 1  # WARNING level (overrides verbose)
     mock_settings_final.default_provider = "ai_studio"
     mock_settings_final.default_model = "gemini-pro"
-    mock_settings_final.llm = MagicMock()
+    mock_settings_final.temperature = 0.7  # Add expected top-level attributes
+    mock_settings_final.max_tokens = 1000  # Add expected top-level attributes
     mock_settings_final.security = MagicMock()
     mock_get_config.return_value = mock_settings_final
 
@@ -305,7 +311,8 @@ def test_run_verbose_flag(mock_setup_logging, mock_runner, mock_get_config, mock
     mock_settings_final.verbosity = 2  # Verbose (INFO level)
     mock_settings_final.default_provider = "ai_studio"  # Need these for runner
     mock_settings_final.default_model = "gemini-pro"
-    mock_settings_final.llm = MagicMock()
+    mock_settings_final.temperature = 0.7  # Add expected top-level attributes
+    mock_settings_final.max_tokens = 1000  # Add expected top-level attributes
     mock_settings_final.security = MagicMock()
     mock_get_config.return_value = mock_settings_final
 

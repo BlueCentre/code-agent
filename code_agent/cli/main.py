@@ -28,7 +28,7 @@ try:
     adk_version = getattr(google.adk, "__version__", "unknown")
     ADK_INSTALLED = True
 except ImportError:
-    adk_version = "not installed"
+    adk_version = "Google ADK not installed"
 
 # --- Typer App Definition ---
 app = typer.Typer(
@@ -64,6 +64,7 @@ def _version_callback(value: bool):
 
 
 # --- Main Callback --- (Handles global setup)
+# BUG: Running `code-agent` without any subcommands or arguments does not show help.
 @app.callback(invoke_without_command=True)
 def main(
     ctx: typer.Context,

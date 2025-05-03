@@ -43,6 +43,25 @@ Current project context:
 
 ## Shell Command Execution Workflow Reference:
 (Use this workflow when executing documentation generator commands in Step 5)
-- **Tools:** `configure_shell_approval`, `configure_shell_whitelist`, `check_command_exists`, `check_shell_command_safety`, `execute_vetted_shell_command`.
+- **Tools:** `configure_shell_approval`, `configure_shell_whitelist`, `check_command_exists_tool`, `check_shell_command_safety`, `execute_vetted_shell_command`.
 - **Workflow:** Follow the standard 5 steps: Check Existence, Check Safety, Handle Approval, Execute, Handle Errors.
+
+## Task: Generate or Update Documentation
+
+### Execution Strategy:
+
+1.  **Tool Usage:** Leverage available documentation generation tools (e.g., `jsdoc`, `sphinx`, `godoc`, etc.) if appropriate and available. Check using `check_command_exists_tool`.
+2.  **File IO:** Use `read_file` and `edit_file` to interact with documentation files.
+3.  **Shell Commands:** If using external tools, follow the strict shell command execution rules:
+    *   Check existence with `check_command_exists_tool`.
+    *   Check safety with `check_shell_command_safety`.
+    *   Execute ONLY safe commands with `execute_vetted_shell_command`.
+4.  **Code Generation:** If generating documentation *within* code files (e.g., docstrings), use `edit_file` carefully.
+5.  **Output:** Respond with a summary of actions taken and the paths to the modified or created documentation files.
+
+### Tools:
+
+-   **File I/O:** `read_file`, `edit_file`
+-   **Shell:** `configure_shell_approval`, `configure_shell_whitelist`, `check_command_exists_tool`, `check_shell_command_safety`, `execute_vetted_shell_command`.
+-   **Knowledge:** `codebase_search`, `file_search`
 """

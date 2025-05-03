@@ -1,6 +1,4 @@
-"""Implementation of the Software Engineer Agent using Google Agent Development Kit."""
-
-# NOTE: SWITCH TO ADK WEB or COMMENT OUT FOR ADK RUN
+"""Implementation of the Software Engineer Agent with knowledge and experience of sub-agents."""
 
 import logging
 
@@ -86,13 +84,13 @@ root_agent = Agent(
     description="An AI software engineer assistant that helps with various software development tasks",
     instruction=prompt.ROOT_AGENT_INSTR,
     sub_agents=[
-        code_review_agent,
         design_pattern_agent,
+        documentation_agent,
+        code_review_agent,
+        code_quality_agent,
         testing_agent,
         debugging_agent,
-        documentation_agent,
-        devops_agent,
-        code_quality_agent,
+        devops_agent,  # TODO: Move command tools to devops_agent with more guardrails
     ],
     tools=[
         read_file_tool,

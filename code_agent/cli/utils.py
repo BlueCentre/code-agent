@@ -22,6 +22,89 @@ from rich.prompt import Prompt
 from code_agent.config import CodeAgentSettings
 
 
+# --- Path Resolution ---
+def _resolve_agent_path_str(agent_path_cli: Optional[Path], cfg: CodeAgentSettings) -> Optional[str]:
+    """Resolves the agent path string from CLI argument or config."""
+    resolved_path: Optional[Path] = None
+    console = Console()  # Create console for printing messages
+
+    if agent_path_cli:
+        # Check existence later, after potential default resolution
+        resolved_path = agent_path_cli
+        logging.debug(f"Using agent path from CLI: {resolved_path}")
+    elif cfg.default_agent_path:
+        resolved_path = cfg.default_agent_path
+        logging.debug(f"Using default agent path from config: {resolved_path}")
+    else:
+        # Default to current directory if neither CLI nor config provides a path
+        console.print("[yellow]Warning:[/yellow] No agent path provided via CLI or config. Defaulting to current directory '.'")
+        resolved_path = Path(".")
+        logging.debug("Defaulting agent path to current directory '.'")
+
+    # Perform existence check now
+    if resolved_path:
+        resolved_path = resolved_path.resolve()  # Make absolute
+        if not resolved_path.exists():
+            # Use operation_error for consistency
+            operation_error(console, f"Resolved agent path does not exist: {resolved_path}")
+            # Optionally, print how it was resolved (CLI or config)
+            if agent_path_cli:
+                operation_error(console, "(Path was provided via command line argument)")
+            elif cfg.default_agent_path:
+                operation_error(console, "(Path was provided by config's default_agent_path)")
+            else:
+                operation_error(console, "(Path defaulted to current directory)")
+            return None
+        else:
+            # Validate if it's a directory or a .py file if needed by ADK downstream
+            # ADK's _parse_path handles some of this, maybe keep it simple here
+            logging.debug(f"Agent path exists: {resolved_path}")
+            return str(resolved_path)
+    else:
+        # This case should ideally not be reached if defaulting works
+        operation_error(console, "Could not determine agent path.")
+        return None
+
+
+# --- Yaml Loading/Saving Helpers (for config commands) ---
+
+
+def load_config_data(config_path: Path) -> dict:
+    """Loads YAML data from the config file."""
+    config_data = {}
+    console = Console()
+    if config_path.exists():
+        try:
+            with open(config_path, "r") as f:
+                content = f.read()
+                if not content.strip():  # Handle empty file case
+                    logging.warning(f"Config file exists but is empty: {config_path}")
+                    return {}
+                config_data = yaml.safe_load(content) or {}  # Ensure dict even if null
+        except yaml.YAMLError as e:
+            console.print(f"[red]Error parsing config file YAML: {e}[/red]")
+            # Explicitly chain the exception
+            raise typer.Exit(1) from e
+        except Exception as e:
+            console.print(f"[red]Error reading config file: {e}[/red]")
+            # Explicitly chain the exception
+            raise typer.Exit(1) from e
+    return config_data
+
+
+def save_config_data(config_path: Path, config_data: dict):
+    """Saves YAML data to the config file."""
+    console = Console()
+    try:
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(config_path, "w") as f:
+            yaml.safe_dump(config_data, f, default_flow_style=False, sort_keys=False)  # Keep order
+    except Exception as e:
+        console.print(f"[red]Error writing config file: {e}[/red]")
+        # Explicitly chain the exception
+        raise typer.Exit(1) from e
+
+
 # --- Logging Configuration ---
 def setup_logging(verbosity_level: int):
     """Configures the root logger based on verbosity level."""
@@ -124,7 +207,7 @@ def run_cli(
 
     # Set up rich console for better output
     console = Console()
-    console.print("[bold cyan]Running agent[/bold cyan]")
+    # console.print("[bold cyan]Running agent[/bold cyan]")
 
     # Create session service if not provided
     if session_service is None:
@@ -167,7 +250,7 @@ def run_cli(
                 if not current_session_id:
                     session = session_service.create_session(app_name=app_name, user_id=user_id)
                     current_session_id = session.id
-                    step_progress(console, f"Created new session: {current_session_id}")  # Pass console
+                    step_progress(console, f"[dim]Created new session: {current_session_id}[/dim]")  # Pass console
 
                 # Run the agent asynchronously
                 event_async_generator = runner.run_async(
@@ -206,10 +289,10 @@ def run_cli(
                         if show_events and content_text and content_text != last_content:
                             if author == "user":
                                 # Keep user output as plain text
-                                console.print(f"{timestamp_str}[bold blue]User:[/bold blue] {content_text}")
+                                console.print(f"{timestamp_str}[bold blue]👦🏻User:[/bold blue] {content_text}")
                             elif author == "assistant" or author == agent.name:  # Check agent name too
                                 # Print prefix and then render content as Markdown
-                                console.print(f"{timestamp_str}[bold yellow]Agent:[/bold yellow]")
+                                console.print(f"{timestamp_str}[bold yellow]🤖Agent:[/bold yellow]")
                                 console.print(Markdown(content_text))
                                 # Update last content to avoid duplicates
                                 last_content = content_text
@@ -217,7 +300,7 @@ def run_cli(
 
                         if is_final:
                             final_response_event = event
-                            operation_complete(console, "Agent finished processing.")  # Pass console
+                            operation_complete(console, "[dim]Agent finished processing.[/dim]")  # Pass console
 
                 except Exception as e:
                     # Allow KeyboardInterrupt and SystemExit to propagate
@@ -382,89 +465,6 @@ def run_cli(
         console.print("[dim]No active session ID to display.[/dim]")
 
     return current_session_id
-
-
-# --- Path Resolution ---
-def _resolve_agent_path_str(agent_path_cli: Optional[Path], cfg: CodeAgentSettings) -> Optional[str]:
-    """Resolves the agent path string from CLI argument or config."""
-    resolved_path: Optional[Path] = None
-    console = Console()  # Create console for printing messages
-
-    if agent_path_cli:
-        # Check existence later, after potential default resolution
-        resolved_path = agent_path_cli
-        logging.debug(f"Using agent path from CLI: {resolved_path}")
-    elif cfg.default_agent_path:
-        resolved_path = cfg.default_agent_path
-        logging.debug(f"Using default agent path from config: {resolved_path}")
-    else:
-        # Default to current directory if neither CLI nor config provides a path
-        console.print("[yellow]Warning:[/yellow] No agent path provided via CLI or config. Defaulting to current directory '.'")
-        resolved_path = Path(".")
-        logging.debug("Defaulting agent path to current directory '.'")
-
-    # Perform existence check now
-    if resolved_path:
-        resolved_path = resolved_path.resolve()  # Make absolute
-        if not resolved_path.exists():
-            # Use operation_error for consistency
-            operation_error(console, f"Resolved agent path does not exist: {resolved_path}")
-            # Optionally, print how it was resolved (CLI or config)
-            if agent_path_cli:
-                operation_error(console, "(Path was provided via command line argument)")
-            elif cfg.default_agent_path:
-                operation_error(console, "(Path was provided by config's default_agent_path)")
-            else:
-                operation_error(console, "(Path defaulted to current directory)")
-            return None
-        else:
-            # Validate if it's a directory or a .py file if needed by ADK downstream
-            # ADK's _parse_path handles some of this, maybe keep it simple here
-            logging.debug(f"Agent path exists: {resolved_path}")
-            return str(resolved_path)
-    else:
-        # This case should ideally not be reached if defaulting works
-        operation_error(console, "Could not determine agent path.")
-        return None
-
-
-# --- Yaml Loading/Saving Helpers (for config commands) ---
-
-
-def load_config_data(config_path: Path) -> dict:
-    """Loads YAML data from the config file."""
-    config_data = {}
-    console = Console()
-    if config_path.exists():
-        try:
-            with open(config_path, "r") as f:
-                content = f.read()
-                if not content.strip():  # Handle empty file case
-                    logging.warning(f"Config file exists but is empty: {config_path}")
-                    return {}
-                config_data = yaml.safe_load(content) or {}  # Ensure dict even if null
-        except yaml.YAMLError as e:
-            console.print(f"[red]Error parsing config file YAML: {e}[/red]")
-            # Explicitly chain the exception
-            raise typer.Exit(1) from e
-        except Exception as e:
-            console.print(f"[red]Error reading config file: {e}[/red]")
-            # Explicitly chain the exception
-            raise typer.Exit(1) from e
-    return config_data
-
-
-def save_config_data(config_path: Path, config_data: dict):
-    """Saves YAML data to the config file."""
-    console = Console()
-    try:
-        config_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(config_path, "w") as f:
-            yaml.safe_dump(config_data, f, default_flow_style=False, sort_keys=False)  # Keep order
-    except Exception as e:
-        console.print(f"[red]Error writing config file: {e}[/red]")
-        # Explicitly chain the exception
-        raise typer.Exit(1) from e
 
 
 # --- ADK Path Parsing/Validation Helpers (if needed outside ADK commands) ---

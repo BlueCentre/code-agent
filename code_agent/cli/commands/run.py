@@ -1,3 +1,7 @@
+"""
+This module contains the commands for the run sub-app.
+"""
+
 import importlib.util
 import logging
 import sys
@@ -177,6 +181,11 @@ def run_command(
 
         # --- Agent Loading ---
         console.print(f"[bold cyan]Running agent[/bold cyan] with instruction: '[italic]{instruction}[/italic]'")
+        # Print provider info using the correct config attribute
+        # Check if provider attribute exists, otherwise fallback might be needed (e.g., default_provider)
+        provider_display = getattr(cfg, "provider", cfg.default_provider)  # Attempt to get effective provider, fallback to default
+        console.print(f"[dim]Provider: {provider_display}[/dim]")  # Use the determined provider
+
         agent_to_run = None
         try:
             with thinking_indicator(console, "Loading agent..."):
@@ -261,13 +270,16 @@ def run_command(
         # --- Verbose Output ---
         if cfg.verbosity >= 2:  # Corresponds to VERBOSE or DEBUG
             console.print(f"[dim]Agent path: {resolved_agent_path_str}[/dim]")
-            console.print(f"[dim]Provider: {cfg.llm.provider}[/dim]")
-            console.print(f"[dim]Model: {cfg.llm.model}[/dim]")
+            # Use correct top-level attributes for provider, model, temp, tokens
+            provider_display = getattr(cfg, "provider", cfg.default_provider)
+            model_display = getattr(cfg, "model", cfg.default_model)
+            console.print(f"[dim]Provider: {provider_display}[/dim]")
+            console.print(f"[dim]Model: {model_display}[/dim]")
             # Ensure agent_to_run is not None before accessing name
             agent_name = getattr(agent_to_run, "name", "Unnamed Agent") if agent_to_run else "Unknown"
             console.print(f"[dim]Agent name: {agent_name}[/dim]")
-            console.print(f"[dim]Temperature: {cfg.llm.temperature}[/dim]")
-            console.print(f"[dim]Max tokens: {cfg.llm.max_tokens}[/dim]")
+            console.print(f"[dim]Temperature: {cfg.temperature}[/dim]")
+            console.print(f"[dim]Max tokens: {cfg.max_tokens}[/dim]")
             if session_id:
                 console.print(f"[dim]Continuing session: {session_id}[/dim]")
 

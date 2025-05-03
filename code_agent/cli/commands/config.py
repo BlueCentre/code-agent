@@ -1,3 +1,7 @@
+"""
+This module contains the commands for the config sub-app.
+"""
+
 import shutil
 from pathlib import Path
 from typing import Optional
@@ -103,9 +107,9 @@ def config_aistudio():
     # Setup instructions
     console.print("\n[bold]Setup Instructions:[/bold]")
     console.print("1. Visit [link=https://aistudio.google.com/app/apikey]https://aistudio.google.com/app/apikey[/link] to get an API key.")
-    # console.print("2. Create an account or sign in")
-    # console.print("3. Navigate to the API keys section and create a new key")
-    console.print("2. Your API key will likely start with 'AIza...'")
+    console.print("2. Create an account or sign in")
+    console.print("3. Navigate to the API keys section and create a new key")
+    console.print("4. Your API key will likely start with 'AIza...'")
 
     # Configuration options
     console.print("\n[bold]Configuration Options:[/bold]")

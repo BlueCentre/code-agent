@@ -1,3 +1,7 @@
+"""
+This module contains the commands for the provider sub-app.
+"""
+
 import typer
 from rich.console import Console
 
