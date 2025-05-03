@@ -126,59 +126,70 @@ This diagram details the typical sequence of operations when using the `code-age
 ```mermaid
 sequenceDiagram
     participant User
-    participant CLI as "CLI (main.py)"
-    participant RunCmd as "RunCmd (run.py)"
-    participant Config
-    participant AgentLoader as "AgentLoader (run.py)"
-    participant ADK_Client
-    participant Agent as "Agent (root_agent)"
-    participant FSSessionSvc as "FSSessionSvc (services/session_service.py)"
-    participant JSONMemorySvc as "JSONMemorySvc (adk/json_memory_service.py)"
-    participant Tools as "Tools (adk/tools.py + tools/*)"
+    participant CLI
+    participant RunCmd
+    participant Cfg as Config
+    participant Loader as AgentLoader
+    participant Client as ADK_Client
+    participant Agt as Agent
+    participant SessSvc as FSSessionSvc
+    participant MemSvc as JSONMemorySvc
+    participant ToolSys as Tools
 
     User->>CLI: code-agent run [args] "instruction"
     CLI->>RunCmd: Invoke run_command()
-    RunCmd->>Config: initialize_config(cli_overrides)
-    RunCmd->>Config: get_config()
+    RunCmd->>Cfg: initialize_config(cli_overrides)
+    RunCmd->>Cfg: get_config()
     RunCmd->>RunCmd: setup_logging(cfg.verbosity)
     RunCmd->>RunCmd: Check ADK installed
     RunCmd->>RunCmd: _resolve_agent_path_str(path_arg, cfg)
-    RunCmd->>AgentLoader: Dynamically load agent module
-    AgentLoader->>Agent: Instantiate root_agent
-    RunCmd->>FSSessionSvc: __init__(cfg.sessions_dir)
-    RunCmd->>JSONMemorySvc: __init__(cfg.memory_dir)
-    RunCmd->>ADK_Client: __init__(session_svc, memory_svc, artifact_svc, tools)
-    RunCmd->>+ADK_Client: run_turn("instruction")
-    ADK_Client->>+Agent: process_turn("instruction")
-    Note right of Agent: Agent processes instruction,<br>decides on action (reply/tool)
+    RunCmd->>Loader: Dynamically load agent module
+    Loader->>Agt: Instantiate root_agent
+    RunCmd->>SessSvc: __init__(cfg.sessions_dir)
+    RunCmd->>MemSvc: __init__(cfg.memory_dir)
+    RunCmd->>Client: __init__(session_svc, memory_svc, artifact_svc, tools)
+    RunCmd->>+Client: run_turn("instruction")
+    Client->>+Agt: process_turn("instruction")
+    Note right of Agt: Agent processes instruction,<br>decides on action (reply/tool)
     alt Agent needs Tool
-        Agent->>-ADK_Client: Request Tool Call (e.g., read_file)
-        ADK_Client->>Tools: Execute Tool (read_file)
-        Tools->>Tools: Perform file I/O, run command, etc.
-        Tools-->>ADK_Client: Tool Result
-        ADK_Client->>Agent: Provide Tool Result
-        Agent->>-ADK_Client: Agent Response (Text)
+        Agt->>-Client: Request Tool Call (e.g., read_file)
+        Client->>ToolSys: Execute Tool (read_file)
+        ToolSys->>ToolSys: Perform file I/O, run command, etc.
+        ToolSys-->>Client: Tool Result
+        Client->>Agt: Provide Tool Result
+        Agt->>-Client: Agent Response (Text)
     else Agent replies directly
-        Agent->>-ADK_Client: Agent Response (Text)
+        Agt->>-Client: Agent Response (Text)
     end
-    ADK_Client-->>-RunCmd: Agent Response
+    Client-->>-RunCmd: Agent Response
     RunCmd->>User: Display Response
     loop Interactive Mode
         User->>RunCmd: Follow-up instruction
-        RunCmd->>+ADK_Client: run_turn("follow-up")
-        ADK_Client->>+Agent: process_turn("follow-up")
-        Note right of Agent: Agent processes, potentially uses tools...
-        Agent->>-ADK_Client: Agent Response
-        ADK_Client-->>-RunCmd: Agent Response
+        RunCmd->>+Client: run_turn("follow-up")
+        Client->>+Agt: process_turn("follow-up")
+        Note right of Agt: Agent processes, potentially uses tools...
+        Agt->>-Client: Agent Response
+        Client-->>-RunCmd: Agent Response
         RunCmd->>User: Display Response
     end
-    note over RunCmd, JSONMemorySvc: After loop finishes...
-    RunCmd->>ADK_Client: Get final session/memory state (implicit or explicit call)
-    RunCmd->>FSSessionSvc: Save session state to file (e.g., write session JSON)
-    RunCmd->>JSONMemorySvc: Save memory state to file (e.g., write memory JSON)
+    note over RunCmd, MemSvc: After loop finishes...
+    RunCmd->>Client: Get final session/memory state (implicit or explicit call)
+    RunCmd->>SessSvc: Save session state to file (e.g., write session JSON)
+    RunCmd->>MemSvc: Save memory state to file (e.g., write memory JSON)
 
 ```
 
+*Participant Key:*
+*   **User**: End user executing the command.
+*   **CLI**: CLI entry point (`code_agent/cli/main.py`).
+*   **RunCmd**: Run command logic (`code_agent/cli/commands/run.py`).
+*   **Cfg**: Configuration service (`code_agent/config`).
+*   **Loader**: Agent loading mechanism within `run.py`.
+*   **Client**: ADK Client instance.
+*   **Agt**: The loaded agent instance (`root_agent`).
+*   **SessSvc**: FileSystemSessionService (`code_agent/services/session_service.py`).
+*   **MemSvc**: JsonFileMemoryService (`code_agent/adk/json_memory_service.py`).
+*   **ToolSys**: Tool execution system (`code_agent/adk/tools.py` + `code_agent/tools/*`).
 
 ## Key Components & Code References
 
