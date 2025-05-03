@@ -52,7 +52,7 @@ flowchart TD
         agent_core["Agent Core (ADK)<br>Python (google-adk)<br>Orchestrates LLM calls via LiteLLM, tool definitions, and tool execution logic."]
         config_system["Configuration System<br>Python (Pydantic, PyYAML)<br>Loads, validates, and manages user configuration."]
         tool_modules["Tool Modules<br>Python<br>Implementations for file ops, command exec, search, memory, security checks."]
-        history_store[(History Store<br>JSON Files<br>Stores chat session history on the local file system.)]
+        history_store["History Store<br>JSON Files<br>Stores chat session history on the local file system."]
     end
 
     user --> |"Interacts with<br>CLI (stdin/stdout)"| cli_app
@@ -78,26 +78,26 @@ flowchart TD
 This diagram shows the primary internal components and their relationships.
 
 ```mermaid
-graph TD
-    subgraph User Interface
-        CLI[CLI (Typer)<br>code_agent/cli]
+flowchart TD
+    subgraph "User Interface"
+        CLI["CLI (Typer)<br>code_agent/cli"]
     end
 
-    subgraph Core Framework
-        ADK_Client[ADK Client<br>(in run.py)]
-        Config[Config Service<br>code_agent/config]
-        ADK_Services[ADK Services Integration<br>code_agent/adk]
-        FS_Session[FileSystemSessionService<br>code_agent/services] --> ADK_Services
-        JSON_Memory[JsonFileMemoryService<br>code_agent/adk] --> ADK_Services
-        SharedTools[Shared Tools<br>code_agent/tools] --> ADK_Services
+    subgraph "Core Framework"
+        ADK_Client["ADK Client<br>(in run.py)"]
+        Config["Config Service<br>code_agent/config"]
+        ADK_Services["ADK Services Integration<br>code_agent/adk"]
+        FS_Session["FileSystemSessionService<br>code_agent/services"] --> ADK_Services
+        JSON_Memory["JsonFileMemoryService<br>code_agent/adk"] --> ADK_Services
+        SharedTools["Shared Tools<br>code_agent/tools"] --> ADK_Services
     end
 
-    subgraph Agents
+    subgraph "Agents"
         direction LR
-        AgentLoader[Agent Loader<br>(in run.py)] -- Loads --> AgentX[Agent X (root_agent)<br>code_agent/agent/agent_x/agent_x/agent.py]
-        AgentX -- Uses --> AgentX_Tools[Agent X Tools<br>code_agent/agent/agent_x/agent_x/tools]
-        AgentX -- Uses --> AgentX_SubAgents[Agent X SubAgents<br>code_agent/agent/agent_x/agent_x/sub_agents]
-        AgentX -- Uses --> AgentX_Prompts[Agent X Prompts<br>code_agent/agent/agent_x/agent_x/prompt.py]
+        AgentLoader["Agent Loader<br>(in run.py)"] -- Loads --> AgentX["Agent X (root_agent)<br>code_agent/agent/agent_x/agent_x/agent.py"]
+        AgentX -- Uses --> AgentX_Tools["Agent X Tools<br>code_agent/agent/agent_x/agent_x/tools"]
+        AgentX -- Uses --> AgentX_SubAgents["Agent X SubAgents<br>code_agent/agent/agent_x/agent_x/sub_agents"]
+        AgentX -- Uses --> AgentX_Prompts["Agent X Prompts<br>code_agent/agent/agent_x/agent_x/prompt.py"]
         AgentX -- Uses --> ADK_Services
     end
 
@@ -126,15 +126,15 @@ This diagram details the typical sequence of operations when using the `code-age
 ```mermaid
 sequenceDiagram
     participant User
-    participant CLI (main.py)
-    participant RunCmd (run.py)
+    participant CLI as "CLI (main.py)"
+    participant RunCmd as "RunCmd (run.py)"
     participant Config
-    participant AgentLoader (run.py)
+    participant AgentLoader as "AgentLoader (run.py)"
     participant ADK_Client
-    participant Agent (root_agent)
-    participant FSSessionSvc (services/session_service.py)
-    participant JSONMemorySvc (adk/json_memory_service.py)
-    participant Tools (adk/tools.py + tools/*)
+    participant Agent as "Agent (root_agent)"
+    participant FSSessionSvc as "FSSessionSvc (services/session_service.py)"
+    participant JSONMemorySvc as "JSONMemorySvc (adk/json_memory_service.py)"
+    participant Tools as "Tools (adk/tools.py + tools/*)"
 
     User->>CLI: code-agent run [args] "instruction"
     CLI->>RunCmd: Invoke run_command()
