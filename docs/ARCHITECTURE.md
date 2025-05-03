@@ -146,8 +146,8 @@ sequenceDiagram
     RunCmd->>AgentLoader: Dynamically load agent module
     AgentLoader->>Agent: Instantiate root_agent
     RunCmd->>FSSessionSvc: __init__(cfg.sessions_dir)
-    RunCmd->>JSONMemorySvc: __init__(cfg.memory_dir) # Assumes memory dir config
-    RunCmd->>ADK_Client: __init__(session_svc, memory_svc, artifact_svc, tools) # Simplified
+    RunCmd->>JSONMemorySvc: __init__(cfg.memory_dir)
+    RunCmd->>ADK_Client: __init__(session_svc, memory_svc, artifact_svc, tools)
     RunCmd->>+ADK_Client: run_turn("instruction")
     ADK_Client->>+Agent: process_turn("instruction")
     Note right of Agent: Agent processes instruction,<br>decides on action (reply/tool)
