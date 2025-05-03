@@ -112,7 +112,6 @@ graph TD
 
     style AgentX fill:#f9d,stroke:#333,stroke-width:2px
     style CLI fill:#ccf,stroke:#333,stroke-width:2px
-    style CoreFramework fill:#eee,stroke:#666,stroke-width:1px
 ```
 
 *Diagram Key:*
@@ -157,7 +156,7 @@ sequenceDiagram
         ADK_Client->>Tools: Execute Tool (read_file)
         Tools->>Tools: Perform file I/O, run command, etc.
         Tools-->>ADK_Client: Tool Result
-        ADK_Client->>+Agent: Provide Tool Result
+        ADK_Client->>Agent: Provide Tool Result
         Agent->>-ADK_Client: Agent Response (Text)
     else Agent replies directly
         Agent->>-ADK_Client: Agent Response (Text)
