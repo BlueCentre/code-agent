@@ -6,45 +6,13 @@ import json
 import os
 import tempfile
 import unittest
-from unittest.mock import MagicMock, mock_open, patch
+from unittest.mock import mock_open, patch
 
 from google.adk.events import Event
 from google.adk.sessions import Session
 from google.genai import types as genai_types
 
-from code_agent.adk.json_memory_service import JsonFileMemoryService, MemoryServiceResponse
-
-
-# Rename class to avoid pytest collection warning
-class HelperJsonFileMemoryService(JsonFileMemoryService):
-    """Helper version of JsonFileMemoryService that handles events instead of history."""
-
-    def load_memory(self, query: str, **kwargs) -> MemoryServiceResponse:
-        """
-        Overridden version that works with events instead of history.
-        """
-        results = []
-        query_lower = query.lower()
-
-        for session in self._sessions.values():
-            session_matched = False
-            # Access events instead of history
-            if session.events:
-                for event in session.events:
-                    # Access parts directly from the Content object in event.content
-                    message_text = ""
-                    if hasattr(event, "content") and event.content and event.content.parts:
-                        message_text = "".join([part.text for part in event.content.parts if hasattr(part, "text") and part.text is not None]).lower()
-
-                    if query_lower in message_text:
-                        session_matched = True
-                        break  # Found a match in this session's events
-
-            if session_matched:
-                # Add relevant session data
-                results.append(session.model_dump(mode="json"))
-
-        return MemoryServiceResponse(memories=results)
+from code_agent.adk.json_memory_service import JsonFileMemoryService, JsonMemoryStore, MemoryServiceResponse
 
 
 class TestJsonFileMemoryServiceClass(unittest.TestCase):
@@ -58,6 +26,8 @@ class TestJsonFileMemoryServiceClass(unittest.TestCase):
 
         # Create a sample session for testing
         self.sample_session = self._create_sample_session()
+        # Define the expected string key for the sample session
+        self.sample_session_key_str = f"('{self.sample_session.app_name}', '{self.sample_session.user_id}', '{self.sample_session.id}')"
 
     def tearDown(self):
         """Clean up test fixtures."""
@@ -80,10 +50,10 @@ class TestJsonFileMemoryServiceClass(unittest.TestCase):
         return session
 
     def _create_memory_service(self, filepath=None):
-        """Helper to create a HelperJsonFileMemoryService instance."""
+        """Helper to create a JsonFileMemoryService instance."""
         if filepath is None:
             filepath = self.test_filepath
-        return HelperJsonFileMemoryService(filepath)
+        return JsonFileMemoryService(filepath)
 
     def test_init_new_file(self):
         """Test initialization with a new file path."""
@@ -92,19 +62,9 @@ class TestJsonFileMemoryServiceClass(unittest.TestCase):
 
         # Verify the service is initialized correctly
         self.assertEqual(service.filepath, self.test_filepath)
-        self.assertEqual(len(service._sessions), 0)
-
-    def test_get_session_key(self):
-        """Test the _get_session_key method."""
-        service = self._create_memory_service()
-
-        # Get the key for the sample session
-        key = service._get_session_key(self.sample_session)
-
-        # Verify the key is correct
-        self.assertEqual(key, ("test_app", "test_user", "test_session"))
-        self.assertIsInstance(key, tuple)
-        self.assertEqual(len(key), 3)
+        self.assertIsInstance(service._memory_store, JsonMemoryStore)
+        self.assertEqual(len(service._memory_store.sessions), 0)
+        self.assertEqual(len(service._memory_store.facts), 0)
 
     def test_add_session_to_memory(self):
         """Test adding a session to memory."""
@@ -113,12 +73,11 @@ class TestJsonFileMemoryServiceClass(unittest.TestCase):
         # Add the sample session to memory
         service.add_session_to_memory(self.sample_session)
 
-        # Verify the session was added
-        key = service._get_session_key(self.sample_session)
-        self.assertIn(key, service._sessions)
-        self.assertEqual(service._sessions[key], self.sample_session)
+        # Verify the session was added using the string key
+        self.assertIn(self.sample_session_key_str, service._memory_store.sessions)
+        self.assertEqual(service._memory_store.sessions[self.sample_session_key_str]["id"], self.sample_session.id)
 
-        # Verify the file was created
+        # Verify the file was created/updated (implicitly tested by add_session_to_memory calling _save_to_json)
         self.assertTrue(os.path.exists(self.test_filepath))
 
     def test_load_memory_with_matching_query(self):
@@ -129,7 +88,7 @@ class TestJsonFileMemoryServiceClass(unittest.TestCase):
         service.add_session_to_memory(self.sample_session)
 
         # Search for a query that matches the message text
-        response = service.load_memory("test message")
+        response = service.search_memory("test message")
 
         # Verify the response
         self.assertIsInstance(response, MemoryServiceResponse)
@@ -146,7 +105,7 @@ class TestJsonFileMemoryServiceClass(unittest.TestCase):
         service.add_session_to_memory(self.sample_session)
 
         # Search for a query that doesn't match any message text
-        response = service.load_memory("non-existent query")
+        response = service.search_memory("non-existent query")
 
         # Verify the response is empty
         self.assertIsInstance(response, MemoryServiceResponse)
@@ -163,31 +122,33 @@ class TestJsonFileMemoryServiceClass(unittest.TestCase):
         results = service.search_memory("test message")
 
         # Verify the results
-        self.assertIsInstance(results, list)
-        self.assertEqual(len(results), 1)
-        self.assertEqual(results[0]["app_name"], "test_app")
+        self.assertIsInstance(results, MemoryServiceResponse)
+        self.assertEqual(len(results.memories), 1)
+        self.assertEqual(results.memories[0]["app_name"], "test_app")
 
         # Test with non-matching query
         empty_results = service.search_memory("non-existent query")
-        self.assertEqual(len(empty_results), 0)
+        self.assertIsInstance(empty_results, MemoryServiceResponse)
+        self.assertEqual(len(empty_results.memories), 0)
 
     def test_load_from_json_valid_file(self):
         """Test loading sessions from a valid JSON file."""
-        # Create a valid JSON file with session data
-        session_data = {"('test_app', 'test_user', 'test_session')": self.sample_session.model_dump(mode="json")}
+        # Create a valid JSON file with the new structure
+        session_dump = self.sample_session.model_dump(mode="json")
+        valid_data = {"sessions": {self.sample_session_key_str: session_dump}, "facts": {}}
 
         with open(self.test_filepath, "w") as f:
-            json.dump(session_data, f)
+            json.dump(valid_data, f)
 
         # Initialize service, which should load the file
         service = self._create_memory_service()
 
-        # Verify the session was loaded
-        key = ("test_app", "test_user", "test_session")
-        self.assertIn(key, service._sessions)
-        self.assertEqual(service._sessions[key].app_name, "test_app")
-        self.assertEqual(service._sessions[key].user_id, "test_user")
-        self.assertEqual(service._sessions[key].id, "test_session")
+        # Verify the session was loaded into the memory store
+        self.assertIn(self.sample_session_key_str, service._memory_store.sessions)
+        loaded_session_data = service._memory_store.sessions[self.sample_session_key_str]
+        self.assertEqual(loaded_session_data["app_name"], "test_app")
+        self.assertEqual(loaded_session_data["user_id"], "test_user")
+        self.assertEqual(loaded_session_data["id"], "test_session")
 
     @patch("os.path.exists")
     @patch("builtins.open", new_callable=mock_open)
@@ -201,7 +162,7 @@ class TestJsonFileMemoryServiceClass(unittest.TestCase):
         service = self._create_memory_service()
 
         # Verify no sessions were loaded
-        self.assertEqual(len(service._sessions), 0)
+        self.assertEqual(len(service._memory_store.sessions), 0)
 
     @patch("os.path.exists")
     def test_load_from_json_file_not_found(self, mock_exists):
@@ -213,7 +174,7 @@ class TestJsonFileMemoryServiceClass(unittest.TestCase):
         service = self._create_memory_service()
 
         # Verify no sessions were loaded and no errors were raised
-        self.assertEqual(len(service._sessions), 0)
+        self.assertEqual(len(service._memory_store.sessions), 0)
 
     @patch("os.path.exists")
     def test_load_from_json_unexpected_error(self, mock_exists):
@@ -229,35 +190,41 @@ class TestJsonFileMemoryServiceClass(unittest.TestCase):
             service = self._create_memory_service()
 
             # Verify no sessions were loaded and no errors were raised
-            self.assertEqual(len(service._sessions), 0)
+            self.assertEqual(len(service._memory_store.sessions), 0)
 
     def test_load_from_json_invalid_key_format(self):
         """Test loading with invalid key format in the JSON file."""
-        # Create a JSON file with invalid key format
-        invalid_data = {"invalid_key_format": self.sample_session.model_dump(mode="json")}
+        # Create a JSON file with valid structure but potentially bad session key
+        # (Note: Pydantic might catch malformed session dumps earlier now)
+        invalid_session_dump = self.sample_session.model_dump(mode="json")
+        valid_data_bad_key = {"sessions": {"bad key": invalid_session_dump}, "facts": {}}
 
         with open(self.test_filepath, "w") as f:
-            json.dump(invalid_data, f)
+            json.dump(valid_data_bad_key, f)
 
-        # Initialize service, which should handle the invalid key format
+        # Initialize service
         service = self._create_memory_service()
 
-        # Verify no sessions were loaded
-        self.assertEqual(len(service._sessions), 0)
+        # Verify the session with the bad key might be loaded but potentially unusable,
+        # or simply check if the store remains empty if validation fails harshly.
+        # Let's assume it loads the key as is for now.
+        self.assertNotIn("bad key", service._memory_store.sessions)
+        self.assertEqual(len(service._memory_store.sessions), 0)
 
     def test_load_from_json_invalid_session_data(self):
         """Test loading with invalid session data in the JSON file."""
-        # Create a JSON file with invalid session data
-        invalid_data = {"('test_app', 'test_user', 'test_session')": {"invalid": "data"}}
+        # Create a JSON file with the correct outer structure but invalid inner session data
+        invalid_session_data = {"invalid": "data"}
+        valid_structure_invalid_session = {"sessions": {self.sample_session_key_str: invalid_session_data}, "facts": {}}
 
         with open(self.test_filepath, "w") as f:
-            json.dump(invalid_data, f)
+            json.dump(valid_structure_invalid_session, f)
 
-        # Initialize service, which should handle the invalid session data
+        # Initialize service, which should handle the invalid session data gracefully
         service = self._create_memory_service()
 
-        # Verify no sessions were loaded
-        self.assertEqual(len(service._sessions), 0)
+        # Verify no valid sessions were loaded (or the invalid one was skipped)
+        self.assertEqual(len(service._memory_store.sessions), 0)
 
     def test_save_to_json(self):
         """Test saving sessions to a JSON file."""
@@ -266,7 +233,7 @@ class TestJsonFileMemoryServiceClass(unittest.TestCase):
         # Add the sample session to memory
         service.add_session_to_memory(self.sample_session)
 
-        # Force save to JSON
+        # Force save to JSON (add_session calls it, but call again for explicitness if needed)
         service._save_to_json()
 
         # Verify the file was created
@@ -276,12 +243,15 @@ class TestJsonFileMemoryServiceClass(unittest.TestCase):
         with open(self.test_filepath, "r") as f:
             saved_data = json.load(f)
 
-        # Verify the saved data
-        key_str = str(("test_app", "test_user", "test_session"))
-        self.assertIn(key_str, saved_data)
-        self.assertEqual(saved_data[key_str]["app_name"], "test_app")
-        self.assertEqual(saved_data[key_str]["user_id"], "test_user")
-        self.assertEqual(saved_data[key_str]["id"], "test_session")
+        # Verify the saved data structure and content
+        self.assertIn("sessions", saved_data)
+        self.assertIn("facts", saved_data)
+        self.assertIsInstance(saved_data["sessions"], dict)
+        self.assertIn(self.sample_session_key_str, saved_data["sessions"])
+        # Compare saved session dump with original dump
+        saved_session_dump = saved_data["sessions"][self.sample_session_key_str]
+        original_session_dump = self.sample_session.model_dump(mode="json")
+        self.assertDictEqual(saved_session_dump, original_session_dump)
 
     def test_get_memory_service_info(self):
         """Test getting memory service info."""
@@ -309,8 +279,7 @@ class TestJsonFileMemoryServiceClass(unittest.TestCase):
         service._save_to_json()
 
         # Verify the internal state is still intact
-        key = service._get_session_key(self.sample_session)
-        self.assertIn(key, service._sessions)
+        self.assertIn(self.sample_session_key_str, service._memory_store.sessions)
 
     @patch("json.dump")
     def test_save_to_json_with_type_error(self, mock_dump):
@@ -325,8 +294,7 @@ class TestJsonFileMemoryServiceClass(unittest.TestCase):
         service._save_to_json()
 
         # Verify the internal state is still intact
-        key = service._get_session_key(self.sample_session)
-        self.assertIn(key, service._sessions)
+        self.assertIn(self.sample_session_key_str, service._memory_store.sessions)
 
     def test_add_invalid_session(self):
         """Test adding an invalid object as a session."""
@@ -336,37 +304,4 @@ class TestJsonFileMemoryServiceClass(unittest.TestCase):
         service.add_session_to_memory("not a session")
 
         # Verify nothing was added
-        self.assertEqual(len(service._sessions), 0)
-
-    def test_original_load_memory_method(self):
-        """Test the original load_memory method with mocked sessions that have 'history'."""
-
-        # Create a special version of JsonFileMemoryService for testing the original method
-        class OriginalMethodMemoryService(JsonFileMemoryService):
-            def _load_from_json(self):
-                # Don't load anything, we'll manually add sessions
-                pass
-
-        service = OriginalMethodMemoryService(self.test_filepath)
-
-        # Create a mock session with a 'history' attribute that will be accessed by the original method
-        mock_session = MagicMock()
-        mock_session.history = [MagicMock()]
-        mock_session.history[0].parts = [MagicMock()]
-        mock_session.history[0].parts[0].text = "test message"
-        mock_session.model_dump.return_value = {"app_name": "test_app", "id": "test_session"}
-
-        # Add the mock session to the service
-        session_key = ("test_app", "test_user", "test_session")
-        service._sessions[session_key] = mock_session
-
-        # Call the original load_memory method
-        response = service.load_memory("test")
-
-        # Verify the response
-        self.assertEqual(len(response.memories), 1)
-        self.assertEqual(response.memories[0]["app_name"], "test_app")
-
-        # Test with a non-matching query
-        response = service.load_memory("non-existent")
-        self.assertEqual(len(response.memories), 0)
+        self.assertEqual(len(service._memory_store.sessions), 0)

@@ -47,13 +47,11 @@ ROOT_AGENT_INSTR = """
 - If the user asks about deployment, CI/CD, or DevOps practices, transfer to the agent `devops_agent`
 
 ## Long-Term Memory Access:
-- Your conversations are periodically saved to a long-term memory store, **containing facts, decisions, and context from previous sessions.**
-- **You MUST use the `load_memory` tool to answer questions about information from past interactions or sessions.**
-- Provide a natural language `query` to the `load_memory` tool describing the information you need (e.g., `load_memory(query="discussion about Project Alpha last week")`, `load_memory(query="user's favorite language")`).
-- The tool will search the memory and return relevant snippets from past interactions.
-- Use this tool when the user asks questions that require recalling information beyond the current immediate conversation (e.g., "What did we decide about the API design yesterday?", "Remind me about the goals for feature X", "What is my favorite language?").
-- **Do not guess or state that you cannot remember past information. Use the `load_memory` tool.**
-- Note: This is for retrieving past information. Context within the *current* session (like the most recently read file) should be tracked via your reasoning and the conversation history.
+- Your conversations contain ephemeral short-term memory. Discrete facts can be stored in long-term memory using specific tools.
+- **Storing Facts:** When asked to remember a specific piece of information (like a preference, goal, or detail), you MUST use the `add_memory_fact` tool. Provide a concise `entity_name` (e.g., 'favorite_color', 'project_goal_api') and the `fact_content` to store.
+- **Retrieving Facts:** To recall specific facts you were previously asked to remember, you MUST use the `search_memory_facts` tool. Provide a `query` describing the fact you need (e.g., 'favorite_color', 'api goal'). This searches only the facts you explicitly stored.
+- **Searching History:** To search the general conversation history for context or past discussions (not specific stored facts), use the `load_memory` tool with a natural language `query`. This searches transcripts.
+- **Do not guess.** If asked about something you should have remembered, use `search_memory_facts`. If asked about general past discussion, use `load_memory`.
 
 # --- Placeholder: Manual Memory Persistence Tools (Not Implemented) ---
 # - TODO: The following tools are placeholders for a potential future feature

@@ -79,7 +79,7 @@ runner = CliRunner(mix_stderr=False)
 @patch("code_agent.cli.commands.run.initialize_config")
 @patch("code_agent.cli.commands.run.get_config")
 @patch("code_agent.cli.utils.Runner")
-def test_run_default_config(mock_runner, mock_get_config, mock_init_config, mock_resolve, dummy_agent_file, caplog):
+def test_run_default_config(mock_runner, mock_get_config, mock_init_config, mock_resolve, dummy_agent_file, caplog, tmp_path):
     """Test run command with default config (no CLI overrides)."""
     runner = CliRunner(mix_stderr=False)
     mock_runner_instance = mock_runner.return_value
@@ -96,6 +96,9 @@ def test_run_default_config(mock_runner, mock_get_config, mock_init_config, mock
     mock_settings.temperature = 0.7  # Add expected top-level attributes if needed by code under test
     mock_settings.max_tokens = 1000  # Add expected top-level attributes if needed by code under test
     mock_settings.security = MagicMock()
+    mock_settings.sessions_dir = tmp_path / "sessions"
+    mock_settings.app_name = "test_app"
+    mock_settings.user_id = "test_user"
     mock_get_config.return_value = mock_settings
 
     result = runner.invoke(app, ["run", "Say hi", str(dummy_agent_file)])
@@ -126,7 +129,7 @@ def test_run_default_config(mock_runner, mock_get_config, mock_init_config, mock
 @patch("code_agent.cli.commands.run.initialize_config")
 @patch("code_agent.cli.commands.run.get_config")
 @patch("code_agent.cli.utils.Runner")
-def test_run_cli_overrides(mock_runner, mock_get_config, mock_init_config, mock_resolve, dummy_agent_file, caplog):
+def test_run_cli_overrides(mock_runner, mock_get_config, mock_init_config, mock_resolve, dummy_agent_file, caplog, tmp_path):
     """Test run command CLI args override config file."""
     runner = CliRunner(mix_stderr=False)
     mock_runner_instance = mock_runner.return_value
@@ -148,6 +151,9 @@ def test_run_cli_overrides(mock_runner, mock_get_config, mock_init_config, mock_
     mock_settings_final.temperature = 0.7  # Add expected top-level attributes
     mock_settings_final.max_tokens = 1000  # Add expected top-level attributes
     mock_settings_final.security = MagicMock()
+    mock_settings_final.sessions_dir = tmp_path / "sessions"
+    mock_settings_final.app_name = "test_app"
+    mock_settings_final.user_id = "test_user"
     mock_get_config.return_value = mock_settings_final  # get_config returns this final state
 
     result = runner.invoke(
@@ -193,7 +199,7 @@ def test_run_cli_overrides(mock_runner, mock_get_config, mock_init_config, mock_
 @patch("code_agent.cli.commands.run.get_config")
 @patch("code_agent.cli.utils.Runner")
 @patch("code_agent.cli.commands.run.setup_logging")  # Target where setup_logging is called within run_command
-def test_run_log_level_debug(mock_setup_logging, mock_runner, mock_get_config, mock_init_config, mock_resolve, dummy_agent_file, caplog):
+def test_run_log_level_debug(mock_setup_logging, mock_runner, mock_get_config, mock_init_config, mock_resolve, dummy_agent_file, caplog, tmp_path):
     """Test --log-level DEBUG sets logging level correctly."""
     runner = CliRunner(mix_stderr=False)
     mock_runner_instance = mock_runner.return_value
@@ -209,6 +215,9 @@ def test_run_log_level_debug(mock_setup_logging, mock_runner, mock_get_config, m
     mock_settings_final.temperature = 0.7  # Add expected top-level attributes
     mock_settings_final.max_tokens = 1000  # Add expected top-level attributes
     mock_settings_final.security = MagicMock()
+    mock_settings_final.sessions_dir = tmp_path / "sessions"
+    mock_settings_final.app_name = "test_app"
+    mock_settings_final.user_id = "test_user"
     mock_get_config.return_value = mock_settings_final
 
     result = runner.invoke(
@@ -246,7 +255,7 @@ def test_run_log_level_debug(mock_setup_logging, mock_runner, mock_get_config, m
 @patch("code_agent.cli.commands.run.get_config")
 @patch("code_agent.cli.utils.Runner")
 @patch("code_agent.cli.commands.run.setup_logging")  # Target where setup_logging is called within run_command
-def test_run_log_level_overrides_verbose(mock_setup_logging, mock_runner, mock_get_config, mock_init_config, mock_resolve, dummy_agent_file, caplog):
+def test_run_log_level_overrides_verbose(mock_setup_logging, mock_runner, mock_get_config, mock_init_config, mock_resolve, dummy_agent_file, caplog, tmp_path):
     """Test --log-level overrides --verbose flag."""
     runner = CliRunner(mix_stderr=False)
     mock_runner_instance = mock_runner.return_value
@@ -262,6 +271,9 @@ def test_run_log_level_overrides_verbose(mock_setup_logging, mock_runner, mock_g
     mock_settings_final.temperature = 0.7  # Add expected top-level attributes
     mock_settings_final.max_tokens = 1000  # Add expected top-level attributes
     mock_settings_final.security = MagicMock()
+    mock_settings_final.sessions_dir = tmp_path / "sessions"
+    mock_settings_final.app_name = "test_app"
+    mock_settings_final.user_id = "test_user"
     mock_get_config.return_value = mock_settings_final
 
     result = runner.invoke(
@@ -298,7 +310,7 @@ def test_run_log_level_overrides_verbose(mock_setup_logging, mock_runner, mock_g
 @patch("code_agent.cli.commands.run.get_config")
 @patch("code_agent.cli.utils.Runner")
 @patch("code_agent.cli.commands.run.setup_logging")  # Target where setup_logging is called within run_command
-def test_run_verbose_flag(mock_setup_logging, mock_runner, mock_get_config, mock_init_config, mock_resolve, dummy_agent_file, caplog):
+def test_run_verbose_flag(mock_setup_logging, mock_runner, mock_get_config, mock_init_config, mock_resolve, dummy_agent_file, caplog, tmp_path):
     """Test --verbose flag sets logging level correctly."""
     runner = CliRunner(mix_stderr=False)
     mock_runner_instance = mock_runner.return_value
@@ -314,6 +326,9 @@ def test_run_verbose_flag(mock_setup_logging, mock_runner, mock_get_config, mock
     mock_settings_final.temperature = 0.7  # Add expected top-level attributes
     mock_settings_final.max_tokens = 1000  # Add expected top-level attributes
     mock_settings_final.security = MagicMock()
+    mock_settings_final.sessions_dir = tmp_path / "sessions"
+    mock_settings_final.app_name = "test_app"
+    mock_settings_final.user_id = "test_user"
     mock_get_config.return_value = mock_settings_final
 
     result = runner.invoke(

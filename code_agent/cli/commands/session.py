@@ -1,13 +1,20 @@
-import uuid
+import logging
 from typing import Optional
 
 import typer
 from rich.console import Console
 from typing_extensions import Annotated
 
+from code_agent.cli.utils import operation_error
+from code_agent.config import get_config
+
+# Create a Typer app for session commands (if needed, or register directly)
+# session_app = typer.Typer(help="Manage and view conversation sessions.")
+
 # --- Constants ---
 SESSION_ID_HELP = "The session ID to view history for."
 SESSION_ID_ARG = typer.Argument(help=SESSION_ID_HELP)
+HISTORY_SESSION_ID_ARG = typer.Argument(..., help="The ID of the session whose history you want to view.")
 
 # --- Session Commands ---
 
@@ -15,7 +22,7 @@ SESSION_ID_ARG = typer.Argument(help=SESSION_ID_HELP)
 def history(
     session_id: Annotated[
         str,
-        SESSION_ID_ARG,
+        HISTORY_SESSION_ID_ARG,
     ],
     count: Annotated[
         Optional[int],
@@ -58,40 +65,51 @@ def history(
     console.print("[dim]- Custom file-based session implementation[/dim]")
 
 
-def sessions(
-    count: Annotated[
-        Optional[int],
-        typer.Option("--count", "-n", help="Number of most recent sessions to show."),
-    ] = 10,
-    all_sessions: Annotated[
-        bool,
-        typer.Option("--all", "-a", help="Show all sessions instead of just the most recent ones."),
-    ] = False,
-):
+def sessions() -> None:
     """
-    List available chat sessions that can be continued.
-
-    Note: Due to limitations of InMemorySessionService, this command can only show sessions
-    created in the current process. For session persistence, use the --session-id flag with
-    the run command to continue a session.
+    List available saved conversation sessions.
     """
     console = Console()
-    console.print("[bold cyan]Available Sessions:[/bold cyan]")
+    try:
+        # 1. Initialize and get configuration
+        # Suppress warnings during this specific initialization if needed
+        # initialize_config(validate=False) # Validation might not be strictly needed here
+        cfg = get_config()  # Assume config is initialized by main callback
 
-    # TODO: Implement actual session listing if a persistent SessionService is used.
-    # For now, display the limitations message.
+        # 2. Get sessions directory from config
+        sessions_dir = cfg.sessions_dir
 
-    console.print("[yellow]Note: InMemorySessionService only retains sessions for the current process.[/yellow]")
-    console.print("[dim]To continue a session from a previous run, you need to save the session ID.[/dim]")
-    console.print('[dim]Example: code-agent run "your question" --session-id <your-saved-session-id>[/dim]')
+        # 3. Check if sessions_dir is configured
+        if not sessions_dir:
+            operation_error(console, "Session directory is not configured. Cannot list sessions.")
+            raise typer.Exit(code=1)
 
-    # Display a note about session persistence
-    console.print("\n[bold]For persistent sessions, use one of these approaches:[/bold]")
-    console.print("1. [dim]Save the session ID displayed at the end of each run command[/dim]")
-    console.print("2. [dim]Use a database URL with a custom session service implementation[/dim]")
+        # 4. Check if the directory exists
+        if not sessions_dir.is_dir():
+            console.print(f"[yellow]Sessions directory not found:[/yellow] {sessions_dir}")
+            console.print("No sessions saved yet or directory is misconfigured.")
+            raise typer.Exit(code=0)  # Not an error if dir just doesn't exist yet
 
-    # Let's give a sample session ID to demonstrate the format
-    sample_id = str(uuid.uuid4())
-    console.print("\n[bold]Sample usage:[/bold]")
-    # Example needs agent path if no default is set
-    console.print(f'[dim]code-agent run <agent_path> "your question" --session-id {sample_id}[/dim]')
+        # 5. Find session files
+        try:
+            session_files = sorted(list(sessions_dir.glob("*.session.json")), key=lambda p: p.stat().st_mtime, reverse=True)
+        except OSError as e:
+            operation_error(console, f"Error accessing sessions directory '{sessions_dir}': {e}")
+            raise typer.Exit(code=1) from e
+
+        # 6. Print the list
+        if not session_files:
+            console.print(f"No saved sessions found in: {sessions_dir}")
+        else:
+            console.print(f"[bold cyan]Available Sessions (in {sessions_dir}):[/bold cyan]")
+            for file_path in session_files:
+                # Extract session ID from filename stem
+                session_id = file_path.stem.replace(".session", "")
+                console.print(f"- {session_id}")
+
+    except typer.Exit:
+        raise  # Let Typer exits pass through
+    except Exception as e:
+        operation_error(console, f"An unexpected error occurred while listing sessions: {e}")
+        logging.exception("Error listing sessions")  # Log the full traceback
+        raise typer.Exit(code=1) from e

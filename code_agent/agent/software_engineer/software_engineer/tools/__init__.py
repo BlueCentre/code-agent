@@ -1,5 +1,5 @@
 # ruff: noqa: I001, F401
-"""Tools for the Software Engineer Agent."""
+"""Tools for the Software Engineer Multi-Agent."""
 
 from . import (
     analysis_state,

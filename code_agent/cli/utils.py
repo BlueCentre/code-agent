@@ -178,11 +178,14 @@ def step_progress(console: Console, message: str):
 def run_cli(
     agent,
     app_name,
+    artifact_service=None,
     user_id="cli_user",
     session_id=None,
     interactive=False,
     show_timestamps=False,
+    session=None,
     session_service=None,
+    memory_service=None,
     initial_instruction=None,
 ):
     """
@@ -195,7 +198,9 @@ def run_cli(
         session_id: Optional session ID to continue an existing conversation
         interactive: Whether to continue conversation in interactive mode after initial query
         show_timestamps: Whether to show timestamps for messages
+        session: Session object to use for the run
         session_service: Service for session management (creates InMemorySessionService if None)
+        memory_service: Service for memory management (creates InMemorySessionService if None)
         initial_instruction: Initial instruction to give the agent (if None, will prompt for it)
     """
     # Suppress specific loggers that generate noise
@@ -214,7 +219,7 @@ def run_cli(
         session_service = InMemorySessionService()
 
     # Create a Runner instance
-    runner = Runner(session_service=session_service, app_name=app_name, agent=agent)
+    runner = Runner(session_service=session_service, app_name=app_name, agent=agent, memory_service=memory_service)
 
     # Set up interrupt handling
     interrupted = False
@@ -465,23 +470,3 @@ def run_cli(
         console.print("[dim]No active session ID to display.[/dim]")
 
     return current_session_id
-
-
-# --- ADK Path Parsing/Validation Helpers (if needed outside ADK commands) ---
-# These might be better kept within the web/fastapi command modules if only used there.
-# If reused by 'run' or others, keep them here.
-
-# Example: (Remove if not needed globally)
-# def parse_adk_path(path_str: str) -> str:
-#     """Parses the agent path for ADK."""
-#     # Placeholder for ADK's _parse_path logic if needed globally
-#     # from google.adk.cli.commands import _parse_path # Requires ADK install check
-#     # return _parse_path(path_str)
-#     return path_str # Simple pass-through for now
-
-# def validate_adk_path(parsed_path: str) -> bool:
-#     """Validates the parsed ADK agent path."""
-#     # Placeholder for ADK's _validate_agent_path logic if needed globally
-#     # from google.adk.cli.commands import _validate_agent_path
-#     # return _validate_agent_path(parsed_path)
-#     return True # Simple pass-through for now

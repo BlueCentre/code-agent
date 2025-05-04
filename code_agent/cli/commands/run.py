@@ -3,6 +3,7 @@ This module contains the commands for the run sub-app.
 """
 
 import importlib.util
+import json
 import logging
 import sys
 import traceback
@@ -19,23 +20,40 @@ from code_agent.config import get_config, initialize_config
 
 # Import ADK components if available
 try:
+    from google.adk.artifacts.in_memory_artifact_service import InMemoryArtifactService
+
+    # Try importing the memory service
+    from google.adk.memory.in_memory_memory_service import InMemoryMemoryService
     from google.adk.sessions.in_memory_session_service import InMemorySessionService
 
     ADK_INSTALLED = True
+    # Placeholder is no longer needed here if import succeeds
+    # InMemoryMemoryService = None # type: ignore
 except ImportError:
+    # Set all to None if ANY import fails
+    InMemoryArtifactService = None  # type: ignore
     InMemorySessionService = None  # type: ignore
+    InMemoryMemoryService = None  # type: ignore # Keep this for the check below
     ADK_INSTALLED = False
 
+# Import our custom session service
+# from code_agent.services.memory_service import FileSystemMemoryService # Old import
+# from code_agent.services.memory_service import MemoryServiceWrapper # Not the wrapper
+from code_agent.adk.json_memory_service import JsonFileMemoryService  # Import the correct one
 
 # Import helpers from utils
 from code_agent.cli.utils import (
     _resolve_agent_path_str,
+    operation_complete,
     operation_error,
     operation_warning,
     run_cli,
     setup_logging,
     thinking_indicator,
 )
+from code_agent.services.session_service import FileSystemSessionService
+
+logger = logging.getLogger(__name__)  # Define logger at module level
 
 # --- Constants for Typer Arguments/Options ---
 AGENT_PATH_DEFAULT = None  # Can't use Path() here directly
@@ -127,6 +145,10 @@ def run_command(
             help="Maximum number of tokens to generate. Overrides config file.",
         ),
     ] = None,
+    save_session_cli: Annotated[
+        bool,
+        typer.Option("--save-session", help="Save the conversation session to a file."),
+    ] = False,
     verbose: Annotated[
         bool,
         typer.Option(
@@ -166,7 +188,7 @@ def run_command(
         # --- ADK Check ---
         if not ADK_INSTALLED:
             console.print("[bold red]Error:[/bold red] Google ADK is required for the 'run' command but is not installed.")
-            console.print("Please install it using: [yellow]uv pip install google-adk[/yellow]")
+            console.print("Please install it using: [yellow]uv add google-adk[/yellow]")
             raise typer.Exit(code=1)
         if InMemorySessionService is None:  # Check again just in case
             console.print("[bold red]Error:[/bold red] Failed to import ADK's InMemorySessionService.")
@@ -217,6 +239,7 @@ def run_command(
                         # Attempt to import the directory as a package
                         agent_module = importlib.import_module(module_name)
                     except ImportError as e:
+                        # Re-raise the original ImportError but chain the context
                         raise ImportError(f"Could not import agent package '{module_name}' from {resolved_agent_path}: {e}") from e
                     finally:
                         # Clean up sys.path if needed, though generally safe to leave
@@ -226,95 +249,165 @@ def run_command(
                 else:
                     raise ImportError(f"Agent path is neither a Python file nor a directory: {resolved_agent_path}")
 
-                # Try to get the root_agent from the loaded module
+                # --- Get Agent Instance (Revert to previous working logic) ---
                 if hasattr(agent_module, "root_agent"):
                     agent_to_run = agent_module.root_agent
+                    operation_warning(console, f"Found 'agent.root_agent' structure in {resolved_agent_path.name}.")
                 elif hasattr(agent_module, "agent"):
-                    # Check if module.agent itself looks like an agent instance
                     potential_agent = agent_module.agent
+                    # Previous check: Look for expected attributes like name/tools
                     if hasattr(potential_agent, "name") and hasattr(potential_agent, "tools"):
                         agent_to_run = potential_agent
-                        # Split the warning into two lines
-                        operation_warning(console, f"Found top-level 'agent' variable in {module_name} and using it.")
+                        operation_warning(console, f"Found top-level 'agent' variable in {resolved_agent_path.name} and using it.")
                         operation_warning(console, "Consider renaming to 'root_agent' for clarity.")
                     # Check if agent_module.agent contains root_agent (less common)
                     elif hasattr(potential_agent, "root_agent"):
                         agent_to_run = potential_agent.root_agent
-                        operation_warning(console, f"Found 'agent.root_agent' structure in {module_name}.")
+                        operation_warning(console, f"Found 'agent.root_agent' structure in {resolved_agent_path.name}.")
                     else:
-                        # Split the error message across lines
-                        error_msg = f"Found 'agent' variable in {module_name}, but it doesn't look " "like an agent instance or contain 'root_agent'."
-                        operation_error(console, error_msg)
-                        raise ImportError("Cannot determine agent instance from 'agent' variable.")
+                        # If root_agent doesn't exist, try 'agent'
+                        raise AttributeError(f"Module {resolved_agent_path} has 'agent' but not 'root_agent'. Please expose 'root_agent'.")
                 else:
                     # Look for common factory functions or patterns if needed
-                    operation_error(console, f"Could not find 'root_agent' or a suitable 'agent' variable in the module: {module_name}")
-                    raise ImportError(f"Could not find 'root_agent' or 'agent' in the module: {module_name}")
+                    operation_error(console, f"Could not find 'root_agent' or a suitable 'agent' variable in the module: {resolved_agent_path.name}")
+                    raise ImportError(f"Could not find 'root_agent' or 'agent' in the module: {resolved_agent_path.name}")
 
                 if not agent_to_run:
                     # Should have been caught above, but double check
                     raise ImportError("Failed to load a valid agent instance.")
 
-                # Use operation_complete from utils
-                from code_agent.cli.utils import operation_complete
-
                 operation_complete(console, f"Agent '{getattr(agent_to_run, 'name', 'Unnamed Agent')}' loaded successfully.")
 
-        except (ImportError, AttributeError, Exception) as e:
-            operation_error(console, f"Error loading agent: {e}")
-            logging.exception("Agent loading failed.")  # Log traceback
-            console.print(f"[dim]Traceback: {traceback.format_exc()}[/dim]")
-            console.print(f"[dim]Attempted to load from: {resolved_agent_path}[/dim]")
+        except (ImportError, AttributeError) as e:
+            operation_error(console, f"Failed to load agent: {e}")
+            # Chain the original exception
+            raise typer.Exit(code=1) from e
+        except Exception as e:
+            # Catch any other unexpected loading errors
+            operation_error(console, f"An unexpected error occurred during agent loading: {e}")
+            logger.error(traceback.format_exc())  # - Logger should be defined
+            # Chain the original exception
             raise typer.Exit(code=1) from e
 
-        # --- Verbose Output ---
-        if cfg.verbosity >= 2:  # Corresponds to VERBOSE or DEBUG
-            console.print(f"[dim]Agent path: {resolved_agent_path_str}[/dim]")
-            # Use correct top-level attributes for provider, model, temp, tokens
-            provider_display = getattr(cfg, "provider", cfg.default_provider)
-            model_display = getattr(cfg, "model", cfg.default_model)
-            console.print(f"[dim]Provider: {provider_display}[/dim]")
-            console.print(f"[dim]Model: {model_display}[/dim]")
-            # Ensure agent_to_run is not None before accessing name
-            agent_name = getattr(agent_to_run, "name", "Unnamed Agent") if agent_to_run else "Unknown"
-            console.print(f"[dim]Agent name: {agent_name}[/dim]")
-            console.print(f"[dim]Temperature: {cfg.temperature}[/dim]")
-            console.print(f"[dim]Max tokens: {cfg.max_tokens}[/dim]")
-            if session_id:
-                console.print(f"[dim]Continuing session: {session_id}[/dim]")
-
-        # --- Session Service ---
-        # ADK check ensures InMemorySessionService is available
-        session_service = InMemorySessionService()
-
-        # --- Run Agent via run_cli ---
-        app_name = "code_agent_cli"
-        user_id = "cli_user"
-
+        # --- Instantiate Services ---
+        # Session Service (using FileSystemSessionService)
+        sessions_dir_path = Path(cfg.sessions_dir).expanduser()
+        sessions_dir_str = str(sessions_dir_path)
+        # Ensure directory exists (FileSystemSessionService might do this, but good practice)
         try:
-            # Call the run_cli utility function
-            run_cli(
-                agent=agent_to_run,
-                app_name=app_name,
-                user_id=user_id,
-                session_id=session_id,
-                interactive=interactive,
-                show_timestamps=show_timestamps,
-                session_service=session_service,
-                initial_instruction=instruction,
-            )
-        except (Exception, typer.Exit) as e:  # Catch typer.Exit here too
-            # run_cli should handle its own errors, but catch unexpected ones
-            if not isinstance(e, typer.Exit):  # Don't double-print Exit messages
-                operation_error(console, f"Error during agent execution: {e}")
-                logging.exception("Unhandled exception during run_cli call.")
-            raise  # Re-raise to exit
+            sessions_dir_path.mkdir(parents=True, exist_ok=True)
+        except OSError as e:
+            operation_error(console, f"Failed to create sessions directory {sessions_dir_str}: {e}")
+            raise typer.Exit(code=1)  # noqa: B904
 
-    except typer.Exit:
-        # Let Typer's exit exceptions propagate cleanly
-        raise
+        logging.debug(f"Initializing FileSystemSessionService. Sessions dir: {sessions_dir_str}")
+        file_system_session_service = FileSystemSessionService(sessions_dir=sessions_dir_str)
+
+        # Memory Service (using JsonFileMemoryService)
+        # Place memory store inside the sessions directory for organization
+        memory_file_path = sessions_dir_path / "memory_store.json"
+        memory_file_path_str = str(memory_file_path)
+        logging.info(f"Using JSON memory store file: {memory_file_path_str}")
+        json_memory_service = JsonFileMemoryService(filepath=memory_file_path_str)
+
+        # Artifact Service (using default InMemory for now)
+        # If needed, instantiate a specific one here
+        artifact_service = InMemoryArtifactService()
+        logging.debug("Using default InMemoryArtifactService.")
+
+        # --- Execute Agent via run_cli --- #
+        run_output = None  # Initialize run_output
+        final_session_id = None  # Initialize final_session_id
+        try:
+            # Prepare arguments for run_cli
+            run_cli_args = {
+                "agent": agent_to_run,
+                "app_name": cfg.app_name,  # Use app_name from config
+                "user_id": cfg.user_id,  # Use user_id from config
+                "initial_instruction": instruction,
+                "session_id": session_id,
+                "interactive": interactive,
+                "show_timestamps": show_timestamps,
+                # Pass the instantiated services
+                "session_service": file_system_session_service,
+                "memory_service": json_memory_service,
+                "artifact_service": artifact_service,
+            }
+
+            # Run the agent using the utility function
+            run_output = run_cli(**run_cli_args)
+
+            # --- Session Saving Logic ---
+            # Determine the session ID used (either provided or created)
+            # Make final_session_id determination more robust
+            if isinstance(run_output, dict):
+                final_session_id = run_output.get("session_id")
+            elif isinstance(run_output, str):
+                final_session_id = run_output  # Assume string output is the session ID
+            else:
+                final_session_id = session_id  # Fallback to initial ID if run_output is None or unexpected type
+
+            # If still no ID after checks, use the one from run_cli_args if it was provided
+            if not final_session_id and run_cli_args.get("session_id"):
+                final_session_id = run_cli_args["session_id"]
+
+            if final_session_id:
+                console.print(f"Session ID: {final_session_id}")
+
+                # Check if saving is requested via CLI flag
+                should_save = save_session_cli
+                # If not via CLI, check config (assuming a config setting like `save_sessions_by_default`)
+                # if not should_save and hasattr(cfg, 'save_sessions_by_default') and cfg.save_sessions_by_default:
+                #     should_save = True
+
+                if should_save:
+                    sessions_dir_path = Path(cfg.sessions_dir).expanduser()
+                    sessions_dir_str = str(sessions_dir_path)
+
+                    # Ensure the directory exists
+                    try:
+                        sessions_dir_path.mkdir(parents=True, exist_ok=True)
+                    except OSError as e:
+                        operation_error(console, f"Failed to create sessions directory {sessions_dir_str} for saving: {e}")
+                        # Don't exit, just report error and continue
+                        should_save = False  # Prevent attempting save
+
+                    if should_save:
+                        save_path = sessions_dir_path / f"{final_session_id}.session.json"
+                        try:
+                            # Fetch the complete session data using the service
+                            # Note: get_session might return None if the session ended abruptly
+                            # Use the *final* session ID determined above
+                            session_data = file_system_session_service.get_session(app_name=cfg.app_name, user_id=cfg.user_id, session_id=final_session_id)
+
+                            if session_data:
+                                # Convert Session object to dict before saving
+                                session_dict = session_data.model_dump(mode="json")
+                                with open(save_path, "w", encoding="utf-8") as f:
+                                    json.dump(session_dict, f, indent=4)
+                                operation_complete(console, f"Session saved to: {save_path}")
+                            else:
+                                operation_warning(console, f"Could not retrieve session data for ID {final_session_id} to save.")
+
+                        except Exception as e:
+                            operation_error(console, f"Failed to save session {final_session_id} to {save_path}: {e}")
+                            logging.error(f"Saving Traceback:\n{traceback.format_exc()}")
+            elif save_session_cli:
+                operation_warning(console, "--save-session flag was used, but no final session ID was determined. Cannot save.")
+
+        except Exception as e:
+            operation_error(console, f"An error occurred during agent execution: {e}")
+            logging.error(f"Execution Traceback:\n{traceback.format_exc()}")
+            raise typer.Exit(code=1)  # noqa: B904
+
+    except typer.Exit as e:
+        # Let Typer Exit exceptions propagate naturally
+        raise e
     except Exception as e:
-        # Catch-all for unexpected errors during setup (e.g., config loading)
-        operation_error(console, f"Unhandled exception in run command: {e}")
-        logging.exception("Unhandled exception in run command.")
+        # Catch-all for other unexpected errors during the run process
+        operation_error(console, f"An unexpected error occurred: {e}")
+        logger.error(traceback.format_exc())  # Log the full traceback # - Logger should be defined
         raise typer.Exit(code=1) from e
+
+
+# Note: Command registration happens in main.py

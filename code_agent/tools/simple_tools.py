@@ -4,6 +4,7 @@ without relying on complex decorators or tool classes.
 """
 
 import difflib
+import logging
 import subprocess
 from pathlib import Path
 
@@ -23,6 +24,8 @@ from code_agent.tools.error_utils import (
 subprocess_run = subprocess.run
 confirm_ask = Confirm.ask
 
+# Setup logger for this module
+logger = logging.getLogger(__name__)
 console = Console()
 
 # Define a max file size limit (e.g., 1MB)
@@ -82,74 +85,80 @@ def read_file(path: str) -> str:
 
 # --- APPLY EDIT Tool ---
 def apply_edit(target_file: str, code_edit: str) -> str:
-    """Applies proposed content changes to a file after showing a diff and requesting user confirmation."""
+    """Applies a given edit to a target file, showing a diff and asking for confirmation."""
+    target_path = Path(target_file)
     config = get_config()
 
+    # Security Check 1: Ensure path is within the current working directory or subdirs
     if not is_path_within_cwd(target_file):
-        return format_path_restricted_error(target_file)
+        return f"Error: Target file '{target_file}' is outside the allowed workspace."
 
     try:
-        file_path = Path(target_file).resolve()
-        print(f"[yellow]Attempting to edit file:[/yellow] {file_path}")
+        # Determine if the file exists and is a regular file
+        file_exists = target_path.is_file()
+        if not file_exists and target_path.exists():
+            return f"Error: Path exists but is not a regular file: '{target_file}'. " f"Only regular files can be edited."
 
-        # --- Read Current Content ---
-        current_content = ""
-        if file_path.is_file():
+        original_content = ""
+        # Try reading original content *before* proceeding to diff
+        if file_exists:
             try:
-                # Check file size before reading
-                file_size = file_path.stat().st_size
-                if file_size > MAX_FILE_SIZE_BYTES:
-                    return format_file_size_error(target_file, file_size, MAX_FILE_SIZE_BYTES)
-                current_content = file_path.read_text()
+                original_content = target_path.read_text()
             except Exception as read_e:
-                return format_file_error(read_e, target_file, "reading for edit")
-        elif file_path.exists():
-            return (
-                f"Error: Path exists but is not a regular file: '{target_file}'.\n"
-                f"Only regular files can be edited. If you're trying to edit a directory,\n"
-                f"this operation is not supported."
-            )
+                # Handle potential read errors early
+                logger.error(f"Error reading original content from {target_file}: {read_e}", exc_info=True)
+                return f"Error: Failed reading original content from '{target_file}'.\nError details: {read_e}"
 
-        # --- Show Diff ---
-        diff = "".join(
-            difflib.unified_diff(
-                current_content.splitlines(keepends=True),
-                code_edit.splitlines(keepends=True),
-                fromfile=f"a/{target_file}",
-                tofile=f"b/{target_file}",
-                lineterm="\n",
-            )
+        # --- Diff and Confirmation --- #
+        # Generate diff
+        # Check if splitlines can handle potential None or non-string types defensively
+        original_lines = original_content.splitlines(keepends=True) if isinstance(original_content, str) else []
+        new_lines = code_edit.splitlines(keepends=True) if isinstance(code_edit, str) else []
+
+        diff = difflib.unified_diff(
+            original_lines,
+            new_lines,
+            fromfile=f"a/{target_file}",
+            tofile=f"b/{target_file}",
         )
+        diff_text = "".join(diff)
 
-        if not diff:
-            return f"No changes needed. File content already matches the proposed edit for {target_file}."
+        # If no changes, report and exit
+        if not diff_text:
+            return "No changes detected."
 
-        print("\n[bold]Proposed changes:[/bold]")
-        syntax = Syntax(diff, "diff", theme="default", line_numbers=False)
-        console.print(syntax)
+        # Display diff and ask for confirmation
+        console.print(f"Attempting to edit file: \n[cyan]{target_path}[/cyan]")
+        console.print("\nProposed changes:")
+        console.print(Syntax(diff_text, "diff", theme="default", line_numbers=False))
 
-        # --- Ask for Confirmation ---
-        if config.auto_approve_edit:
+        # Check for auto-approve setting
+        auto_approve = config.auto_approve_edits
+
+        confirmed = False
+        if auto_approve:
+            console.print("[yellow]Auto-approving edit based on configuration.[/yellow]")
             confirmed = True
         else:
-            confirmed = Confirm.ask(f"Apply these changes to {target_file}?", default=False)
+            confirmed = Confirm.ask("Apply these changes?", default=False)
 
-        # --- Apply Changes if Confirmed ---
         if confirmed:
             try:
-                # Ensure parent directory exists
-                file_path.parent.mkdir(parents=True, exist_ok=True)
-                file_path.write_text(code_edit)
+                # Ensure parent directory exists for new files
+                if not file_exists:
+                    target_path.parent.mkdir(parents=True, exist_ok=True)
+
+                target_path.write_text(code_edit)
                 return f"Edit applied successfully to {target_file}."
-            except Exception as write_e:
-                return format_file_error(write_e, target_file, "writing changes to")
+            except IOError as e:
+                logger.error(f"IOError writing changes to {target_file}: {e}")
+                return f"Error: Failed when writing changes to '{target_file}'.\nError details: {e}"
         else:
             return "Edit cancelled by user."
 
-    except PermissionError as e:
-        return format_file_error(e, target_file, "accessing")
     except Exception as e:
-        return format_file_error(e, target_file, "applying edit to")
+        logger.error(f"Error applying edit to {target_file}: {e}", exc_info=True)
+        return f"Error: Failed when applying edit to '{target_file}'.\nError details: {e}"
 
 
 # --- RUN NATIVE COMMAND Tool ---

@@ -23,7 +23,7 @@ from code_agent.config.settings_based_config import (
     DEFAULT_CONFIG_PATH,
     ApiKeys,
     CodeAgentSettings,  # Use the final merged settings class
-    SettingsConfig,
+    SecuritySettings,
     build_effective_config,
     load_config_from_file,
 )
@@ -90,45 +90,43 @@ def test_api_keys_model():
     assert dump["custom_provider"] == "custom-key"
 
 
-def test_settings_config_model_defaults():
-    """Test the default values in SettingsConfig."""
-    config = SettingsConfig()
-    assert config.default_provider == "ai_studio"
-    assert config.default_model == "gemini-2.0-flash"
-    assert config.auto_approve_edits is False
-    assert config.auto_approve_native_commands is False
-    assert config.native_command_allowlist == []
-    assert config.rules == []
-    # Check defaults for fields inherited/added in CodeAgentSettings
-    agent_settings = CodeAgentSettings()  # Should inherit defaults
+def test_code_agent_settings_defaults():
+    """Test the default values in CodeAgentSettings."""
+    agent_settings = CodeAgentSettings()
     assert agent_settings.default_provider == "ai_studio"
-    assert agent_settings.max_tokens == 1000  # Default from CodeAgentSettings
-    assert agent_settings.temperature == 0.7  # Default from CodeAgentSettings
+    assert agent_settings.default_model == "gemini-2.0-flash"
+    assert agent_settings.auto_approve_edits is False
+    assert agent_settings.auto_approve_native_commands is False
+    assert agent_settings.native_command_allowlist == []
+    assert agent_settings.rules == []
+    assert agent_settings.max_tokens == 1000
+    assert agent_settings.temperature == 0.7
+    assert agent_settings.verbosity == 1
+    assert agent_settings.max_tool_calls == 10
+    assert isinstance(agent_settings.api_keys, ApiKeys)
+    assert agent_settings.api_keys.openai is None
+    assert isinstance(agent_settings.security, SecuritySettings)
+    assert agent_settings.security.path_validation is True
 
 
-def test_settings_config_model_custom():
-    """Test creating SettingsConfig with custom values."""
-    custom_config = SettingsConfig(
+def test_code_agent_settings_custom():
+    """Test creating CodeAgentSettings with custom values."""
+    custom_settings = CodeAgentSettings(
         default_provider="openai",
         default_model="gpt-4o",
         auto_approve_edits=True,
         native_command_allowlist=["git status"],
+        max_tokens=2000,
+        temperature=0.5,
+        security=SecuritySettings(path_validation=False),
     )
-    assert custom_config.default_provider == "openai"
-    assert custom_config.default_model == "gpt-4o"
-    assert custom_config.auto_approve_edits is True
-    assert custom_config.native_command_allowlist == ["git status"]
-
-
-def test_code_agent_settings_merges_correctly():
-    """Test that CodeAgentSettings merges fields from SettingsConfig correctly."""
-    settings_config = SettingsConfig(default_provider="test_provider", max_tokens=500)
-    # Simulate loading into CodeAgentSettings
-    merged_settings = CodeAgentSettings(**settings_config.model_dump())
-    assert merged_settings.default_provider == "test_provider"
-    assert merged_settings.max_tokens == 500  # Takes value from SettingsConfig part
-    assert merged_settings.temperature == 0.7  # Takes default from CodeAgentSettings
-    assert merged_settings.max_tool_calls == 10  # Takes default from CodeAgentSettings
+    assert custom_settings.default_provider == "openai"
+    assert custom_settings.default_model == "gpt-4o"
+    assert custom_settings.auto_approve_edits is True
+    assert custom_settings.native_command_allowlist == ["git status"]
+    assert custom_settings.max_tokens == 2000
+    assert custom_settings.temperature == 0.5
+    assert custom_settings.security.path_validation is False
 
 
 # --- Tests for File Loading ---
