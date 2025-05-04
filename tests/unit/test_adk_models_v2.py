@@ -273,14 +273,14 @@ class TestCreateModel:
 
     @patch("code_agent.adk.models_v2.get_model_providers")
     @patch("code_agent.adk.models_v2.get_api_key")
-    @patch("code_agent.config.config.get_config")
+    @patch("code_agent.adk.models_v2.get_config")
     def test_create_model_default_from_config(self, mock_get_config, mock_get_api_key, mock_get_providers):
         """Test create_model using default values from config."""
         # Configure the mock config with ai_studio as provider
         mock_config = MagicMock()
         mock_config.default_provider = "ai_studio"
         mock_config.default_model = "gemini-2.0-flash"
-        mock_config.llm.temperature = 0.7
+        mock_config.temperature = 0.7  # Set temperature directly on the mock_config
         mock_get_config.return_value = mock_config
 
         # Provider list that confirms our target provider is valid
@@ -297,7 +297,7 @@ class TestCreateModel:
         mock_get_api_key.assert_any_call("ai_studio")
 
     @patch("code_agent.adk.models_v2.get_api_key")
-    @patch("code_agent.config.config.get_config")
+    @patch("code_agent.adk.models_v2.get_config")
     def test_create_model_explicit_params(self, mock_get_config, mock_get_api_key):
         """Test create_model with explicitly provided parameters."""
         # Configure the mock config
@@ -318,7 +318,7 @@ class TestCreateModel:
             mock_litellm_class.assert_called_once()
             mock_get_api_key.assert_called_with("anthropic")
 
-    @patch("code_agent.config.config.get_config")
+    @patch("code_agent.adk.models_v2.get_config")
     def test_create_model_ollama(self, mock_get_config):
         """Test create_model for Ollama provider."""
         mock_config = MagicMock()

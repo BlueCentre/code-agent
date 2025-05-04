@@ -14,6 +14,15 @@ default_provider: "ai_studio"
 # - Ollama: "llama3:latest", "codellama:13b", "mistral:latest", etc.
 default_model: "gemini-2.0-flash" # https://ai.google.dev/gemini-api/docs/rate-limits#free-tier
 
+# Default agent path - Path to the Python module containing the agent definition
+# This will be used by the 'run' command if no explicit path is provided
+# Example: "code_agent/agent/multi_agent.py" or just "code_agent/agent"
+default_agent_path: null  # Set this to your preferred agent path
+
+# Session saving directory - Where session files are stored when using '--save-session'
+# If null or not set, defaults to ~/.config/code-agent/sessions
+sessions_dir: null
+
 # ===============================
 # API Keys
 # ===============================

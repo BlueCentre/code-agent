@@ -2,7 +2,6 @@
 Tests for the code_agent.agent.multi_agent module.
 """
 
-import os
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -67,7 +66,9 @@ class TestAgentConfiguration:
         assert root_agent is not None
         assert isinstance(root_agent, Agent)
         assert root_agent.name == "RootAgent"
-        assert "primary agent" in root_agent.instruction.lower()
+        assert (
+            "delegating to specialized agents" in root_agent.description.lower() or "delegating to specialized agents" in root_agent.instruction.lower()
+        ), "Instruction or description should mention delegation"
         assert "SearchAgent" in root_agent.instruction
         assert "LocalOpsAgent" in root_agent.instruction
 
@@ -85,52 +86,3 @@ class TestAgentConfiguration:
         assert result is root_agent
         assert isinstance(result, Agent)
         assert result.name == "RootAgent"
-
-
-@patch.dict(os.environ, {"GOOGLE_API_KEY": "fake-api-key"}, clear=True)
-def test_api_key_from_google_env_var(mock_genai_configure):
-    """Test that the API key is configured from GOOGLE_API_KEY env var."""
-    # Force reimport of the module to trigger API key configuration
-    import importlib
-
-    import code_agent.agent.multi_agent
-
-    importlib.reload(code_agent.agent.multi_agent)
-
-    # Check that genai.configure was called with the API key
-    mock_genai_configure.assert_called_once_with(api_key="fake-api-key")
-
-
-@patch.dict(os.environ, {"AI_STUDIO_API_KEY": "fake-studio-key"}, clear=True)
-def test_api_key_from_studio_env_var(mock_genai_configure):
-    """Test that the API key is configured from AI_STUDIO_API_KEY env var."""
-    # Force reimport of the module to trigger API key configuration
-    import importlib
-
-    import code_agent.agent.multi_agent
-
-    importlib.reload(code_agent.agent.multi_agent)
-
-    # Check that genai.configure was called with the API key
-    mock_genai_configure.assert_called_once_with(api_key="fake-studio-key")
-
-
-@patch.dict(os.environ, {}, clear=True)
-def test_warning_when_no_api_key(mock_genai_configure):
-    """Test that a warning is printed when no API key is found."""
-    # Force reimport of the module to trigger warning
-    import importlib
-
-    import code_agent.agent.multi_agent
-
-    with patch("builtins.print") as mock_print:
-        importlib.reload(code_agent.agent.multi_agent)
-
-        # Check that warning was printed
-        mock_print.assert_called_once()
-        warning_message = mock_print.call_args[0][0]
-        assert "WARNING" in warning_message
-        assert "No API key found" in warning_message
-
-    # Check that genai.configure was not called
-    mock_genai_configure.assert_not_called()

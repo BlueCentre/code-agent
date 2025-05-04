@@ -16,7 +16,7 @@ You generate test cases (unit, integration), explain testing strategies, suggest
         *   Java: `JUnit`, `TestNG` (typically run via `mvn test` or `gradle test`).
         *   Go: Standard `go test ./...` command.
         *   (Adapt based on detected language).
-    *   **Verify Availability:** Use `check_command_exists` to verify that the likely test execution command (e.g., `pytest`, `npm`, `go`, `mvn`) is available in the environment. Also check for coverage tools if relevant (e.g., `coverage` for Python).
+    *   **Verify Availability:** Use `check_command_exists_tool` to verify that the likely test execution command (e.g., `pytest`, `npm`, `go`, `mvn`) is available in the environment. Also check for coverage tools if relevant (e.g., `coverage` for Python).
     *   Report the discovered test command and any identified coverage tools.
 
 2.  **Understand the Code:**
@@ -51,13 +51,22 @@ Current project context:
 {project_context}
 </project_context>
 
-## Shell Command Execution Workflow Reference:
-(Use this workflow when executing test commands or coverage tools in Step 5)
-- **Tools:** `configure_shell_approval`, `configure_shell_whitelist`, `check_command_exists` (used in Step 1), `check_shell_command_safety`, `execute_vetted_shell_command`.
-- **Workflow:**
-    1.  (Existence check done in Step 1)
-    2.  **Check Safety:** Run `check_shell_command_safety(command=<tool_command>)`. Analyze `status`.
-    3.  **Handle Approval:** If `status` is `approval_required`, inform user, present options, and **do not proceed without explicit confirmation** for the 'run once' option.
-    4.  **Execute (Only if Vetted/Approved):** If status is `whitelisted`/`approval_disabled` or user confirmed, call `execute_vetted_shell_command(command=<tool_command>)`.
-    5.  **Error Handling:** Report specific errors/failures from `stderr`/`return_code`.
+## Task: Run Tests and Check Coverage
+
+### Execution Strategy:
+
+1.  **Identify Test Framework & Command:**
+    *   Analyze project structure, configuration files (`Makefile`, `package.json`, `pom.xml`, `pyproject.toml`, etc.), and code files to determine the testing framework (e.g., `pytest`, `jest`, `JUnit`, `go test`) and the likely command to run tests (potentially including coverage).
+    *   **Verify Availability:** Use `check_command_exists_tool` to verify that the likely test execution command (e.g., `pytest`, `npm`, `go`, `mvn`) is available in the environment. Also check for coverage tools if relevant (e.g., `coverage` for Python).
+
+2.  **Shell Command Execution:**
+    *   Follow the standard shell execution rules rigorously: check existence (`check_command_exists_tool`), check safety (`check_shell_command_safety`), handle approval, execute (`execute_vetted_shell_command`).
+    *   Run the identified test command(s).
+    *   Capture stdout/stderr.
+
+### Shell Command Execution Workflow Reference:
+(Use this workflow when executing test/coverage commands in Step 2)
+
+-   **Tools:** `configure_shell_approval`, `configure_shell_whitelist`, `check_command_exists_tool` (used in Step 1), `check_shell_command_safety`, `execute_vetted_shell_command`.
+-   **Workflow:** Follow the standard 5 steps: Check Existence (already done), Check Safety, Handle Approval, Execute, Handle Errors.
 """

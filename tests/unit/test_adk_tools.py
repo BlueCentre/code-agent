@@ -152,7 +152,7 @@ async def test_apply_edit_tool(tmp_path, mock_tool_context):
     # We need to mock security checks, confirmation, and config
     # Create a mock settings object with auto_approve_edit directly
     mock_settings = mock.MagicMock(spec=CodeAgentSettings)
-    mock_settings.auto_approve_edit = True  # Set attribute directly
+    mock_settings.auto_approve_edits = True  # Correct attribute name
 
     with (
         mock.patch("code_agent.tools.file_tools.is_path_safe", return_value=(True, None)),
@@ -182,7 +182,7 @@ async def test_apply_edit_cancelled_tool(tmp_path, mock_tool_context):
     # Mock security checks, confirmation (to return False), and config
     # Create a mock settings object with auto_approve_edit directly
     mock_settings = mock.MagicMock(spec=CodeAgentSettings)
-    mock_settings.auto_approve_edit = False  # Set attribute directly
+    mock_settings.auto_approve_edits = False  # Set attribute directly
 
     with (
         mock.patch("code_agent.tools.file_tools.is_path_safe", return_value=(True, None)),

@@ -1,6 +1,6 @@
-import os
+# import os
 
-import google.generativeai as genai  # Import genai for API key configuration
+# import google.generativeai as genai  # Import genai for API key configuration
 
 # ADK Imports
 from google.adk.agents import Agent
@@ -14,11 +14,11 @@ from code_agent.config import get_config
 from code_agent.verbosity import get_controller  # Updated import
 
 # Direct API key configuration
-api_key = os.environ.get("GOOGLE_API_KEY") or os.environ.get("AI_STUDIO_API_KEY")
-if api_key:
-    genai.configure(api_key=api_key)
-else:
-    print("WARNING: No API key found in environment. Check GOOGLE_API_KEY or AI_STUDIO_API_KEY. Models will not work.")
+# api_key = os.environ.get("GOOGLE_API_KEY") or os.environ.get("AI_STUDIO_API_KEY")
+# if api_key:
+#     genai.configure(api_key=api_key)
+# else:
+#     print("WARNING: No API key found in environment. Check GOOGLE_API_KEY or AI_STUDIO_API_KEY. Models will not work.")
 
 # --- Configuration and Model Instantiation ---
 config = get_config()
@@ -64,12 +64,17 @@ root_agent = Agent(
     model=Gemini(model=config.default_model),
     description="Orchestrates tasks, delegating to specialized agents (Search, LocalOps) or handling directly.",
     instruction="""
-    - You are the primary agent. Analyze the user's request and determine the best course of action.
-    - You want to gather a minimal information to help the user.
-    - Please use only the agents and tools to fulfill all user rquest.
-    - If the user asks to search the web or external knowledge bases, transfer to the agent 'SearchAgent'.
-    - If the user ask about local file system operations (reading, writing, listing files), transfer to the agent 'LocalOpsAgent'.
-    - Otherwise, handle the request yourself.
+    IMPORTANT: Answer the user's question or request directly without any introductions or greeting messages.
+
+    When given a request:
+    1. Immediately analyze and process the user's question/instruction.
+    2. Provide a direct answer or take the requested action without preamble.
+    3. DO NOT introduce yourself, acknowledge instructions, or ask "how can I help you" - just answer the question.
+
+    For specialized tasks:
+    - If the request requires web search or current events, transfer to 'SearchAgent'.
+    - If the request requires local file operations, transfer to 'LocalOpsAgent'.
+    - Otherwise, answer directly with the requested information.
     """,
     sub_agents=[search_agent, local_ops_agent],
 )

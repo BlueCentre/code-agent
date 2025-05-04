@@ -7,6 +7,8 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
+# Import the ADK base class
+
 logger = logging.getLogger(__name__)
 
 
@@ -221,7 +223,7 @@ def get_memory_manager(session_id: str) -> MemoryManager:
     return _memory_managers[session_id]
 
 
-# Abstract Memory Service
+# Abstract Memory Service - Reverted to local definition
 class BaseMemoryService:
     """Base class for memory services."""
 
@@ -253,39 +255,40 @@ class BaseMemoryService:
         raise NotImplementedError("BaseMemoryService.search not implemented")
 
 
+# Reverted to inherit from local BaseMemoryService
 class InMemoryMemoryService(BaseMemoryService):
     """In-memory implementation of the memory service."""
 
     def __init__(self):
-        """Initialize the memory service."""
-        super().__init__()
+        """Initialize the in-memory memory service."""
+        super().__init__()  # Call local BaseMemoryService init
+        # Use the local MemoryManager implementation
+        self._managers: Dict[str, MemoryManager] = {}
 
     def add(self, session_id: str, content: str, metadata: Optional[Dict[str, Any]] = None) -> None:
-        """Add a memory.
-
-        Args:
-            session_id: The ID of the session
-            content: The content of the memory
-            metadata: Additional metadata
-        """
-        memory_manager = get_memory_manager(session_id)
-        memory_type = MemoryType.LONG_TERM
-        importance = metadata.get("importance", 1.0) if metadata else 1.0
-        memory_manager.add_memory(content, memory_type, importance, metadata)
+        """Add a memory using the local MemoryManager."""
+        if session_id not in self._managers:
+            self._managers[session_id] = MemoryManager(session_id)
+        # Add as LONG_TERM for simplicity in this basic implementation
+        self._managers[session_id].add_memory(content, MemoryType.LONG_TERM, metadata=metadata)
 
     def search(self, session_id: str, query: str, limit: int = 5) -> SearchMemoryResponse:
-        """Search for memories.
+        """Search for memories using the local MemoryManager."""
+        if session_id not in self._managers:
+            return SearchMemoryResponse()  # No manager, no memories
+        return self._managers[session_id].search_memories(query, limit=limit)
 
-        Args:
-            session_id: The ID of the session
-            query: The search query
-            limit: Maximum number of results
 
-        Returns:
-            SearchMemoryResponse with the search results
-        """
-        memory_manager = get_memory_manager(session_id)
-        return memory_manager.search_memories(query, MemoryType.LONG_TERM, limit=limit)
+# Singleton instance
+_memory_service: Optional[InMemoryMemoryService] = None
+
+
+def get_memory_service() -> InMemoryMemoryService:
+    """Get the singleton memory service instance."""
+    global _memory_service
+    if _memory_service is None:
+        _memory_service = InMemoryMemoryService()
+    return _memory_service
 
 
 # def add_observation(entity_name: str, observation: str) -> None:

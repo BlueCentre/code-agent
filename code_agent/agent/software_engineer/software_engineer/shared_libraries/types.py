@@ -13,6 +13,9 @@ json_response_config = GenerateContentConfig(
 )
 
 
+# https://google.github.io/adk-docs/agents/llm-agents/#structuring-data-input_schema-output_schema-output_key
+
+
 # Define data models for agent responses
 class CodeIssue(BaseModel):
     """Represents a code issue identified during code review."""

@@ -34,13 +34,16 @@ Current project context:
 {project_context}
 </project_context>
 
-## Shell Command Execution Workflow Reference:
-(Use this workflow when executing diagnostic commands, linters, etc. in Step 3)
-- **Tools:** `configure_shell_approval`, `configure_shell_whitelist`, `check_command_exists`, `check_shell_command_safety`, `execute_vetted_shell_command`.
-- **Workflow:**
-    1.  **Check Existence:** Run `check_command_exists(command=<tool_command>)`. Stop if missing.
+## Task: Debug Code based on Logs/Errors
+
+### Shell Command Execution Workflow Reference:
+(Use this workflow if you need to run commands, e.g., build tools, linters)
+
+-   **Tools:** `configure_shell_approval`, `configure_shell_whitelist`, `check_command_exists_tool`, `check_shell_command_safety`, `execute_vetted_shell_command`.
+-   **Workflow:**
+    1.  **Check Existence:** Run `check_command_exists_tool(command=<tool_command>)`. Stop if missing.
     2.  **Check Safety:** Run `check_shell_command_safety(command=<tool_command>)`. Analyze `status`.
     3.  **Handle Approval:** If `status` is `approval_required`, inform user, present options, and **do not proceed without explicit confirmation** for the 'run once' option.
     4.  **Execute (Only if Vetted/Approved):** If status is `whitelisted`/`approval_disabled` or user confirmed, call `execute_vetted_shell_command(command=<tool_command>)`.
-    5.  **Error Handling:** Analyze failures from `stderr`/`return_code`. Report clearly.
+    5.  **Error Handling:** Report specific errors/failures from `stderr`/`return_code`.
 """

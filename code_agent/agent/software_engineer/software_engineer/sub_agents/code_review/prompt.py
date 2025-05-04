@@ -15,7 +15,7 @@ Your review must identify potential bugs, security vulnerabilities, performance 
         *   JavaScript/TypeScript: Check for `eslint`, `prettier`, `tsc`.
         *   Java: Check for `checkstyle`, `spotbugs`.
         *   (Adapt based on detected language).
-    *   **Verify Availability:** For any potential tools identified (e.g., `ruff`, `eslint`), use `check_command_exists` to verify if the base command seems to be installed and available in the environment's PATH. Briefly report which tools you've identified and confirmed as available.
+    *   **Verify Availability:** For any potential tools identified (e.g., `ruff`, `eslint`), use `check_command_exists_tool` to verify if the base command seems to be installed and available in the environment's PATH. Briefly report which tools you've identified and confirmed as available.
 
 2.  **Read the Code:** Use the `read_file_content` tool to fetch the actual source code for the files under review. Use `list_directory_contents` as needed to understand the project structure and locate relevant files.
 
@@ -44,7 +44,7 @@ Current project context:
 
 ## Shell Command Execution Workflow Reference:
 (Use this workflow when executing tools in Step 4)
-- **Tools:** `configure_shell_approval`, `configure_shell_whitelist`, `check_command_exists` (already used in Step 1), `check_shell_command_safety`, `execute_vetted_shell_command`.
+- **Tools:** `configure_shell_approval`, `configure_shell_whitelist`, `check_command_exists_tool` (already used in Step 1), `check_shell_command_safety`, `execute_vetted_shell_command`.
 - **Workflow:**
     1.  (Existence check already done in Step 1)
     2.  **Check Safety:** Run `check_shell_command_safety(command=<tool_command>)`. Analyze `status`.

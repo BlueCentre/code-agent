@@ -1,16 +1,13 @@
-"""Implementation of the Software Engineer Agent using Google Agent Development Kit."""
-
-# NOTE: SWITCH TO ADK WEB or COMMENT OUT FOR ADK RUN
+"""Implementation of the Software Engineer Agent with knowledge and experience of sub-agents."""
 
 import logging
 
 from google.adk.agents import Agent
-
-# Import built-in load_memory tool
 from google.adk.tools import load_memory
 
-# Use relative imports from the 'software_engineer' sibling directory
 from . import prompt
+
+# Use relative imports from the 'software_engineer' sibling directory
 from .sub_agents.code_quality.agent import code_quality_agent
 from .sub_agents.code_review.agent import code_review_agent
 from .sub_agents.debugging.agent import debugging_agent
@@ -29,16 +26,18 @@ from .tools import (
     get_os_info_tool,
     google_search_grounding,
     list_dir_tool,
-    load_memory_from_file_tool,
+    # load_memory_from_file_tool, # Remove placeholder
     read_file_tool,
-    # Placeholder manual persistence tools
-    save_current_session_to_file_tool,
 )
 
 # Import tools via the tools package __init__
 from .tools import (
     configure_approval_tool as configure_edit_approval_tool,  # Keep alias for now
 )
+
+# save_current_session_to_file_tool, # Remove placeholder
+# Import memory tools (using the wrapped variable names)
+from .tools.memory_tools import add_memory_fact, search_memory_facts
 from .tools.project_context import load_project_context
 
 logger = logging.getLogger(__name__)
@@ -86,13 +85,13 @@ root_agent = Agent(
     description="An AI software engineer assistant that helps with various software development tasks",
     instruction=prompt.ROOT_AGENT_INSTR,
     sub_agents=[
-        code_review_agent,
         design_pattern_agent,
+        documentation_agent,
+        code_review_agent,
+        code_quality_agent,
         testing_agent,
         debugging_agent,
-        documentation_agent,
-        devops_agent,
-        code_quality_agent,
+        devops_agent,  # TODO: Move command tools to devops_agent with more guardrails
     ],
     tools=[
         read_file_tool,
@@ -107,11 +106,13 @@ root_agent = Agent(
         google_search_grounding,
         codebase_search_tool,
         get_os_info_tool,
-        # Add built-in ADK memory tool
-        load_memory,
-        # Add placeholder tools (active but non-functional)
-        save_current_session_to_file_tool,
-        load_memory_from_file_tool,
+        # Memory Tools:
+        load_memory,  # Keep for transcript search
+        add_memory_fact,  # Use wrapped tool variable name
+        search_memory_facts,  # Use wrapped tool variable name
+        # Remove placeholder tools
+        # save_current_session_to_file_tool,
+        # load_memory_from_file_tool,
     ],
     # Pass the function directly, not as a list
     before_agent_callback=load_project_context,

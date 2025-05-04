@@ -42,7 +42,7 @@ def mock_config_base():
 @pytest.fixture
 def auto_approve_config(mock_config_base):
     """Mock config with auto-approve edits enabled."""
-    mock_config_base.auto_approve_edit = True  # Corrected: Changed edits -> edit
+    mock_config_base.auto_approve_edits = True
     return mock_config_base
 
 
@@ -197,7 +197,7 @@ def test_apply_edit_path_restricted(mock_is_path_within_cwd, mock_get_config, mo
 
     result = apply_edit("/restricted/path.txt", "New content")
 
-    assert "restricted for security reasons" in result
+    assert "outside the allowed workspace" in result
     mock_is_path_within_cwd.assert_called_once_with("/restricted/path.txt")
 
 
@@ -219,6 +219,8 @@ def test_apply_edit_path_exists_but_not_file(mock_is_path_within_cwd, mock_get_c
 def test_apply_edit_success_new_file(mock_confirm_ask, mock_is_path_within_cwd, mock_get_config, mock_config_base, tmp_path, mocker):
     """Test apply_edit successfully creates a new file."""
     mock_is_path_within_cwd.return_value = True  # Path is within CWD
+    # Ensure auto-approve is OFF for this test
+    mock_config_base.auto_approve_edits = False
     mock_get_config.return_value = mock_config_base
     mock_confirm_ask.return_value = True  # Simulate user confirmation
 
@@ -275,6 +277,8 @@ def test_apply_edit_success_existing_file(mock_confirm_ask, mock_is_path_within_
 def test_apply_edit_cancelled(mock_confirm_ask, mock_is_path_within_cwd, mock_get_config, mock_config_base, temp_file):
     """Test apply_edit handles user cancellation."""
     mock_is_path_within_cwd.return_value = True  # Path is within CWD
+    # Ensure auto-approve is OFF for this test
+    mock_config_base.auto_approve_edits = False
     mock_get_config.return_value = mock_config_base
     mock_confirm_ask.return_value = False  # Simulate user cancelling
 
@@ -318,7 +322,7 @@ def test_apply_edit_write_error(mock_write_text, mock_confirm_ask, mock_is_path_
 
     assert "Error" in result
     assert "Failed when writing changes to" in result
-    assert "You don't have permission to access" in result
+    assert "Write permission denied" in result
     mock_confirm_ask.assert_called_once()
 
 
@@ -327,19 +331,20 @@ def test_apply_edit_write_error(mock_write_text, mock_confirm_ask, mock_is_path_
 @patch("rich.prompt.Confirm.ask")
 @patch("pathlib.Path.read_text")
 def test_apply_edit_read_error(mock_read_text, mock_confirm_ask, mock_is_path_within_cwd, mock_get_config, mock_config_base, temp_file):
-    """Test apply_edit handles read errors."""
-    mock_is_path_within_cwd.return_value = True  # Path is within CWD
+    """Test apply_edit handles read errors during initial read."""
+    mock_is_path_within_cwd.return_value = True
     mock_get_config.return_value = mock_config_base
-    # First call to read_text (for checking if file exists) succeeds, second call (for diffing) fails
-    mock_read_text.side_effect = [temp_file.read_text(), PermissionError("Read permission denied")]
+    # Mock read_text to fail on the FIRST call within apply_edit
+    # mock_read_text.side_effect = [temp_file.read_text(), PermissionError("Read permission denied")] # REMOVE side_effect list
+    mock_read_text.side_effect = PermissionError("Read permission denied")  # Raise error directly
 
     result = apply_edit(str(temp_file), "New content")
 
     assert "Error" in result
-    assert "Failed when applying edit" in result
-    assert "An unexpected error occurred" in result
-    # Confirm.ask should not be called if there's an error reading the file
-    mock_confirm_ask.assert_not_called()
+    assert "Failed reading original content from" in result
+    assert "Read permission denied" in result
+    mock_confirm_ask.assert_not_called()  # Confirmation should not be asked
+    mock_read_text.assert_called_once()  # Ensure read_text was attempted
 
 
 # Note: PermissionError/GenericError during write are covered by test_apply_edit_write_error

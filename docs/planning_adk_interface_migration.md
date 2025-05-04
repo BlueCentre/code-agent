@@ -17,6 +17,33 @@ This document outlines the plan to rewrite the Code Agent Command Line Interface
 *   Establish a new, comprehensive test suite.
 *   Maintain the current project tooling (`uv`, `pytest`, etc.).
 
+## 1.5 Current Implementation Status
+
+Here's the current progress on the ADK CLI integration:
+
+### ✅ Milestone 1: Core Setup & Basic ADK `run` Integration
+- Created new CLI structure with Typer app
+- Implemented basic ADK agent loading and execution
+- Integrated with configuration system
+
+### ✅ Milestone 2: Enhanced `run` Command with Rich & Progressive CLI Feedback
+- Added rich progress indicators
+- Implemented interactive mode
+- Added validation and error handling for agent paths
+- Created comprehensive unit tests
+
+### ✅ Milestone 3: ADK Web & API Interfaces
+- Implemented `web` command with ADK integration
+- Implemented `fastapi` command with ADK integration
+- Added command-line options for host, port, and log level
+- Created unit tests for both commands
+
+### 🔄 Next Up: Milestone 4: Enhanced Configuration & Fine-Tuning
+- Implement enhanced configuration options for all commands
+- Add model options direct via CLI
+- Support all cloud provider integrations
+- Add verbose logging and debug options
+
 ## 2. Key Requirements
 
 1.  **ADK CLI Foundation:** Base the new CLI structure on `google.adk.cli`, specifically incorporating the logic/behavior of its `run`, `web` (`browser`), and `fastapi` commands.
@@ -107,7 +134,7 @@ flowchart TD
 
 ### Milestone 1: Core Setup & Basic ADK `run` Integration
 
-*   **Goal:** Establish the new CLI project structure, install ADK, create a basic Typer app, and verify that a simple ADK agent can be executed via a placeholder `run` command (without Rich enhancements or custom progress indicators yet).
+*   **Goal:** Establish the new CLI project structure, install ADK, create a basic Typer app, and verify that a simple ADK agent can be executed via a placeholder `run` command (without Rich enhancements or custom progress indicators yet). (Reference: [ADK Runtime Docs](https://google.github.io/adk-docs/runtime/))
 *   **Tasks:**
     *   Set up `code_agent/cli` directory structure.
     *   Add `google-ads-app-conversion` (ADK) and `typer` as dependencies.
@@ -141,7 +168,7 @@ flowchart TD
 
 ### Milestone 2: Enhanced `run` Command with Rich & Progress
 
-*   **Goal:** Enhance the `run` command with Typer argument/option handling, Rich output formatting, and integration of the custom `progress_indicators.py`.
+*   **Goal:** Enhance the `run` command with Typer argument/option handling, Rich output formatting, and integration of the custom `progress_indicators.py`. (Reference: [ADK Runtime Docs](https://google.github.io/adk-docs/runtime/))
 *   **Tasks:**
     *   Refine Typer arguments/options for the `run` command to match desired UX.
     *   Integrate `rich` for console output formatting (status messages, results).
@@ -177,7 +204,7 @@ flowchart TD
 
 ### Milestone 3: `web` and `fastapi` Commands Integration
 
-*   **Goal:** Implement the `web` and `fastapi` commands by directly leveraging the corresponding ADK CLI functionalities.
+*   **Goal:** Implement the `web` and `fastapi` commands by directly leveraging the corresponding ADK CLI functionalities. (Reference: [ADK Runtime Docs](https://google.github.io/adk-docs/runtime/))
 *   **Tasks:**
     *   Add `web` and `fastapi` commands to the Typer application.
     *   In the command implementations, import and call the necessary functions/entry points from `google.adk.cli.browser` (for `web`) and `google.adk.cli.fast_api` (for `fastapi`).
@@ -218,7 +245,7 @@ flowchart TD
 
 ### Milestone 4: Configuration & Multi-Model Provider Integration
 
-*   **Goal:** Fully integrate the custom configuration system (`code_agent.config`) and ensure support for multiple LLM providers (Gemini, LiteLLM) works correctly through ADK, configured via the custom config.
+*   **Goal:** Fully integrate the custom configuration system (`code_agent.config`) and ensure support for multiple LLM providers (Gemini, LiteLLM) works correctly through ADK, configured via the custom config. (Reference: [ADK Runtime Docs](https://google.github.io/adk-docs/runtime/))
 *   **Tasks:**
     *   Ensure all necessary settings (API keys, model names, ADK parameters) are read from `code_agent.config`.
     *   Verify that ADK's model registry and LiteLLM integration points can be configured using values from the custom config.
@@ -252,7 +279,7 @@ flowchart TD
 
 ### Milestone 5: Testing & Refinement
 
-*   **Goal:** Implement a comprehensive test suite and refine the overall CLI behavior and user experience.
+*   **Goal:** Implement a comprehensive test suite and refine the overall CLI behavior and user experience. (Reference: [ADK Runtime Docs](https://google.github.io/adk-docs/runtime/))
 *   **Tasks:**
     *   Write unit tests for CLI command parsing, configuration loading, and utility functions.
     *   Write integration tests for the `run`, `web`, and `fastapi` commands, mocking ADK calls and external services where necessary.
@@ -289,4 +316,12 @@ No changes are planned for the core development workflow tools.
 
 *   **Progress Indicator Integration:** Precisely integrating `progress_indicators.py` with ADK's execution flow might require careful handling, potentially using ADK callbacks or wrapping execution steps. The level of granularity achievable needs investigation.
 *   **ADK CLI Stability:** Relying on internal ADK CLI functions (`adk.cli.*`) might pose a risk if their interfaces change in future ADK versions. We should aim to rely on more stable ADK core APIs where possible, using the CLI modules primarily as a reference or starting point.
-*   **Configuration Complexity:** Mapping the custom configuration structure to ADK's expected configuration (especially for models and runtime parameters) needs careful implementation. 
+*   **Configuration Complexity:** Mapping the custom configuration structure to ADK's expected configuration (especially for models and runtime parameters) needs careful implementation.
+*   **Implicit Feature Loss:** Ensuring all subtle behaviors or utility features from the old CLI are captured or intentionally omitted in the rewrite requires careful review of the existing codebase.
+*   **Performance:** Potential differences in execution speed or resource usage compared to the original CLI need to be monitored during and after the rewrite.
+
+## 9. Conclusion
+
+This plan outlines a strategic rewrite of the Code Agent CLI, transitioning to the Google ADK foundation while preserving and enhancing key features like the custom configuration system, multi-model support, and the improved user experience provided by Typer/Rich and custom progress indicators.
+
+By following the defined milestones, leveraging ADK's robust runtime, and establishing a comprehensive test suite, the new CLI aims to be more maintainable, powerful, and user-friendly, providing a solid base for future development. 
