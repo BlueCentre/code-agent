@@ -249,39 +249,128 @@ class JsonFileMemoryService(BaseMemoryService):
             logger.error("search_nodes requires a valid session_id (string). Returning empty list.")
             return []
 
-        query_lower = query.lower()
+        query_lower = query.lower().strip()
         session_facts = self._memory_store.facts.get(session_id, [])
+
+        # Log all available facts for debugging
+        logger.debug(f"All facts for session {session_id}: {json.dumps(session_facts, indent=2)}")
+
         results: List[Dict[str, Any]] = []
 
         logger.debug(f"Searching {len(session_facts)} facts for session {session_id} with query '{query}'")
 
-        # --- Start Enhanced Search Logic ---
+        # If no facts found, return empty list
+        if not session_facts:
+            logger.info(f"No facts found for session {session_id}")
+            return []
+
+        # Break query into keywords and bigrams for better matching
+        query_words = query_lower.split()
+        query_keywords = set(query_words)
+        query_bigrams = set()
+        for i in range(len(query_words) - 1):
+            query_bigrams.add(f"{query_words[i]} {query_words[i+1]}")
+
+        # Common question patterns for information retrieval
+        question_starters = ["what", "tell me", "do i", "am i", "can you"]
+        is_question = any(query_lower.startswith(starter) for starter in question_starters)
+
+        # Score each fact for relevance to the query
+        scored_facts = []
+
         for fact in session_facts:
-            # match = False # No longer needed
-            try:
-                entity_name = fact.get("entity", "")
-                content_str = str(fact.get("content", ""))  # Get content as string, default empty
+            score = 0
+            entity_name = fact.get("entity", "").lower()
+            fact_content = fact.get("content", "").lower()
+            combined_text = f"{entity_name} {fact_content}"
 
-                # Normalize query and entity name for comparison (lowercase, remove space/underscore)
-                query_norm = query_lower.replace(" ", "").replace("_", "")
-                entity_norm = ""
-                if isinstance(entity_name, str):
-                    entity_norm = entity_name.lower().replace(" ", "").replace("_", "")
+            logger.debug(f"Evaluating fact - entity: '{entity_name}', content: '{fact_content}'")
 
-                # Check if normalized query EQUALS normalized entity name OR query is IN content (case-insensitive)
-                if (entity_norm == query_norm) or (query_lower in content_str.lower()):
-                    results.append(fact)
+            # Direct match with complete query - highest score
+            if query_lower in combined_text:
+                score += 10
+                logger.debug("  Direct match with complete query: +10")
 
-            except Exception as e:
-                logger.warning(f"Error processing fact during search comparison: {fact}. Error: {e}")
-                continue  # Skip problematic fact
-        # --- End Enhanced Search Logic ---
+            # Check for exact keyword matches
+            for keyword in query_keywords:
+                if keyword in combined_text:
+                    score += 2
+                    logger.debug(f"  Keyword match '{keyword}': +2")
 
-        logger.info(f"Found {len(results)} relevant fact(s) for session {session_id} matching query: '{query}'")
-        logger.debug(f"Fact search results: {json.dumps(results, indent=2)}")
+                    # Bonus points for keywords in entity name (more specific)
+                    if keyword in entity_name:
+                        score += 1
+                        logger.debug(f"  Keyword in entity name '{keyword}': +1")
 
-        # BaseMemoryService definition implies returning List[Dict], let's stick to that for now.
-        # If issues arise, we might need to wrap this in a response object similar to search_memory.
+            # Check for bigram matches (phrases)
+            for bigram in query_bigrams:
+                if bigram in combined_text:
+                    score += 3
+                    logger.debug(f"  Bigram match '{bigram}': +3")
+
+            # Special handling for questions about preferences, work, etc.
+            if is_question:
+                # Question about what user likes/preferences
+                if any(term in query_lower for term in ["like", "favorite", "prefer", "enjoy"]):
+                    if any(term in combined_text for term in ["like", "favorite", "prefer", "enjoy"]):
+                        score += 4
+                        logger.debug("  Preference question match: +4")
+
+                # Question about what user is working on
+                if any(term in query_lower for term in ["working on", "project", "task"]):
+                    if any(term in combined_text for term in ["working on", "project", "task", "developing"]):
+                        score += 4
+                        logger.debug("  Project/work question match: +4")
+
+                # Question about user's activities or hobbies
+                if any(term in query_lower for term in ["do", "activity", "hobby", "interest"]):
+                    if any(term in combined_text for term in ["do", "activity", "hobby", "interest"]):
+                        score += 4
+                        logger.debug("  Activity/hobby question match: +4")
+
+                # Questions about specific domains with more specific matching
+                common_domains = {
+                    "food": ["food", "eat", "meal", "dish", "cuisine", "pizza", "pasta"],
+                    "drink": ["drink", "beverage", "coffee", "tea", "water"],
+                    "color": ["color", "red", "blue", "green", "yellow"],
+                    "project": ["project", "app", "application", "software", "program", "system", "database"],
+                    "hobby": ["hobby", "activity", "sport", "game", "read", "hiking"],
+                    "travel": ["travel", "trip", "vacation", "visit", "place"],
+                    "technology": ["tech", "tool", "software", "program", "app", "language", "framework", "library"],
+                    "database": ["database", "db", "sql", "nosql", "data"],
+                }
+
+                for domain, terms in common_domains.items():
+                    if any(term in query_lower for term in terms):
+                        if any(term in combined_text for term in terms):
+                            score += 5
+                            logger.debug(f"  Domain '{domain}' match: +5")
+
+                # Special case for specific project types (like "database project")
+                for project_type in ["database", "web", "mobile", "desktop", "ai", "ml"]:
+                    project_phrase = f"{project_type} project"
+                    if project_phrase in query_lower and (project_phrase in combined_text or (project_type in combined_text and "project" in combined_text)):
+                        score += 6
+                        logger.debug(f"  Specific project type '{project_phrase}' match: +6")
+
+            # Add to scored list if there's any match at all
+            if score > 0:
+                scored_facts.append((score, fact))
+                logger.debug(f"  Total score for fact: {score}")
+            else:
+                logger.debug("  No match found for this fact")
+
+        # Sort by score descending and extract just the facts
+        scored_facts.sort(key=lambda x: x[0], reverse=True)
+        results = [fact for _, fact in scored_facts]
+
+        # Log the results
+        if results:
+            logger.info(f"Found {len(results)} relevant fact(s) for session {session_id} matching query: '{query}'")
+            logger.debug(f"Top matched fact: {results[0]}")
+        else:
+            logger.info(f"No facts found for session {session_id} matching query: '{query}'")
+
         return results
 
     # --- End new methods ---

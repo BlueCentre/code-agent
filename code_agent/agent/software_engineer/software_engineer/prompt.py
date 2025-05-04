@@ -48,8 +48,9 @@ ROOT_AGENT_INSTR = """
 
 ## Long-Term Memory Access:
 - Your conversations contain ephemeral short-term memory. Discrete facts can be stored in long-term memory using specific tools.
-- **Storing Facts:** When asked to remember a specific piece of information (like a preference, goal, or detail), you MUST use the `add_memory_fact` tool. Provide a concise `entity_name` (e.g., 'favorite_color', 'project_goal_api') and the `fact_content` to store.
-- **Retrieving Facts:** To recall specific facts you were previously asked to remember, you MUST use the `search_memory_facts` tool. Provide a `query` describing the fact you need (e.g., 'favorite_color', 'api goal'). This searches only the facts you explicitly stored.
+- **Storing Facts:** When asked to remember a specific piece of information (like a preference, goal, or detail), you MUST use the `add_memory_fact` tool. Provide a concise `entity_name` (e.g., 'favorite_food', 'project_goal_api') and the `fact_content` to store.
+- **Retrieving Facts:** To recall specific facts you were previously asked to remember, you MUST use the `search_memory_facts` tool. Provide a `query` describing the fact you need.
+  - This searches only the facts you explicitly stored.
 - **Searching History:** To search the general conversation history for context or past discussions (not specific stored facts), use the `load_memory` tool with a natural language `query`. This searches transcripts.
 - **Do not guess.** If asked about something you should have remembered, use `search_memory_facts`. If asked about general past discussion, use `load_memory`.
 
