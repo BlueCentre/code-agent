@@ -49,6 +49,7 @@ from code_agent.cli.utils import (
     operation_warning,
     run_cli,
     setup_logging,
+    step_progress,
     thinking_indicator,
 )
 from code_agent.services.session_service import FileSystemSessionService
@@ -206,7 +207,9 @@ def run_command(
         # Print provider info using the correct config attribute
         # Check if provider attribute exists, otherwise fallback might be needed (e.g., default_provider)
         provider_display = getattr(cfg, "provider", cfg.default_provider)  # Attempt to get effective provider, fallback to default
-        console.print(f"[dim]Provider: {provider_display}[/dim]")  # Use the determined provider
+        model_display = getattr(cfg, "model", cfg.default_model)  # Attempt to get effective model, fallback to default
+        step_progress(console, f"[dim]Provider: {provider_display}[/dim]")
+        step_progress(console, f"[dim]Model: {model_display}[/dim]")
 
         agent_to_run = None
         try:
@@ -252,18 +255,18 @@ def run_command(
                 # --- Get Agent Instance (Revert to previous working logic) ---
                 if hasattr(agent_module, "root_agent"):
                     agent_to_run = agent_module.root_agent
-                    operation_warning(console, f"Found 'agent.root_agent' structure in {resolved_agent_path.name}.")
+                    operation_warning(console, f"[dim]Found 'agent.root_agent' structure in {resolved_agent_path.name}.[/dim]")
                 elif hasattr(agent_module, "agent"):
                     potential_agent = agent_module.agent
                     # Previous check: Look for expected attributes like name/tools
                     if hasattr(potential_agent, "name") and hasattr(potential_agent, "tools"):
                         agent_to_run = potential_agent
-                        operation_warning(console, f"Found top-level 'agent' variable in {resolved_agent_path.name} and using it.")
+                        operation_warning(console, f"[dim]Found top-level 'agent' variable in {resolved_agent_path.name} and using it.[/dim]")
                         operation_warning(console, "Consider renaming to 'root_agent' for clarity.")
                     # Check if agent_module.agent contains root_agent (less common)
                     elif hasattr(potential_agent, "root_agent"):
                         agent_to_run = potential_agent.root_agent
-                        operation_warning(console, f"Found 'agent.root_agent' structure in {resolved_agent_path.name}.")
+                        # operation_warning(console, f"[dim]Found 'agent.root_agent' structure in {resolved_agent_path.name}.[/dim]")
                     else:
                         # If root_agent doesn't exist, try 'agent'
                         raise AttributeError(f"Module {resolved_agent_path} has 'agent' but not 'root_agent'. Please expose 'root_agent'.")
@@ -276,7 +279,9 @@ def run_command(
                     # Should have been caught above, but double check
                     raise ImportError("Failed to load a valid agent instance.")
 
-                operation_complete(console, f"Agent '{getattr(agent_to_run, 'name', 'Unnamed Agent')}' loaded successfully.")
+                operation_complete(
+                    console, f"[dim]Agent '{getattr(agent_to_run, 'name', 'Unnamed Agent')}' loaded successfully from {resolved_agent_path.name}.[/dim]"
+                )
 
         except (ImportError, AttributeError) as e:
             operation_error(console, f"Failed to load agent: {e}")
@@ -352,7 +357,9 @@ def run_command(
                 final_session_id = run_cli_args["session_id"]
 
             if final_session_id:
-                console.print(f"Session ID: {final_session_id}")
+                # This is the last of the two print statements that look like:
+                # Session ID: 0f6e2c63-76fc-494b-95fc-b9d0319004e0
+                console.print(f"[dim]Session ID: {final_session_id}[/dim]")
 
                 # Check if saving is requested via CLI flag
                 should_save = save_session_cli

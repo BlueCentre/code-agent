@@ -101,6 +101,7 @@ def configure_shell_whitelist(args: dict, tool_context: ToolContext) -> Configur
         "ss",
         "uname",
         "uptime",
+        "date",
         "df",
         "du",
         "free",

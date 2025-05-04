@@ -270,6 +270,25 @@ def run_cli(
                 # Process events
                 try:
                     async for event in event_async_generator:
+                        # TODO: Improve event handling to include more details in chat loop
+                        #     print(f"Event from: {event.author}")
+                        #
+                        #     if event.content and event.content.parts:
+                        #         if event.get_function_calls():
+                        #             print("  Type: Tool Call Request")
+                        #         elif event.get_function_responses():
+                        #             print("  Type: Tool Result")
+                        #         elif event.content.parts[0].text:
+                        #             if event.partial:
+                        #                 print("  Type: Streaming Text Chunk")
+                        #             else:
+                        #                 print("  Type: Complete Text Message")
+                        #         else:
+                        #             print("  Type: Other Content (e.g., code result)")
+                        #     elif event.actions and (event.actions.state_delta or event.actions.artifact_delta):
+                        #         print("  Type: State/Artifact Update")
+                        #     else:
+                        #         print("  Type: Control Signal or Other")
                         if interrupted:
                             console.print("[bold yellow]Processing interrupted by user.[/bold yellow]")
                             break
@@ -301,11 +320,15 @@ def run_cli(
                                 console.print(Markdown(content_text))
                                 # Update last content to avoid duplicates
                                 last_content = content_text
+                            # TODO: Currently now working...
                             # Optionally handle other authors like 'tool' or 'system' if needed
+                            elif event.get_function_responses():  # author == "tool":
+                                console.print(f"{timestamp_str}[bold green]🔧Tool:[/bold green] {content_text}")
 
                         if is_final:
+                            # https://google.github.io/adk-docs/events/
                             final_response_event = event
-                            operation_complete(console, "[dim]Agent finished processing.[/dim]")  # Pass console
+                            operation_complete(console, f"[dim]{event.author} finished processing.[/dim]")  # Pass console
 
                 except Exception as e:
                     # Allow KeyboardInterrupt and SystemExit to propagate
@@ -463,10 +486,12 @@ def run_cli(
     if interrupted:
         console.print("[bold yellow]Session terminated by user.[/bold yellow]")
 
+    # This is the first of the two print statements that look like:
+    # Session ID: 0f6e2c63-76fc-494b-95fc-b9d0319004e0
     # Always print the session ID at the end for reference
-    if current_session_id:
-        console.print(f"[dim]Session ID: [bold cyan]{current_session_id}[/bold cyan][/dim]")
-    else:
-        console.print("[dim]No active session ID to display.[/dim]")
+    # if current_session_id:
+    #     console.print(f"[dim]Session ID: [bold cyan]{current_session_id}[/bold cyan][/dim]")
+    # else:
+    #     console.print("[dim]No active session ID to display.[/dim]")
 
     return current_session_id
