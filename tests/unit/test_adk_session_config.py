@@ -156,10 +156,7 @@ class TestDefaultConfigs(unittest.TestCase):
         from code_agent.adk.session_config import CodeAgentSessionConfig
 
         # Create a fresh config to test the environment variable behavior
-        fs_config = CodeAgentSessionConfig(
-            persistence_type="filesystem",
-            filesystem_base_path=os.environ.get("CODE_AGENT_SESSION_PATH")
-        )
+        fs_config = CodeAgentSessionConfig(persistence_type="filesystem", filesystem_base_path=os.environ.get("CODE_AGENT_SESSION_PATH"))
 
         self.assertEqual(fs_config.persistence_type, "filesystem")
         self.assertEqual(fs_config.filesystem_base_path, "/custom/path")

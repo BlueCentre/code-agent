@@ -35,26 +35,15 @@ class TestFileSystemSessionService(unittest.TestCase):
     def _create_sample_session(self):
         """Create a sample session with events for testing."""
         # Create sample content objects for events
-        user_content = genai_types.Content(
-            role="user",
-            parts=[genai_types.Part(text="Hello, this is a test message")]
-        )
-        model_content = genai_types.Content(
-            role="model",
-            parts=[genai_types.Part(text="This is a test response")]
-        )
+        user_content = genai_types.Content(role="user", parts=[genai_types.Part(text="Hello, this is a test message")])
+        model_content = genai_types.Content(role="model", parts=[genai_types.Part(text="This is a test response")])
 
         # Create events from content
         user_event = Event(author="user", content=user_content)
         model_event = Event(author="model", content=model_content)
 
         # Create a session with the events
-        session = Session(
-            app_name=self.app_name,
-            user_id=self.user_id,
-            id=self.session_id,
-            events=[user_event, model_event]
-        )
+        session = Session(app_name=self.app_name, user_id=self.user_id, id=self.session_id, events=[user_event, model_event])
         return session
 
     def test_init_with_valid_dir(self):
@@ -87,13 +76,9 @@ class TestFileSystemSessionService(unittest.TestCase):
         service = FileSystemSessionService(sessions_dir=str(self.sessions_dir))
 
         # Mock the parent class method to return our sample session
-        with patch.object(service, 'get_session', return_value=self.sample_session):
+        with patch.object(service, "get_session", return_value=self.sample_session):
             # This would call the overridden method which we've already mocked
-            session = service.get_session(
-                app_name=self.app_name,
-                user_id=self.user_id,
-                session_id=self.session_id
-            )
+            session = service.get_session(app_name=self.app_name, user_id=self.user_id, session_id=self.session_id)
 
         # Since we've mocked the method itself, we're just verifying our mock works
         self.assertEqual(session, self.sample_session)
@@ -109,11 +94,7 @@ class TestFileSystemSessionService(unittest.TestCase):
 
         # Mock the parent get_session to return None (not in memory)
         with patch("google.adk.sessions.in_memory_session_service.InMemorySessionService.get_session", return_value=None):
-            session = service.get_session(
-                app_name=self.app_name,
-                user_id=self.user_id,
-                session_id=self.session_id
-            )
+            session = service.get_session(app_name=self.app_name, user_id=self.user_id, session_id=self.session_id)
 
         # Verify we got a session back
         self.assertIsNotNone(session)
@@ -127,11 +108,7 @@ class TestFileSystemSessionService(unittest.TestCase):
 
         # Mock the parent get_session to return None (not in memory)
         with patch("google.adk.sessions.in_memory_session_service.InMemorySessionService.get_session", return_value=None):
-            session = service.get_session(
-                app_name=self.app_name,
-                user_id=self.user_id,
-                session_id="nonexistent_session"
-            )
+            session = service.get_session(app_name=self.app_name, user_id=self.user_id, session_id="nonexistent_session")
 
         # Verify we got None back
         self.assertIsNone(session)
@@ -141,7 +118,7 @@ class TestFileSystemSessionService(unittest.TestCase):
         service = FileSystemSessionService(sessions_dir=str(self.sessions_dir))
 
         # Create the session file path
-        session_file = self.sessions_dir / f"{self.session_id}.session.json" # noqa: F841
+        session_file = self.sessions_dir / f"{self.session_id}.session.json"  # noqa: F841
 
         # Set up the mock to make it look like the file exists
         with patch("pathlib.Path.is_file", return_value=True):
@@ -149,11 +126,7 @@ class TestFileSystemSessionService(unittest.TestCase):
             with patch("pathlib.Path.read_text", side_effect=OSError("Read error")):
                 # Mock the parent get_session to return None (not in memory)
                 with patch("google.adk.sessions.in_memory_session_service.InMemorySessionService.get_session", return_value=None):
-                    session = service.get_session(
-                        app_name=self.app_name,
-                        user_id=self.user_id,
-                        session_id=self.session_id
-                    )
+                    session = service.get_session(app_name=self.app_name, user_id=self.user_id, session_id=self.session_id)
 
         # Verify we got None back
         self.assertIsNone(session)
@@ -169,11 +142,7 @@ class TestFileSystemSessionService(unittest.TestCase):
 
         # Mock the parent get_session to return None (not in memory)
         with patch("google.adk.sessions.in_memory_session_service.InMemorySessionService.get_session", return_value=None):
-            session = service.get_session(
-                app_name=self.app_name,
-                user_id=self.user_id,
-                session_id=self.session_id
-            )
+            session = service.get_session(app_name=self.app_name, user_id=self.user_id, session_id=self.session_id)
 
         # Verify we got None back
         self.assertIsNone(session)
@@ -189,11 +158,7 @@ class TestFileSystemSessionService(unittest.TestCase):
 
         # Mock the parent get_session to return None (not in memory)
         with patch("google.adk.sessions.in_memory_session_service.InMemorySessionService.get_session", return_value=None):
-            session = service.get_session(
-                app_name=self.app_name,
-                user_id=self.user_id,
-                session_id=self.session_id
-            )
+            session = service.get_session(app_name=self.app_name, user_id=self.user_id, session_id=self.session_id)
 
         # Verify we got None back
         self.assertIsNone(session)
@@ -208,11 +173,7 @@ class TestFileSystemSessionService(unittest.TestCase):
             with patch("google.adk.sessions.Session.model_validate_json", side_effect=Exception("Unexpected error")):
                 # Mock the parent get_session to return None (not in memory)
                 with patch("google.adk.sessions.in_memory_session_service.InMemorySessionService.get_session", return_value=None):
-                    session = service.get_session(
-                        app_name=self.app_name,
-                        user_id=self.user_id,
-                        session_id=self.session_id
-                    )
+                    session = service.get_session(app_name=self.app_name, user_id=self.user_id, session_id=self.session_id)
 
         # Verify we got None back
         self.assertIsNone(session)

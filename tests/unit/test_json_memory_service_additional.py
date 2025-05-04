@@ -32,26 +32,15 @@ class TestJsonFileMemoryServiceAdditional(unittest.TestCase):
     def _create_sample_session(self):
         """Create a sample session with events for testing."""
         # Create sample content objects for events
-        user_content = genai_types.Content(
-            role="user",
-            parts=[genai_types.Part(text="Hello, this is a test message")]
-        )
-        model_content = genai_types.Content(
-            role="model",
-            parts=[genai_types.Part(text="This is a test response")]
-        )
+        user_content = genai_types.Content(role="user", parts=[genai_types.Part(text="Hello, this is a test message")])
+        model_content = genai_types.Content(role="model", parts=[genai_types.Part(text="This is a test response")])
 
         # Create events from content
         user_event = Event(author="user", content=user_content)
         model_event = Event(author="model", content=model_content)
 
         # Create a session with the events
-        session = Session(
-            app_name="test_app",
-            user_id="test_user",
-            id="test_session",
-            events=[user_event, model_event]
-        )
+        session = Session(app_name="test_app", user_id="test_user", id="test_session", events=[user_event, model_event])
         return session
 
     def _create_memory_service(self, filepath=None):
@@ -89,10 +78,7 @@ class TestJsonFileMemoryServiceAdditional(unittest.TestCase):
         service = self._create_memory_service()
 
         # Add observations to the session
-        service.add_observations("test_session", [
-            {"entity_name": "person", "content": "John Doe"},
-            {"entity_name": "location", "content": "New York"}
-        ])
+        service.add_observations("test_session", [{"entity_name": "person", "content": "John Doe"}, {"entity_name": "location", "content": "New York"}])
 
         # Search with empty query
         result = service.search_nodes("test_session", "")
@@ -105,10 +91,7 @@ class TestJsonFileMemoryServiceAdditional(unittest.TestCase):
         service = self._create_memory_service()
 
         # Add observations to the session
-        service.add_observations("test_session", [
-            {"entity_name": "person", "content": "John Doe"},
-            {"entity_name": "location", "content": "New York"}
-        ])
+        service.add_observations("test_session", [{"entity_name": "person", "content": "John Doe"}, {"entity_name": "location", "content": "New York"}])
 
         # Search with matching query
         result = service.search_nodes("test_session", "John")
@@ -122,10 +105,7 @@ class TestJsonFileMemoryServiceAdditional(unittest.TestCase):
         service = self._create_memory_service()
 
         # Add observations to the session
-        service.add_observations("test_session", [
-            {"entity_name": "person", "content": "John Doe"},
-            {"entity_name": "location", "content": "New York"}
-        ])
+        service.add_observations("test_session", [{"entity_name": "person", "content": "John Doe"}, {"entity_name": "location", "content": "New York"}])
 
         # Search with non-matching query
         result = service.search_nodes("test_session", "Paris")
@@ -168,10 +148,7 @@ class TestJsonFileMemoryServiceAdditional(unittest.TestCase):
     def test_add_observations_valid(self):
         """Test add_observations with valid parameters."""
         service = self._create_memory_service()
-        observations = [
-            {"entity_name": "person", "content": "John Doe"},
-            {"entity_name": "location", "content": "New York"}
-        ]
+        observations = [{"entity_name": "person", "content": "John Doe"}, {"entity_name": "location", "content": "New York"}]
         service.add_observations("test_session", observations)
 
         # Should add observations
@@ -230,7 +207,7 @@ class TestJsonFileMemoryServiceAdditional(unittest.TestCase):
         service = self._create_memory_service()
         key_str = "('app', 'user', 'session')"
         parsed_key = service._parse_str_key(key_str)
-        self.assertEqual(parsed_key, ('app', 'user', 'session'))
+        self.assertEqual(parsed_key, ("app", "user", "session"))
 
     def test_parse_str_key_invalid_format(self):
         """Test parsing an invalid string key format."""

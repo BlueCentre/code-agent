@@ -3,7 +3,7 @@
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import typer
 
@@ -45,7 +45,7 @@ def chat():
         # Create a mock console
         mock_console = MagicMock()
         mock_console_class.return_value = mock_console
-        
+
         # Make _resolve_agent_path_str return None to simulate nonexistent path
         mock_resolve_path_str.return_value = None
 
@@ -63,7 +63,7 @@ def chat():
                 temperature=None,
                 max_tokens=None,
                 save_session_cli=False,
-                verbose=False
+                verbose=False,
             )
 
         # Verify _resolve_agent_path_str was called
@@ -80,9 +80,7 @@ def chat():
     @patch("pathlib.Path.exists")
     @patch("code_agent.cli.commands.run.importlib.util.spec_from_file_location")
     def test_run_command_with_invalid_module_spec(
-        self, mock_spec_from_file_location, mock_exists, mock_suffix, 
-        mock_is_file, mock_setup_logging, mock_get_config, 
-        mock_init_config, mock_console_class
+        self, mock_spec_from_file_location, mock_exists, mock_suffix, mock_is_file, mock_setup_logging, mock_get_config, mock_init_config, mock_console_class
     ):
         """Test run_command with invalid module spec."""
         # Create a mock console
@@ -98,7 +96,7 @@ def chat():
         mock_exists.return_value = True
         mock_is_file.return_value = True
         mock_suffix.return_value = ".py"
-        
+
         # Make spec_from_file_location return None (invalid module spec)
         mock_spec_from_file_location.return_value = None
 
@@ -116,7 +114,7 @@ def chat():
                 temperature=None,
                 max_tokens=None,
                 save_session_cli=False,
-                verbose=False
+                verbose=False,
             )
 
         # Verify error message was printed
@@ -134,10 +132,16 @@ def chat():
     @patch("code_agent.cli.commands.run.importlib.util.spec_from_file_location")
     @patch("code_agent.cli.commands.run.importlib.util.module_from_spec")
     def test_run_command_with_exec_module_error(
-        self, mock_module_from_spec, mock_spec_from_file_location, 
-        mock_exists, mock_suffix, mock_is_file, 
-        mock_setup_logging, mock_get_config, mock_init_config, 
-        mock_console_class
+        self,
+        mock_module_from_spec,
+        mock_spec_from_file_location,
+        mock_exists,
+        mock_suffix,
+        mock_is_file,
+        mock_setup_logging,
+        mock_get_config,
+        mock_init_config,
+        mock_console_class,
     ):
         """Test run_command with exec_module error."""
         # Create a mock console
@@ -153,17 +157,17 @@ def chat():
         mock_exists.return_value = True
         mock_is_file.return_value = True
         mock_suffix.return_value = ".py"
-        
+
         # Create mock spec and loader
         mock_spec = MagicMock()
         mock_loader = MagicMock()
         mock_spec.loader = mock_loader
         mock_spec_from_file_location.return_value = mock_spec
-        
+
         # Create mock module
         mock_module = MagicMock()
         mock_module_from_spec.return_value = mock_module
-        
+
         # Make exec_module raise an exception
         mock_loader.exec_module.side_effect = Exception("Module execution error")
 
@@ -181,11 +185,11 @@ def chat():
                 temperature=None,
                 max_tokens=None,
                 save_session_cli=False,
-                verbose=False
+                verbose=False,
             )
 
         # Verify exec_module was called
         mock_loader.exec_module.assert_called_once()
-        
+
         # Verify error message was printed
-        mock_console.print.assert_called() 
+        mock_console.print.assert_called()

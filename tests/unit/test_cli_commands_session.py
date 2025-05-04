@@ -25,12 +25,7 @@ class TestSessionCommands(unittest.TestCase):
         for session_id in self.session_ids:
             session_file = self.sessions_dir / f"{session_id}.session.json"
             with open(session_file, "w") as f:
-                json.dump({
-                    "app_name": "test_app",
-                    "user_id": "test_user",
-                    "id": session_id,
-                    "events": []
-                }, f)
+                json.dump({"app_name": "test_app", "user_id": "test_user", "id": session_id, "events": []}, f)
 
     def tearDown(self):
         """Clean up test fixtures."""

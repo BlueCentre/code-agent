@@ -52,8 +52,7 @@ def chat():
     @patch("code_agent.cli.commands.run.run_cli")
     @patch("importlib.util.spec_from_file_location")
     def test_run_command_with_valid_agent_file(
-        self, mock_spec_from_file_location, mock_run_cli, mock_resolve_path, mock_setup_logging,
-        mock_get_config, mock_init_config, mock_console_class
+        self, mock_spec_from_file_location, mock_run_cli, mock_resolve_path, mock_setup_logging, mock_get_config, mock_init_config, mock_console_class
     ):
         """Test run_command with a valid agent file."""
         # Create a mock console
@@ -96,7 +95,7 @@ def chat():
                 temperature=None,
                 max_tokens=None,
                 save_session_cli=False,
-                verbose=False
+                verbose=False,
             )
 
         # Verify run_cli was called
@@ -112,8 +111,7 @@ def chat():
     @patch("code_agent.cli.commands.run.run_cli")
     @patch("code_agent.cli.commands.run.importlib")
     def test_run_command_with_valid_agent_package(
-        self, mock_importlib, mock_run_cli, mock_resolve_path, mock_setup_logging,
-        mock_get_config, mock_init_config, mock_console_class
+        self, mock_importlib, mock_run_cli, mock_resolve_path, mock_setup_logging, mock_get_config, mock_init_config, mock_console_class
     ):
         """Test run_command with a valid agent package."""
         # Create a mock console
@@ -148,7 +146,7 @@ def chat():
             temperature=None,
             max_tokens=None,
             save_session_cli=False,
-            verbose=False
+            verbose=False,
         )
 
         # Verify run_cli was called
@@ -176,7 +174,7 @@ def chat():
                 temperature=None,
                 max_tokens=None,
                 save_session_cli=False,
-                verbose=False
+                verbose=False,
             )
 
         # Verify error message was printed
@@ -207,7 +205,7 @@ def chat():
                 temperature=None,
                 max_tokens=None,
                 save_session_cli=False,
-                verbose=False
+                verbose=False,
             )
 
         # Verify error message was printed
@@ -221,10 +219,7 @@ def chat():
     @patch("code_agent.cli.commands.run.get_config")
     @patch("code_agent.cli.commands.run.setup_logging")
     @patch("code_agent.cli.commands.run._resolve_agent_path_str", return_value=None)
-    def test_run_command_with_invalid_agent_path(
-        self, mock_resolve_path, mock_setup_logging,
-        mock_get_config, mock_init_config, mock_console_class
-    ):
+    def test_run_command_with_invalid_agent_path(self, mock_resolve_path, mock_setup_logging, mock_get_config, mock_init_config, mock_console_class):
         """Test run_command with an invalid agent path."""
         # Create a mock console
         mock_console = MagicMock()
@@ -249,7 +244,7 @@ def chat():
                 temperature=None,
                 max_tokens=None,
                 save_session_cli=False,
-                verbose=False
+                verbose=False,
             )
 
         # Verify initialize_config was called
@@ -267,8 +262,7 @@ def chat():
     @patch("code_agent.cli.commands.run._resolve_agent_path_str")
     @patch("code_agent.cli.commands.run.importlib.util.spec_from_file_location", return_value=None)
     def test_run_command_with_module_loading_error(
-        self, mock_spec_from_file, mock_resolve_path, mock_setup_logging,
-        mock_get_config, mock_init_config, mock_console_class
+        self, mock_spec_from_file, mock_resolve_path, mock_setup_logging, mock_get_config, mock_init_config, mock_console_class
     ):
         """Test run_command with a module loading error."""
         # Create a mock console
@@ -297,7 +291,7 @@ def chat():
                 temperature=None,
                 max_tokens=None,
                 save_session_cli=False,
-                verbose=False
+                verbose=False,
             )
 
         # Verify initialize_config was called
@@ -319,8 +313,7 @@ def chat():
     @patch("code_agent.cli.commands.run.run_cli")
     @patch("code_agent.cli.commands.run.importlib")
     def test_run_command_with_package_import_error(
-        self, mock_importlib, mock_run_cli, mock_resolve_path, mock_setup_logging,
-        mock_get_config, mock_init_config, mock_console_class
+        self, mock_importlib, mock_run_cli, mock_resolve_path, mock_setup_logging, mock_get_config, mock_init_config, mock_console_class
     ):
         """Test run_command with a package import error."""
         # Create a mock console
@@ -336,9 +329,7 @@ def chat():
         mock_resolve_path.return_value = str(self.agent_dir)
 
         # Mock Path.is_file and Path.is_dir to control flow
-        with patch("pathlib.Path.is_file", return_value=False), \
-             patch("pathlib.Path.is_dir", return_value=True):
-
+        with patch("pathlib.Path.is_file", return_value=False), patch("pathlib.Path.is_dir", return_value=True):
             # Make importlib.import_module raise ImportError
             mock_importlib.import_module.side_effect = ImportError("Module not found")
 
@@ -356,7 +347,7 @@ def chat():
                     temperature=None,
                     max_tokens=None,
                     save_session_cli=False,
-                    verbose=False
+                    verbose=False,
                 )
 
         # Verify initialize_config was called
@@ -375,9 +366,7 @@ def chat():
     @patch("pathlib.Path.is_file", return_value=False)
     @patch("pathlib.Path.is_dir", return_value=False)
     def test_run_command_with_invalid_path_type(
-        self, mock_is_dir, mock_is_file, mock_resolve_path,
-        mock_setup_logging, mock_get_config, mock_init_config,
-        mock_console_class
+        self, mock_is_dir, mock_is_file, mock_resolve_path, mock_setup_logging, mock_get_config, mock_init_config, mock_console_class
     ):
         """Test run_command with a path that is neither a file nor a directory."""
         # Create a mock console
@@ -406,7 +395,7 @@ def chat():
                 temperature=None,
                 max_tokens=None,
                 save_session_cli=False,
-                verbose=False
+                verbose=False,
             )
 
         # Verify initialize_config was called
