@@ -18,13 +18,15 @@ dependencies = [
     "shellingham>=1.5.0", # Required for typer shell completion
     "rich>=13.7.1", # Required for typer rich formatting
     "litellm>=1.39.2", # Required to support multiple LLM providers
-    "pyyaml>=6.0.1", # Required for YAML parsing
-    "google-adk>=0.3.0", # Required for ADK
+    #"vllm>=0.8.5-post1",
+    "opentelemetry-api>=1.31.0",
+    "pyyaml>=6.0.1", # Required for ADK
     "google-cloud-aiplatform>=1.70.0", # Required for Vertex AI
     "google-generativeai>=0.7.0", # Required for Gemini
     "pydantic>=2.7.4", # Required for Pydantic
     "requests>=2.31.0", # Required for litellm
-    "python-dotenv>=1.0.0", # Required for .env loading
+    "python-dotenv>=1.0.0",
+    "google-adk==0.4.0",
 ]
 
 [project.urls]

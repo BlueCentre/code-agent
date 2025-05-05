@@ -111,7 +111,9 @@ def configure_shell_whitelist(args: dict, tool_context: ToolContext) -> Configur
         "ip addr",
         "ip route",
         "traceroute",
+        "git grep",
         "git branch",
+        "git branch --show-current",  # Specific safe variant
         "git tag",
         "git remote -v",
         "git config --list",
@@ -126,7 +128,6 @@ def configure_shell_whitelist(args: dict, tool_context: ToolContext) -> Configur
         "kubectl api-resources",
         "kubectl api-versions",
         "kubectl top",
-        "git branch --show-current",  # Specific safe variant
     ]
 
     # Initialize whitelist in state if it doesn't exist
