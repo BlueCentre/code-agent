@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+import json
 import logging
 import signal
 from contextlib import contextmanager
@@ -270,25 +271,6 @@ def run_cli(
                 # Process events
                 try:
                     async for event in event_async_generator:
-                        # TODO: Improve event handling to include more details in chat loop
-                        #     print(f"Event from: {event.author}")
-                        #
-                        #     if event.content and event.content.parts:
-                        #         if event.get_function_calls():
-                        #             print("  Type: Tool Call Request")
-                        #         elif event.get_function_responses():
-                        #             print("  Type: Tool Result")
-                        #         elif event.content.parts[0].text:
-                        #             if event.partial:
-                        #                 print("  Type: Streaming Text Chunk")
-                        #             else:
-                        #                 print("  Type: Complete Text Message")
-                        #         else:
-                        #             print("  Type: Other Content (e.g., code result)")
-                        #     elif event.actions and (event.actions.state_delta or event.actions.artifact_delta):
-                        #         print("  Type: State/Artifact Update")
-                        #     else:
-                        #         print("  Type: Control Signal or Other")
                         if interrupted:
                             console.print("[bold yellow]Processing interrupted by user.[/bold yellow]")
                             break
@@ -300,6 +282,7 @@ def run_cli(
                             content_text = " ".join(p.text for p in event.content.parts if hasattr(p, "text") and p.text)
 
                         is_final = hasattr(event, "is_final_response") and event.is_final_response()
+                        is_partial = hasattr(event, "partial") and event.partial
 
                         timestamp_str = ""
                         if show_timestamps and hasattr(event, "timestamp") and event.timestamp:
@@ -309,24 +292,160 @@ def run_cli(
                             except (TypeError, ValueError, AttributeError):
                                 timestamp_str = "[dim][unknown time][/dim] "
 
-                        # Only show non-empty content, and avoid duplicates
-                        if show_events and content_text and content_text != last_content:
-                            if author == "user":
-                                # Keep user output as plain text
+                        # Determine event type for better visualization
+                        event_type = "unknown"
+                        event_icon = "❓"
+                        event_color = "white"
+
+                        if hasattr(event, "content") and event.content and event.content.parts:
+                            function_calls = event.get_function_calls()
+                            function_responses = event.get_function_responses()
+
+                            if function_calls:
+                                event_type = "tool_call"
+                                event_icon = "🔧"
+                                event_color = "cyan"
+                            elif function_responses:
+                                event_type = "tool_result"
+                                event_icon = "📊"
+                                event_color = "green"
+                            elif any(hasattr(p, "text") and p.text for p in event.content.parts):
+                                if is_partial:
+                                    event_type = "streaming_text"
+                                    event_icon = "📝"
+                                    event_color = "yellow"
+                                else:
+                                    event_type = "complete_text"
+                                    event_icon = "💬"
+                                    event_color = "blue"
+                            else:
+                                event_type = "other_content"
+                                event_icon = "📄"
+                                event_color = "magenta"
+                        elif (
+                            hasattr(event, "actions")
+                            and event.actions
+                            and (
+                                hasattr(event.actions, "state_delta")
+                                and event.actions.state_delta
+                                or hasattr(event.actions, "artifact_delta")
+                                and event.actions.artifact_delta
+                            )
+                        ):
+                            event_type = "state_update"
+                            event_icon = "🔄"
+                            event_color = "bright_magenta"
+                        elif hasattr(event, "actions") and event.actions and (hasattr(event.actions, "transfer_to_agent") and event.actions.transfer_to_agent):
+                            event_type = "transfer"
+                            event_icon = "🔀"
+                            event_color = "bright_blue"
+                        elif hasattr(event, "actions") and event.actions and (hasattr(event.actions, "escalate") and event.actions.escalate):
+                            event_type = "escalate"
+                            event_icon = "⚠️"
+                            event_color = "bright_red"
+                        elif hasattr(event, "error_code") and event.error_code:
+                            event_type = "error"
+                            event_icon = "❌"
+                            event_color = "red"
+
+                        # Show event metadata in debug mode
+                        # if show_events and verbose:
+                        #     meta_info = []
+                        #     if hasattr(event, "id") and event.id:
+                        #         meta_info.append(f"ID: {event.id[:8]}...")
+                        #     if hasattr(event, "invocation_id") and event.invocation_id:
+                        #         meta_info.append(f"Invocation: {event.invocation_id[:8]}...")
+                        #     if hasattr(event, "turn_complete") and event.turn_complete is not None:
+                        #         meta_info.append(f"Turn complete: {event.turn_complete}")
+
+                        #     if meta_info:
+                        #         meta_str = ", ".join(meta_info)
+                        #         console.print(f"{timestamp_str}[dim]{event_icon} Event metadata: {meta_str}[/dim]")
+
+                        # Display event based on type
+                        if show_events:
+                            # User messages
+                            if author == "user" and content_text:
                                 console.print(f"{timestamp_str}[bold blue]👦🏻User:[/bold blue] {content_text}")
-                            elif author == "assistant" or author == agent.name:  # Check agent name too
-                                # Print prefix and then render content as Markdown
-                                console.print(f"{timestamp_str}[bold yellow]🤖Agent:[/bold yellow]")
-                                console.print(Markdown(content_text))
-                                # Update last content to avoid duplicates
-                                last_content = content_text
-                            # TODO: Currently now working...
-                            # Optionally handle other authors like 'tool' or 'system' if needed
-                            elif event.get_function_responses():  # author == "tool":
-                                console.print(f"{timestamp_str}[bold green]🔧Tool:[/bold green] {content_text}")
+
+                            # Agent text responses
+                            elif (author == "assistant" or author == agent.name) and content_text and event_type in ["complete_text", "streaming_text"]:
+                                prefix = f"{timestamp_str}[bold yellow]🤖Agent"
+                                if is_partial:
+                                    prefix += " [dim](streaming)[/dim]"
+                                prefix += ":[/bold yellow]"
+
+                                # Only print prefix once for streaming chunks with same content
+                                if content_text != last_content:
+                                    console.print(prefix)
+                                    console.print(Markdown(content_text))
+                                    last_content = content_text
+
+                            # Tool calls
+                            elif event_type == "tool_call":
+                                function_calls = event.get_function_calls()
+                                for call in function_calls:
+                                    tool_name = call.name
+                                    tool_args = call.args
+
+                                    console.print(
+                                        f"[dim]{timestamp_str}[bold {event_color}]{event_icon} Tool Call:[/bold {event_color}] [bold]{tool_name}[/bold]"
+                                    )
+                                    # if tool_args and verbose:
+                                    if tool_args:
+                                        # Format arguments in a readable way
+                                        console.print(f"[dim]  Arguments: {json.dumps(tool_args, indent=2)}[/dim]")
+
+                            # Tool results
+                            # elif event_type == "tool_result":
+                            #     function_responses = event.get_function_responses()
+                            #     for response in function_responses:
+                            #         tool_name = response.name
+                            #         result = response.response
+
+                            #         console.print(
+                            #             f"{timestamp_str}[bold {event_color}]{event_icon} Tool Result:[/bold {event_color}] [bold]{tool_name}[/bold]"
+                            #         )
+                            #         if result and verbose:
+                            #             # Format result in a readable way
+                            #             console.print(f"[dim]  Result: {json.dumps(result, indent=2)}[/dim]")
+                            #         elif content_text:
+                            #             console.print(Markdown(content_text))
+
+                            # State changes
+                            # elif event_type == "state_update" and verbose:
+                            #     updates = []
+                            #     if hasattr(event.actions, "state_delta") and event.actions.state_delta:
+                            #         updates.append(f"State changes: {json.dumps(event.actions.state_delta, indent=2)}")
+                            #     if hasattr(event.actions, "artifact_delta") and event.actions.artifact_delta:
+                            #         updates.append(f"Artifact changes: {event.actions.artifact_delta}")
+
+                            #     if updates:
+                            #         console.print(f"{timestamp_str}[bold {event_color}]{event_icon} State Update:[/bold {event_color}]")
+                            #         for update in updates:
+                            #             console.print(f"  {update}")
+
+                            # Control flow events
+                            elif event_type in ["transfer", "escalate"]:
+                                message = "Unknown control action"
+                                if event_type == "transfer" and hasattr(event.actions, "transfer_to_agent"):
+                                    message = f"Transferring to agent: {event.actions.transfer_to_agent}"
+                                elif event_type == "escalate":
+                                    message = "Escalating to higher level"
+
+                                console.print(f"{timestamp_str}[bold {event_color}]{event_icon} Control Flow:[/bold {event_color}] {message}")
+
+                            # Error events
+                            elif event_type == "error":
+                                error_msg = "Error"
+                                if hasattr(event, "error_code") and event.error_code:
+                                    error_msg += f" ({event.error_code})"
+                                if hasattr(event, "error_message") and event.error_message:
+                                    error_msg += f": {event.error_message}"
+
+                                console.print(f"{timestamp_str}[bold {event_color}]{event_icon} {error_msg}[/bold {event_color}]")
 
                         if is_final:
-                            # https://google.github.io/adk-docs/events/
                             final_response_event = event
                             operation_complete(console, f"[dim]{event.author} finished processing.[/dim]")  # Pass console
 

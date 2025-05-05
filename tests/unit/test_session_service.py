@@ -36,7 +36,7 @@ class TestFileSystemSessionService:
     def test_init_creates_directory(self):
         """Test that __init__ creates the sessions directory if it doesn't exist."""
         new_dir = self.session_dir / "nested" / "sessions"
-        service = FileSystemSessionService(str(new_dir))
+        service = FileSystemSessionService(str(new_dir))  # noqa: F841
         assert new_dir.exists()
         assert new_dir.is_dir()
 
