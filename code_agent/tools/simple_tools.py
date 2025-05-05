@@ -7,6 +7,7 @@ import difflib
 import logging
 import subprocess
 from pathlib import Path
+from typing import Optional, Union
 
 from rich import print
 from rich.console import Console
@@ -35,14 +36,52 @@ MAX_FILE_SIZE_BYTES = 1 * 1024 * 1024
 MAX_SEARCH_RESULTS = 3
 
 
+# --- Helper Functions ---
+def deduce_from_path(path: Path) -> str:
+    """Deduce the syntax highlighting lexer from a file path."""
+    extension = path.suffix.lower()
+    extension_map = {
+        ".py": "python",
+        ".js": "javascript",
+        ".ts": "typescript",
+        ".html": "html",
+        ".css": "css",
+        ".json": "json",
+        ".md": "markdown",
+        ".yml": "yaml",
+        ".yaml": "yaml",
+        ".sh": "bash",
+        ".bash": "bash",
+        ".c": "c",
+        ".cpp": "cpp",
+        ".rs": "rust",
+        ".go": "go",
+        ".java": "java",
+        ".rb": "ruby",
+    }
+    return extension_map.get(extension, "text")
+
+
 # --- Helper for Path Validation ---
-def is_path_within_cwd(path_str: str) -> bool:
-    """Checks if the resolved path is within the current working directory."""
+def is_path_within_cwd(path_str: Optional[Union[str, Path]]) -> bool:
+    """
+    Check if a given path is within the current working directory.
+
+    Args:
+        path_str: A path string to check
+
+    Returns:
+        True if the path is within the current working directory, False otherwise
+    """
     try:
+        if path_str is None:
+            return False
+
         cwd = Path.cwd()
         resolved_path = Path(path_str).resolve()
         return resolved_path.is_relative_to(cwd)
-    except (ValueError, OSError):
+    except (ValueError, OSError, TypeError):
+        # Handle various errors: invalid paths, non-existing files, etc.
         return False
 
 
@@ -84,81 +123,98 @@ def read_file(path: str) -> str:
 
 
 # --- APPLY EDIT Tool ---
-def apply_edit(target_file: str, code_edit: str) -> str:
-    """Applies a given edit to a target file, showing a diff and asking for confirmation."""
-    target_path = Path(target_file)
+def apply_edit(target_file: str, content: str, explanation: Optional[str] = None) -> str:
+    """
+    Apply an edit to a file by creating the file or replacing its contents.
+
+    Args:
+        target_file: The path to the file to edit
+        content: The new content for the file
+        explanation: Optional explanation of the edit
+
+    Returns:
+        A string message indicating success or failure
+    """
     config = get_config()
 
-    # Security Check 1: Ensure path is within the current working directory or subdirs
-    if not is_path_within_cwd(target_file):
-        return f"Error: Target file '{target_file}' is outside the allowed workspace."
-
     try:
-        # Determine if the file exists and is a regular file
-        file_exists = target_path.is_file()
-        if not file_exists and target_path.exists():
-            return f"Error: Path exists but is not a regular file: '{target_file}'. " f"Only regular files can be edited."
+        # Ensure valid path (security check)
+        file_path = Path(target_file)
+        if not is_path_within_cwd(file_path):
+            return format_path_restricted_error(str(file_path))
 
-        original_content = ""
-        # Try reading original content *before* proceeding to diff
-        if file_exists:
-            try:
-                original_content = target_path.read_text()
-            except Exception as read_e:
-                # Handle potential read errors early
-                logger.error(f"Error reading original content from {target_file}: {read_e}", exc_info=True)
-                return f"Error: Failed reading original content from '{target_file}'.\nError details: {read_e}"
+        # Handle the case where target exists but is not a file
+        if file_path.exists() and not file_path.is_file():
+            return f"Error: Path exists but is not a regular file: {file_path}"
 
-        # --- Diff and Confirmation --- #
-        # Generate diff
-        # Check if splitlines can handle potential None or non-string types defensively
-        original_lines = original_content.splitlines(keepends=True) if isinstance(original_content, str) else []
-        new_lines = code_edit.splitlines(keepends=True) if isinstance(code_edit, str) else []
+        # Get existing file content (if any)
+        existing_content = ""
+        try:
+            if file_path.exists() and file_path.is_file():
+                with open(file_path, "r", encoding="utf-8") as f:
+                    existing_content = f.read()
+        except Exception as read_error:
+            return f"Error: Could not read existing file: {read_error!s}"
 
-        diff = difflib.unified_diff(
-            original_lines,
-            new_lines,
-            fromfile=f"a/{target_file}",
-            tofile=f"b/{target_file}",
-        )
-        diff_text = "".join(diff)
+        # Check if content is identical to avoid unnecessary edits
+        if existing_content == content:
+            return f"No changes detected in {file_path}"
 
-        # If no changes, report and exit
-        if not diff_text:
-            return "No changes detected."
+        # Show diff
+        console = Console()
+        print(f"Attempting to edit file: \n{target_file}")
 
-        # Display diff and ask for confirmation
-        console.print(f"Attempting to edit file: \n[cyan]{target_path}[/cyan]")
-        console.print("\nProposed changes:")
-        console.print(Syntax(diff_text, "diff", theme="default", line_numbers=False))
-
-        # Check for auto-approve setting
-        auto_approve = config.auto_approve_edits
-
-        confirmed = False
-        if auto_approve:
-            console.print("[yellow]Auto-approving edit based on configuration.[/yellow]")
-            confirmed = True
+        if existing_content:
+            # Create a unified diff when there was existing content
+            diff = difflib.unified_diff(
+                existing_content.splitlines(), content.splitlines(), lineterm="", fromfile=f"Original: {file_path.name}", tofile=f"Updated: {file_path.name}"
+            )
+            diff_text = "\n".join(diff)
+            print("\nProposed changes:")
+            console.print(Syntax(diff_text, "diff"))
         else:
+            # Show the new content when creating a new file
+            print("\nProposed new file:")
+            console.print(Syntax(content, deduce_from_path(file_path)))
+
+        # If auto-approval is enabled, skip confirmation
+        if config.auto_approve_edits:
+            console.print("Auto-approving edit based on configuration.")
+            # Ensure parent directory exists
+            if not file_path.parent.exists():
+                file_path.parent.mkdir(parents=True, exist_ok=True)
+
+            # Write content (new file or replacing old file)
+            try:
+                with open(file_path, "w", encoding="utf-8") as f:
+                    f.write(content)
+                return f"Edit applied successfully to {file_path}"
+            except Exception as write_error:
+                return f"Error: Failed to write to {file_path}: {write_error!s}"
+
+        # Interactive confirmation
+        else:
+            # Use rich's Confirm.ask for a prettier prompt
             confirmed = Confirm.ask("Apply these changes?", default=False)
+            if confirmed:
+                # Ensure parent directory exists
+                if not file_path.parent.exists():
+                    file_path.parent.mkdir(parents=True, exist_ok=True)
 
-        if confirmed:
-            try:
-                # Ensure parent directory exists for new files
-                if not file_exists:
-                    target_path.parent.mkdir(parents=True, exist_ok=True)
+                # Write content (new file or replacing old file)
+                try:
+                    with open(file_path, "w", encoding="utf-8") as f:
+                        f.write(content)
+                    return f"Edit applied successfully to {file_path}"
+                except Exception as write_error:
+                    return f"Error: Failed to write to {file_path}: {write_error!s}"
+            else:
+                return "Edit cancelled by user"
 
-                target_path.write_text(code_edit)
-                return f"Edit applied successfully to {target_file}."
-            except IOError as e:
-                logger.error(f"IOError writing changes to {target_file}: {e}")
-                return f"Error: Failed when writing changes to '{target_file}'.\nError details: {e}"
-        else:
-            return "Edit cancelled by user."
-
+    except OSError as e:
+        return f"Error: Failed when write '{target_file}'.\nOperating system error when accessing '{target_file}'.\nDetails: {e}\nThis could be due to:\n- Disk I/O errors\n- Network file system issues\n- Resource limitations"  # noqa: E501
     except Exception as e:
-        logger.error(f"Error applying edit to {target_file}: {e}", exc_info=True)
-        return f"Error: Failed when applying edit to '{target_file}'.\nError details: {e}"
+        return f"Error: Unexpected error occurred while editing the file: {e}"
 
 
 # --- RUN NATIVE COMMAND Tool ---

@@ -59,6 +59,12 @@ class SecuritySettings(BaseModel):
         description="Enable command validation to prevent execution of dangerous commands",
     )
 
+    # Risky command patterns
+    risky_command_patterns: List[str] = Field(
+        default_factory=list,
+        description="List of regex patterns for commands that are risky but allowed with warning",
+    )
+
     # Web search setting removed - using ADK's google_search instead
 
 

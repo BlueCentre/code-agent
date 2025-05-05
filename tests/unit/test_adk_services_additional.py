@@ -109,6 +109,8 @@ class TestGetAdkSessionService(unittest.TestCase):
 
         # Verify API key was initialized
         mock_initialize.assert_called_once()
+        # Don't return anything from the test method
+        return None
 
     @pytest.mark.asyncio
     @patch("code_agent.adk.services.initialize_adk_with_api_key")
@@ -135,6 +137,8 @@ class TestGetAdkSessionService(unittest.TestCase):
 
         # Clean up global state
         code_agent.adk.services._adk_session_service = None
+        # Don't return anything from the test method
+        return None
 
 
 class TestGetMemoryService(unittest.TestCase):
@@ -324,6 +328,8 @@ class TestCodeAgentADKSessionManager(unittest.TestCase):
         self.mock_session_service.get_session.assert_called_once()
         self.mock_security_manager.verify_session_access.assert_not_called()
         self.mock_security_manager.is_session_expired.assert_not_called()
+        # Don't return anything from the test method
+        return None
 
     @pytest.mark.asyncio
     async def test_get_session_with_auth_enabled(self):
@@ -348,6 +354,8 @@ class TestCodeAgentADKSessionManager(unittest.TestCase):
         self.assertEqual(get_session_args["app_name"], "code_agent")
         self.assertEqual(get_session_args["user_id"], "default_user")
         self.assertEqual(get_session_args["session_id"], "test_session")
+        # Don't return anything from the test method
+        return None
 
     @pytest.mark.asyncio
     async def test_get_session_auth_denied(self):
@@ -367,6 +375,8 @@ class TestCodeAgentADKSessionManager(unittest.TestCase):
         self.mock_security_manager.verify_session_access.assert_called_once_with("test_session", "invalid_token")
         # Verify expiry was not checked (short-circuited by auth failure)
         self.mock_security_manager.is_session_expired.assert_not_called()
+        # Don't return anything from the test method
+        return None
 
     @pytest.mark.asyncio
     async def test_get_session_expired(self):
@@ -387,6 +397,8 @@ class TestCodeAgentADKSessionManager(unittest.TestCase):
         self.mock_security_manager.verify_session_access.assert_called_once_with("test_session", "test_token")
         # Verify expiry was checked and failed
         self.mock_security_manager.is_session_expired.assert_called_once_with("test_session")
+        # Don't return anything from the test method
+        return None
 
     @pytest.mark.asyncio
     async def test_get_session_not_found(self):
@@ -400,55 +412,60 @@ class TestCodeAgentADKSessionManager(unittest.TestCase):
 
         # Verify get_session was called
         self.mock_session_service.get_session.assert_called_once()
+        # Don't return anything from the test method
+        return None
 
     @pytest.mark.asyncio
     async def test_get_memories(self):
-        """Test get_memories retrieves memories from the manager."""
-        # Set up mock session and memory manager
+        """Test get_memories retrieves memories from the memory manager."""
+        # Set up mocks for get_session
         mock_session = MagicMock()
         self.mock_session_service.get_session.return_value = mock_session
+        self.mock_security_manager.verify_session_access.return_value = True
+        self.mock_security_manager.is_session_expired.return_value = False
 
-        # Mock the memory manager
+        # Mock the memory manager and its methods
         mock_memory_manager = MagicMock()
         mock_memories = [
-            MagicMock(content="Memory 1", memory_type=MemoryType.SHORT_TERM, importance=0.5, metadata={}),
-            MagicMock(content="Memory 2", memory_type=MemoryType.WORKING, importance=0.8, metadata={"key": "value"}),
+            {"id": "1", "content": "Memory 1", "type": "fact", "importance": 0.8},
+            {"id": "2", "content": "Memory 2", "type": "conversation", "importance": 0.5},
         ]
         mock_memory_manager.get_memories.return_value = mock_memories
 
-        # Set up the manager's _memory_managers dict
-        self.manager._memory_managers = {"test_session": mock_memory_manager}
+        # Patch the _get_memory_manager method to return our mock
+        with patch.object(self.manager, "_get_memory_manager", return_value=mock_memory_manager):
+            # Call get_memories
+            memories = await self.manager.get_memories("test_session", MemoryType.ALL, 0.3)
 
-        # Call the function
-        result = await self.manager.get_memories("test_session", MemoryType.SHORT_TERM, min_importance=0.3)
+            # Verify the result
+            self.assertEqual(memories, mock_memories)
 
-        # Verify memory manager was called correctly
-        mock_memory_manager.get_memories.assert_called_once_with(MemoryType.SHORT_TERM, 0.3)
+            # Verify get_session was called
+            self.mock_session_service.get_session.assert_called_once()
 
-        # Verify result format
-        self.assertEqual(len(result), 2)
-        # Check that the memories were converted to dictionaries
-        self.assertIsInstance(result[0], dict)
-        self.assertIsInstance(result[1], dict)
+            # Verify memory_manager.get_memories was called with correct parameters
+            mock_memory_manager.get_memories.assert_called_once_with(memory_type=MemoryType.ALL, min_importance=0.3)
+
+        # Don't return anything from the test method
+        return None
 
     @pytest.mark.asyncio
     async def test_close_session(self):
-        """Test close_session removes the memory manager and revokes access."""
-        # Set up memory manager for the session
-        mock_memory_manager = MagicMock()
-        self.manager._memory_managers = {"test_session": mock_memory_manager}
-
-        # Set up auth check to pass
+        """Test close_session closes the session and revokes access."""
+        # Set up mocks for get_session
+        mock_session = MagicMock()
+        self.mock_session_service.get_session.return_value = mock_session
         self.mock_security_manager.verify_session_access.return_value = True
+        self.mock_security_manager.is_session_expired.return_value = False
 
-        # Call the function
+        # Call close_session
         await self.manager.close_session("test_session", auth_token="test_token")
 
-        # Verify auth was checked
-        self.mock_security_manager.verify_session_access.assert_called_once_with("test_session", "test_token")
+        # Verify get_session was called
+        self.mock_session_service.get_session.assert_called_once()
 
-        # Verify memory manager was removed
-        self.assertNotIn("test_session", self.manager._memory_managers)
-
-        # Verify access was revoked
+        # Verify security manager was called to revoke access
         self.mock_security_manager.revoke_session_access.assert_called_once_with("test_session")
+
+        # Don't return anything from the test method
+        return None

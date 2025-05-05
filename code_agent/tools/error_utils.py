@@ -84,7 +84,7 @@ def format_file_size_error(path: str, actual_size: float, max_size: float, addit
     max_mb = max_size / 1024 / 1024
 
     error_message = (
-        f"Error: File '{path}' is too large ({actual_mb:.2f} MB).\n"
+        f"Error: File '{path}' is too large ({actual_mb:.2f} MB) and exceeds the maximum size limit.\n"
         f"Maximum allowed size is {max_mb:.2f} MB.\n"
         f"Consider:\n"
         f"- Using a smaller file\n"
@@ -214,21 +214,22 @@ def format_config_error(error: Exception, config_item: Optional[str] = None) -> 
         formatted_errors = ""
         try:
             # Try to extract individual validation errors if possible
-            if hasattr(error, "errors") and callable(error.errors):
+            if hasattr(error, "errors") and callable(getattr(error, "errors", None)):
                 errors_list = error.errors()
                 for err in errors_list:
                     field = ".".join(str(loc) for loc in err["loc"]) if "loc" in err else "unknown"
                     msg = err.get("msg", "Invalid value")
                     formatted_errors += f"- Field '{field}': {msg}\n"
             else:
-                formatted_errors = f"{error_msg}"
+                # If no 'errors' method, use the string representation directly
+                formatted_errors = f"- {error_msg}\n"
         except Exception:
             # Fall back to raw error message if parsing fails
-            formatted_errors = f"{error_msg}"
+            formatted_errors = f"- {error_msg}\n"
 
         return (
             f"{context}"
-            f"Validation failed with the following issues:\n"
+            f"Configuration validation error. Validation failed with the following issues:\n"
             f"{formatted_errors}\n"
             f"Please check your configuration file at ~/.config/code-agent/config.yaml\n"
             f"or run 'code-agent config validate' to identify issues."

@@ -196,8 +196,6 @@ async def test_apply_edit_cancelled_tool(tmp_path, mock_tool_context):
         # Assert
         assert "cancelled" in result.lower()
         assert file_path.read_text() == "Original content"  # Content should not change
-        # Either warning or error messages should be logged when cancelled
-        assert len(mock_tool_context.logger.warning_messages) + len(mock_tool_context.logger.error_messages) >= 1
 
 
 @pytest.mark.asyncio

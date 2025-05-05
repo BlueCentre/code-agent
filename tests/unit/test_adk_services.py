@@ -1,4 +1,6 @@
-# Placeholder for ADK Service unit tests
+"""
+Tests for the code_agent.adk.services module.
+"""
 
 from unittest.mock import ANY, AsyncMock, MagicMock, patch
 
@@ -9,8 +11,10 @@ import pytest_asyncio
 from google.adk.events.event import Event
 from google.adk.sessions import (
     BaseSessionService,  # Renamed from AbstractSessionService
-    InMemorySessionService,
     Session,
+)
+from google.adk.sessions import (
+    InMemorySessionService as ADKInMemorySessionService,
 )
 
 # SessionId, EventType removed
@@ -306,13 +310,14 @@ async def test_get_history(mock_get_session, session_manager: CodeAgentADKSessio
 
 
 # Test for get_adk_session_service initialization
-@patch("code_agent.adk.services.InMemorySessionService")
+@pytest.mark.asyncio
+@patch("code_agent.adk.services.ADKInMemorySessionService")
 @patch("code_agent.adk.services.initialize_adk_with_api_key")  # Also patch initialization
 # Correct order: patch argument comes after fixtures
-async def test_get_adk_session_service_initialization(mock_init_key, mock_in_memory_service_class):
+async def test_get_adk_session_service_initialization(mock_init_key, mock_adk_in_memory_service_class):
     """Test the initialization logic of get_adk_session_service."""
-    mock_service_instance = MagicMock(spec=InMemorySessionService)
-    mock_in_memory_service_class.return_value = mock_service_instance
+    mock_service_instance = MagicMock(spec=ADKInMemorySessionService)
+    mock_adk_in_memory_service_class.return_value = mock_service_instance
 
     # Clear any existing service to force re-initialization for the test
     with patch("code_agent.adk.services._adk_session_service", None):
@@ -321,7 +326,7 @@ async def test_get_adk_session_service_initialization(mock_init_key, mock_in_mem
     # Verify initialization was called
     mock_init_key.assert_called_once()
     # Verify InMemorySessionService was instantiated
-    mock_in_memory_service_class.assert_called_once_with()
+    mock_adk_in_memory_service_class.assert_called_once_with()
     # Verify the instance is returned
     assert service == mock_service_instance
 

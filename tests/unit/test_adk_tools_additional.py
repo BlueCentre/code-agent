@@ -152,6 +152,9 @@ class TestReadFileToolExecution(unittest.TestCase):
         tool_context.logger.info.assert_any_call("Reading file: test.txt")
         tool_context.logger.info.assert_any_call("Successfully read file: test.txt (12 bytes)")
 
+        # Don't return anything from the test method
+        return None
+
 
 class TestDeleteFileToolExecution(unittest.TestCase):
     """Test the delete_file function execution."""
@@ -179,6 +182,9 @@ class TestDeleteFileToolExecution(unittest.TestCase):
         tool_context.logger.info.assert_any_call("Deleting file: test.txt")
         tool_context.logger.info.assert_any_call("Successfully deleted file: test.txt")
 
+        # Don't return anything from the test method
+        return None
+
 
 class TestApplyEditToolExecution(unittest.TestCase):
     """Test the apply_edit function execution."""
@@ -205,3 +211,6 @@ class TestApplyEditToolExecution(unittest.TestCase):
         self.assertEqual(result, "Successfully edited file: test.txt")
         tool_context.logger.info.assert_any_call("Applying edit to file: test.txt")
         tool_context.logger.info.assert_any_call("Successfully edited file: test.txt")
+
+        # Don't return anything from the test method
+        return None
