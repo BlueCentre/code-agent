@@ -3,9 +3,8 @@ Tests for CLI run operations in code_agent.cli.utils module.
 """
 
 import signal
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import ANY, AsyncMock, MagicMock, patch
 
-import pytest
 from rich.console import Console
 
 from code_agent.cli.utils import run_cli, thinking_indicator
@@ -56,7 +55,7 @@ class TestRunCli:
         mock_runner_class.return_value = mock_runner
 
         # Set up mock async function
-        mock_asyncio_run.return_value = "test_session_id"
+        mock_asyncio_run.return_value = ("test_session_id", True)
 
         # Mock the process_message_async generator
         run_async_mock = AsyncMock()
@@ -78,7 +77,7 @@ class TestRunCli:
         mock_runner_class.assert_called_once_with(session_service=mock_session_service, app_name="test_app", agent=mock_agent, memory_service=None)
 
         # Verify signal handler was set up
-        mock_signal.assert_called_with(signal.SIGINT, pytest.any)
+        mock_signal.assert_called_with(signal.SIGINT, ANY)
 
         # Verify the console printed the instruction
         mock_console.print.assert_any_call("[bold cyan]User (Initial Instruction):[/bold cyan] Test instruction")
@@ -110,7 +109,7 @@ class TestRunCli:
         mock_runner_class.return_value = mock_runner
 
         # Set up mock async function
-        mock_asyncio_run.return_value = "test_session_id"
+        mock_asyncio_run.return_value = ("test_session_id", True)
 
         # Mock the prompt to return an instruction
         mock_prompt_ask.return_value = "User prompted instruction"
@@ -154,7 +153,7 @@ class TestRunCli:
         mock_runner_class.return_value = mock_runner
 
         # Set up mock async function
-        mock_asyncio_run.return_value = "test_session_id"
+        mock_asyncio_run.return_value = ("test_session_id", True)
 
         # Call run_cli in interactive mode with instruction
         run_cli(
@@ -192,7 +191,7 @@ class TestRunCli:
         mock_runner_class.return_value = mock_runner
 
         # Set up mock async function for interactive mode
-        mock_asyncio_run.return_value = "test_session_id"
+        mock_asyncio_run.return_value = ("test_session_id", True)
 
         # Call run_cli in interactive mode without instruction
         run_cli(

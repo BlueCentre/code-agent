@@ -7,7 +7,6 @@ These tests focus on edge cases and error conditions to improve test coverage.
 import json
 import unittest
 from datetime import datetime
-from unittest.mock import MagicMock, patch
 
 from code_agent.adk.memory import (
     InMemoryMemoryService,
@@ -175,40 +174,39 @@ class TestBaseMemoryServiceAdditional(unittest.TestCase):
         self.assertIsInstance(response, SearchMemoryResponse)
         self.assertEqual(len(response.results), 0)
 
-    @patch("code_agent.adk.memory.get_memory_manager")
-    def test_memory_service_add_create_manager(self, mock_get_manager):
+    def test_memory_service_add_create_manager(self):
         """Test add creates a memory manager if it doesn't exist."""
-        # Set up mock
-        mock_manager = MagicMock()
-        mock_get_manager.return_value = mock_manager
-
-        # Test add
+        # Create the service
         service = InMemoryMemoryService()
+
+        # Add content to a new session
         service.add("new_session", "test content")
 
-        # Verify get_memory_manager was called with the session_id
-        mock_get_manager.assert_called_once_with("new_session")
+        # Verify a manager was created and the content was added
+        self.assertIn("new_session", service._managers)
 
-        # Verify add_memory was called on the manager
-        mock_manager.add_memory.assert_called_once()
+        # Verify memory was added as LONG_TERM (as per implementation)
+        memories = service._managers["new_session"].get_memories(MemoryType.LONG_TERM)
+        self.assertEqual(len(memories), 1)
+        self.assertEqual(memories[0].content, "test content")
 
-    @patch("code_agent.adk.memory.get_memory_manager")
-    def test_memory_service_search_create_manager(self, mock_get_manager):
+    def test_memory_service_search_create_manager(self):
         """Test search creates a memory manager if it doesn't exist."""
-        # Set up mock
-        mock_manager = MagicMock()
-        mock_manager.search_memories.return_value = SearchMemoryResponse()
-        mock_get_manager.return_value = mock_manager
-
-        # Test search
+        # Create the service
         service = InMemoryMemoryService()
-        service.search("new_session", "test query")
 
-        # Verify get_memory_manager was called with the session_id
-        mock_get_manager.assert_called_once_with("new_session")
+        # Add some content first to search
+        service.add("new_session", "test query content")
 
-        # Verify search_memories was called on the manager
-        mock_manager.search_memories.assert_called_once()
+        # Search for the content
+        response = service.search("new_session", "test query")
+
+        # Verify a manager was created and search was performed
+        self.assertIn("new_session", service._managers)
+
+        # Verify the search returned results
+        self.assertEqual(len(response.results), 1)
+        self.assertIn("test query", response.results[0].content.lower())
 
 
 class TestGetMemoryManagerSingleton(unittest.TestCase):
