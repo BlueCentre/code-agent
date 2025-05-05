@@ -1,7 +1,7 @@
 [project]
 name = "cli-code-agent"
 version = "0.2.2"
-description = "CLI agent for interacting with LLMs and local environment"
+description = "CLI code agent for interacting with LLMs and local environment"
 authors = [
     {name = "James Nguyen", email = "git@nocentre.net"}
 ]
@@ -105,6 +105,7 @@ omit = [
     "*/.venv/*",
     "code_agent/agent/cli_runner/*",
     "code_agent/agent/software_engineer/*",
+    "code_agent/agent/software_engineer_lite/*",
     "code_agent/agent/travel-concierge/*"
 ]
 
