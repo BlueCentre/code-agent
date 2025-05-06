@@ -264,6 +264,7 @@ name = "cli-code-agent"
 version = "0.2.2"
 source = { editable = "." }
 dependencies = [
+    { name = "fastapi" },
     { name = "google-adk" },
     { name = "google-cloud-aiplatform" },
     { name = "google-generativeai" },
@@ -276,6 +277,7 @@ dependencies = [
     { name = "rich" },
     { name = "shellingham" },
     { name = "typer" },
+    { name = "uvicorn" },
 ]
 
 [package.optional-dependencies]
@@ -300,6 +302,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "fastapi", specifier = ">=0.111.0" },
     { name = "google-adk", specifier = "==0.4.0" },
     { name = "google-cloud-aiplatform", specifier = ">=1.70.0" },
     { name = "google-generativeai", specifier = ">=0.7.0" },
@@ -312,12 +315,14 @@ requires-dist = [
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5.0.0" },
     { name = "pytest-mock", marker = "extra == 'dev'", specifier = ">=3.14.0" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
+    { name = "pyyaml", specifier = ">=6.0" },
     { name = "pyyaml", specifier = ">=6.0.1" },
     { name = "requests", specifier = ">=2.31.0" },
     { name = "rich", specifier = ">=13.7.1" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.4.10" },
     { name = "shellingham", specifier = ">=1.5.0" },
     { name = "typer", specifier = ">=0.12.3" },
+    { name = "uvicorn", specifier = ">=0.30.0" },
 ]
 provides-extras = ["dev"]
 

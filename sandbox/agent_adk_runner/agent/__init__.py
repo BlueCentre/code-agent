@@ -1,7 +1,7 @@
 """
-ADK Agent definition script for use with 'adk run'.
+ADK Agent definition script for use with ADK.
 
-This script defines an agent instance that the ADK CLI runner can load.
+This script defines an agent instance that the ADK runner can load.
 """
 
 # import os
@@ -16,8 +16,10 @@ from dotenv import load_dotenv
 
 # Import necessary ADK and local components
 from google.adk.agents import LlmAgent
+from google.adk.models import Gemini  # Import ADK models directly
 
-from code_agent.adk.models_v2 import create_model  # Use v2 models
+# Previously imported from removed module
+# from code_agent.adk.models_v2 import create_model  # Use v2 models
 from code_agent.config.config import get_config, initialize_config
 
 load_dotenv()
@@ -26,7 +28,7 @@ load_dotenv()
 # from your_tool_module import your_tool_function
 
 # Ensure config is initialized (reads config files, env vars)
-# Note: CLI overrides from adk run might not be directly available here,
+# Note: CLI overrides might not be directly available here,
 # relies on env vars or config file primarily.
 initialize_config()
 config = get_config()
@@ -36,16 +38,17 @@ if google_api_key_val:
     # Configure genai globally
     genai.configure(api_key=google_api_key_val)
 
-# Get the model string (for Gemini) or BaseLlm instance (for others)
-model_ref = create_model()
+# Get the model instance
+# Replace the create_model() call with direct instantiation
+model_ref = Gemini(model_name="gemini-1.5-flash")
 
 # --- Define the agent --- #
 root_agent = LlmAgent(
-    model=model_ref,  # Pass the string or BaseLlm instance
-    name="adk_cli_runner_agent",
-    instruction="You are a helpful assistant responding via the ADK CLI runner.",
+    model=model_ref,  # Pass the BaseLlm instance
+    name="adk_runner_agent",
+    instruction="You are a helpful assistant responding via the ADK runner.",
     # Add tools here if desired:
     # tools=[your_tool_function],
 )
 
-print("Agent definition complete. Ready for 'adk run'.")
+print("Agent definition complete. Ready for use with ADK.")

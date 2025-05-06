@@ -1,4 +1,4 @@
-"""Tests for the code-agent CLI.
+"""Tests for the code-agent package.
 
 This package contains:
 - Unit tests (unit/)

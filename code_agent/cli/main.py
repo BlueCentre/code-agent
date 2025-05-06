@@ -8,13 +8,20 @@ from typing_extensions import Annotated
 
 # Local application imports
 from code_agent import __version__ as agent_version
+from code_agent.cli.commands.api_server import api_server_command
 from code_agent.cli.commands.config import config_app
+
+# Import command functions
+from code_agent.cli.commands.create import create_command
+from code_agent.cli.commands.deploy import deploy_app
+from code_agent.cli.commands.eval import eval_command
 from code_agent.cli.commands.provider import provider_app
 
 # Import command functions and apps from submodules
 from code_agent.cli.commands.run import run_command
 from code_agent.cli.commands.session import history as history_command
 from code_agent.cli.commands.session import sessions as sessions_command
+from code_agent.cli.commands.web import web_command
 from code_agent.config import get_config, initialize_config
 
 # Load environment variables first (e.g., from .env)
@@ -48,9 +55,16 @@ app.command("run")(run_command)
 app.command("history")(history_command)
 app.command("sessions")(sessions_command)
 
+# Register commands with ADK compatibility
+app.command("create")(create_command)
+app.command("eval")(eval_command)
+app.command("web")(web_command)
+app.command("api_server")(api_server_command)
+
 # Register sub-apps
 app.add_typer(config_app, name="config")
 app.add_typer(provider_app, name="providers")
+app.add_typer(deploy_app, name="deploy")
 
 
 # --- Version Callback ---

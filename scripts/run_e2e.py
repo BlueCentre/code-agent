@@ -21,9 +21,8 @@ from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai.types import Content, Part  # Import genai types
 
-# Import the custom JSON memory service
-from code_agent.adk.json_memory_service import JsonFileMemoryService
-
+# Remove JsonFileMemoryService import which is no longer available
+# from code_agent.adk.json_memory_service import JsonFileMemoryService
 # Import the agent definition
 from code_agent.agent.software_engineer.software_engineer.agent import root_agent
 
@@ -46,7 +45,6 @@ async def main(log_level_arg: str):
     gcp_project = os.getenv("ADK_E2E_GCP_PROJECT")
     gcp_location = os.getenv("ADK_E2E_GCP_LOCATION")
     rag_corpus_id = os.getenv("ADK_E2E_RAG_CORPUS_ID")
-    json_path_e2e = os.getenv("ADK_E2E_JSON_MEMORY_PATH")
     memory_service_type = os.getenv("ADK_E2E_MEMORY_SERVICE", "in_memory").lower()
 
     # Initialize Services
@@ -63,9 +61,6 @@ async def main(log_level_arg: str):
         except ImportError:
             logger.error("google-adk[vertexai] is required for VertexAiRagMemoryService.")
             sys.exit(1)
-    elif memory_service_type == "json_file" and json_path_e2e:
-        logger.info(f"Using JsonFileMemoryService with path: {json_path_e2e}")
-        memory_service = JsonFileMemoryService(filepath=json_path_e2e)
     else:  # Default to in_memory
         if memory_service_type != "in_memory":
             logger.warning(f"Invalid or incomplete config for ADK_E2E_MEMORY_SERVICE='{memory_service_type}'. Defaulting to InMemoryMemoryService.")
@@ -137,11 +132,7 @@ async def main(log_level_arg: str):
     except KeyboardInterrupt:
         logger.info("Interrupted, exiting.")
     finally:
-        # --- Explicitly save memory state ---
-        # Retrieve the latest state of the session directly from the session service.
-        # Then, update the memory service's internal state and force a save.
-        # This bypasses the standard add_session_to_memory flow which might not be
-        # correctly triggered or populated by the runner in this non-interactive script context.
+        # --- Get session for logging only ---
         try:
             completed_session = session_service.get_session(app_name=app_name, user_id=user_id, session_id=session_id)
             # --- DETAILED LOGGING ---
@@ -157,28 +148,8 @@ async def main(log_level_arg: str):
                     logger.info(f"Error during model_dump(): {dump_err}")
             else:
                 logger.info("completed_session object is None.")
-            # --- END DETAILED LOGGING ---
-
-            # logger.debug(f"Retrieved session object content: {completed_session}") # Keep debug for full object
-            if completed_session and isinstance(memory_service, JsonFileMemoryService):  # Check type before accessing private members
-                logger.info(f"Explicitly updating session {session_id} in JsonFileMemoryService.")
-                # Directly update the internal dict
-                # Use try-except around potentially failing attribute access
-                try:
-                    key = memory_service._get_session_key(completed_session)
-                    memory_service._sessions[key] = completed_session
-                    logger.info(f"Forcing save to JSON file: {memory_service.filepath}")
-                    memory_service._save_to_json()  # Force save
-                except AttributeError as ae:
-                    logger.error(f"AttributeError accessing session attributes needed for saving: {ae}")
-                except Exception as save_err:
-                    logger.error(f"Unexpected error updating/saving session in memory service: {save_err}")
-            elif completed_session:
-                logger.warning(f"Memory service is not JsonFileMemoryService ({type(memory_service)}), cannot force save.")
-            else:
-                logger.warning(f"Could not retrieve session {session_id} from session service in finally block.")
         except Exception as e:
-            logger.error(f"Error during final session saving for {session_id}: {e}", exc_info=True)
+            logger.error(f"Error during final session retrieval for {session_id}: {e}", exc_info=True)
         # ------------------------------------------
     logger.info("Agent run finished.")
 
@@ -198,13 +169,5 @@ if __name__ == "__main__":
         os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "True"
         if "GOOGLE_CLOUD_PROJECT" not in os.environ and gcp_project_env:
             os.environ["GOOGLE_CLOUD_PROJECT"] = gcp_project_env
-        if "GOOGLE_CLOUD_LOCATION" not in os.environ and gcp_location_env:
-            os.environ["GOOGLE_CLOUD_LOCATION"] = gcp_location_env
 
-    # Run the main async function
-    try:
-        # Pass parsed log level to main
-        asyncio.run(main(log_level_arg=args.log_level))
-    except Exception as e:
-        logger.critical(f"Unhandled exception during script execution: {e}", exc_info=True)
-        sys.exit(1)
+    asyncio.run(main(args.log_level))

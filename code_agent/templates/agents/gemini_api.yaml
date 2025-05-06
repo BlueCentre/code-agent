@@ -1,0 +1,28 @@
+name: "Gemini API"
+description: "Agent using Google AI Studio API (requires API key)"
+id: "gemini_api"
+default_model: "gemini-2.0-flash"
+requires:
+  - api_key: "GOOGLE_API_KEY"
+files:
+  agent.py: |
+    from google.adk.agents import Agent
+
+    root_agent = Agent(
+        model='{model_name}',
+        name='root_agent',
+        description='A helpful assistant for user questions.',
+        instruction='Answer user questions to the best of your knowledge',
+    )
+  __init__.py: |
+    from . import agent
+  .env: |
+    GOOGLE_GENAI_USE_VERTEXAI=0
+    GOOGLE_API_KEY={google_api_key}
+setup_instructions: |
+  Your Gemini agent has been created with Google AI API integration.
+  
+  To use your agent:
+    code-agent run "Your query here" {agent_folder}
+    
+  To modify your agent, edit the files in the {agent_folder} directory. 

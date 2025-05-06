@@ -27,6 +27,9 @@ dependencies = [
     "requests>=2.31.0", # Required for litellm
     "python-dotenv>=1.0.0",
     "google-adk==0.4.0",
+    "fastapi>=0.111.0", # Required for web server
+    "uvicorn>=0.30.0", # Required for serving FastAPI
+    "PyYAML>=6.0", # For template loading
 ]
 
 [project.urls]
@@ -103,10 +106,9 @@ omit = [
     "*/__pycache__/*",
     "*/site-packages/*",
     "*/.venv/*",
-    "code_agent/agent/cli_runner/*",
-    "code_agent/agent/software_engineer/*",
-    "code_agent/agent/software_engineer_lite/*",
-    "code_agent/agent/travel-concierge/*"
+    "custom_agents/*",
+    "scripts/*",
+    "sandbox/*"
 ]
 
 [tool.coverage.report]
