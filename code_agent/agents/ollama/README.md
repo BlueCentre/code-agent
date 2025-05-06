@@ -2,6 +2,8 @@
 
 This package provides integration with [Ollama](https://ollama.ai/) for running local LLM models.
 
+***NOTE: This is actually not needed. The AI agent created it because I was using an older LiteLLM version***
+
 ## Code Organization
 
 The Ollama integration code has been completely reorganized as of [date]:
