@@ -206,7 +206,7 @@ def deploy_to_gcp(
     try:
         subprocess.run(["gcloud", "--version"], check=True, capture_output=True)
     except (subprocess.CalledProcessError, FileNotFoundError):
-        raise RuntimeError("gcloud CLI not found. Please install it from https://cloud.google.com/sdk/docs/install")
+        raise RuntimeError("gcloud CLI not found. Please install it from https://cloud.google.com/sdk/docs/install")  # noqa: B904
 
     # Build and deploy using gcloud
     logger.info("Deploying to Cloud Run...")
@@ -244,4 +244,4 @@ def deploy_to_gcp(
 
     except subprocess.CalledProcessError as e:
         logger.error(f"Deployment failed: {e.stderr}")
-        raise RuntimeError(f"Deployment failed: {e.stderr}")
+        raise RuntimeError(f"Deployment failed: {e.stderr}")  # noqa: B904

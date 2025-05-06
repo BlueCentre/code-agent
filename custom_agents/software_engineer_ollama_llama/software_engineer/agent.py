@@ -2,11 +2,11 @@
 
 import logging
 
-# from google.adk.agents import Agent
-from google.adk.agents import LlmAgent
-from google.adk.models.lite_llm import LiteLlm
+from google.adk.agents import Agent
+from google.adk.tools import load_memory
 
-# from google.adk.tools import load_memory
+from code_agent.agents.ollama.adk_integration import OllamaLlm
+
 from . import prompt
 
 # Use relative imports from the 'software_engineer' sibling directory
@@ -36,44 +36,58 @@ from .tools import (
 from .tools import (
     configure_approval_tool as configure_edit_approval_tool,  # Keep alias for now
 )
+
+# save_current_session_to_file_tool, # Remove placeholder
+# Import memory tools (using the wrapped variable names)
+from .tools.memory_tools import add_memory_fact, search_memory_facts
 from .tools.project_context import load_project_context
 
 logger = logging.getLogger(__name__)
 
 
+# --- Memory Initialization ---
+def initialize_session_memory(tool_context):
+    """Initializes the session memory in tool_context if it doesn't exist."""
+    if not hasattr(tool_context, "session_state"):
+        logger.warning("Tool context does not have session_state. Cannot initialize memory.")
+        # In a real scenario, might need to initialize session_state itself
+        # For now, we assume session_state exists but memory might not.
+        return
+
+    if "memory" not in tool_context.session_state:
+        logger.info("Initializing agent session memory.")
+        tool_context.session_state["memory"] = {
+            "context": {
+                "project_path": None,  # Will be populated by load_project_context
+                "current_file": None,
+            },
+            "tasks": {
+                "active_task": None,
+                "completed_tasks": [],
+            },
+            "history": {
+                "last_read_file": None,
+                "last_search_query": None,
+                "last_error": None,
+            },
+            "user_preferences": {},
+            # Add other relevant fields as needed based on agent interactions
+        }
+    # else: memory already exists, do nothing
+
+
 # --- Agent Definition ---
+
+ollama_llm = OllamaLlm(
+    model="llama3.2",  # Use your preferred Ollama model
+    base_url="http://localhost:11434",  # Adjust if your Ollama server is on a different address
+)
 
 # Note: Using custom ripgrep-based codebase search in tools/code_search.py
 
-# --- Example Agent using a model hosted on a vLLM endpoint ---
-
-# Endpoint URL provided by your vLLM deployment
-api_base_url = "http://localhost:11434/v1"
-
-# Model name as recognized by *your* vLLM endpoint configuration
-model_name_at_endpoint = "hosted_vllm/llama3.2"  # Example from vllm_test.py
-
-# Authentication (Example: using gcloud identity token for a Cloud Run deployment)
-# Adapt this based on your endpoint's security
-# try:
-#     gcloud_token = subprocess.check_output(
-#         ["gcloud", "auth", "print-identity-token", "-q"]
-#     ).decode().strip()
-#     auth_headers = {"Authorization": f"Bearer {gcloud_token}"}
-# except Exception as e:
-#     print(f"Warning: Could not get gcloud token - {e}. Endpoint might be unsecured or require different auth.")
-#     auth_headers = None # Or handle error appropriately
-
-
 # REF: https://ai.google.dev/gemini-api/docs/rate-limits
-# root_agent = Agent(
-root_agent = LlmAgent(
-    # model="gemini-2.5-flash-preview-04-17",
-    model=LiteLlm(
-        model=model_name_at_endpoint,
-        api_base=api_base_url,
-        # auth_headers=auth_headers,
-    ),
+root_agent = Agent(
+    model=ollama_llm,
     name="root_agent",
     description="An AI software engineer assistant that helps with various software development tasks",
     instruction=prompt.ROOT_AGENT_INSTR,
@@ -99,6 +113,13 @@ root_agent = LlmAgent(
         google_search_grounding,
         codebase_search_tool,
         get_os_info_tool,
+        # Memory Tools:
+        load_memory,  # Keep for transcript search
+        add_memory_fact,  # Use wrapped tool variable name
+        search_memory_facts,  # Use wrapped tool variable name
+        # Remove placeholder tools
+        # save_current_session_to_file_tool,
+        # load_memory_from_file_tool,
     ],
     # Pass the function directly, not as a list
     before_agent_callback=load_project_context,
