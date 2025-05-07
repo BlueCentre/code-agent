@@ -42,7 +42,13 @@ from .shell_command import (
 # Export search tools
 from .search import google_search_grounding
 
-from .system_info import get_os_info_tool
+# Export system info tools
+from .system_info import (
+    get_os_info_tool,
+    list_available_tools_tool,
+    list_tools_tool,
+    available_tools_tool,
+)
 
 # Import system info tools
 
@@ -74,6 +80,9 @@ __all__ = [
     "codebase_search_tool",
     # System Info Tools
     "get_os_info_tool",
+    "list_available_tools_tool",
+    "list_tools_tool",  # Alias
+    "available_tools_tool",  # Alias
     # Placeholder Persistent Memory Tools
     "save_current_session_to_file_tool",
     "load_memory_from_file_tool",

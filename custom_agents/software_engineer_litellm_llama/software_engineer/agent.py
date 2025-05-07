@@ -18,6 +18,7 @@ from .sub_agents.devops.agent import devops_agent
 from .sub_agents.documentation.agent import documentation_agent
 from .sub_agents.testing.agent import testing_agent
 from .tools import (
+    available_tools_tool,
     check_command_exists_tool,
     check_shell_command_safety_tool,
     codebase_search_tool,
@@ -27,7 +28,9 @@ from .tools import (
     execute_vetted_shell_command_tool,
     get_os_info_tool,
     google_search_grounding,
+    list_available_tools_tool,
     list_dir_tool,
+    list_tools_tool,
     # load_memory_from_file_tool, # Remove placeholder
     read_file_tool,
 )
@@ -86,6 +89,9 @@ root_agent = LlmAgent(
         google_search_grounding,
         codebase_search_tool,
         get_os_info_tool,
+        list_available_tools_tool,  # NOTE: This is needed for LiteLLM models in order to use the FunctionTool.
+        list_tools_tool,
+        available_tools_tool,
         # Memory Tools:
         # load_memory,  # Keep for transcript search
         # add_memory_fact,  # Use wrapped tool variable name
