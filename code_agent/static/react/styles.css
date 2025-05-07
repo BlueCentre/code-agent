@@ -1,0 +1,452 @@
+:root {
+  /* Light Theme (Default) */
+  --bg-color: #f4f7f9;
+  --text-color: #333333;
+  --header-bg: #ffffff;
+  --header-text: #2c3e50;
+  --header-border: #e0e0e0;
+  --sidebar-bg: #2c3e50; /* For a potential sidebar */
+  --sidebar-text: #ecf0f1;
+  --chat-bg: #ffffff;
+  --chat-shadow: rgba(0, 0, 0, 0.08);
+  --system-message-bg: #e9ecef;
+  --system-message-text: #495057;
+  --user-message-bg: #007bff;
+  --user-message-text: #ffffff;
+  --agent-message-bg: #f0f2f5;
+  --agent-message-text: #212529;
+  --tool-message-bg: #e2f5ea;
+  --tool-message-border: #c3e6cb;
+  --tool-message-text: #155724;
+  --tool-call-message-bg: #fff9e6; /* Light yellow */
+  --tool-call-message-border: #ffe দৃঢ়b; /* Lighter yellow border */
+  --tool-call-message-text: #8c6d00;
+  --tool-result-message-bg: #f3e8ff; /* Light purple */
+  --tool-result-message-border: #e0cfff; /* Lighter purple border */
+  --tool-result-message-text: #5e35b1;
+  --input-container-bg: transparent; /* For floating effect */
+  --input-bg: #ffffff;
+  --input-border: #ced4da;
+  --input-shadow: rgba(0, 0, 0, 0.1);
+  --input-text: #495057;
+  --button-bg: #007bff;
+  --button-text: #ffffff;
+  --button-hover-bg: #0056b3;
+  --status-bar-bg: #f8f9fa;
+  --status-bar-text: #6c757d;
+  --scrollbar-thumb: #c1c1c1;
+  --scrollbar-track: #f1f1f1;
+}
+
+[data-theme="dark"] {
+  --bg-color: #22272e; /* Darker background */
+  --text-color: #c9d1d9;
+  --header-bg: #2d333b;
+  --header-text: #c9d1d9;
+  --header-border: #373e47;
+  --sidebar-bg: #1c2128;
+  --sidebar-text: #c9d1d9;
+  --chat-bg: #2d333b;
+  --chat-shadow: rgba(0, 0, 0, 0.3);
+  --system-message-bg: #373e47;
+  --system-message-text: #adbac7;
+  --user-message-bg: #007bff;
+  --user-message-text: #ffffff;
+  --agent-message-bg: #373e47; 
+  --agent-message-text: #c9d1d9;
+  --tool-message-bg: #1d4d3c;
+  --tool-message-border: #2a6e53;
+  --tool-message-text: #a7e0c3;
+  --tool-call-message-bg: #4d4220; /* Darker yellow */
+  --tool-call-message-border: #6b5b2e;
+  --tool-call-message-text: #ffeaa7;
+  --tool-result-message-bg: #3e2a5e; /* Darker purple */
+  --tool-result-message-border: #583c82;
+  --tool-result-message-text: #d1c4e9;
+  --input-container-bg: transparent;
+  --input-bg: #22272e; /* Darker input field */
+  --input-border: #444c56;
+  --input-shadow: rgba(0, 0, 0, 0.4);
+  --input-text: #c9d1d9;
+  --button-bg: #007bff;
+  --button-text: #ffffff;
+  --button-hover-bg: #0056b3;
+  --status-bar-bg: #2d333b;
+  --status-bar-text: #adbac7;
+  --scrollbar-thumb: #566573;
+  --scrollbar-track: #34495e;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  transition: background-color 0.2s ease-out, color 0.2s ease-out, border-color 0.2s ease-out;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+  line-height: 1.6;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  display: flex;
+  flex-direction: column; /* Changed for full page layout */
+  align-items: center;
+  min-height: 100vh;
+  /* padding: 10px; Removed body padding for full-width header/footer */
+}
+
+/* Main app layout structure */
+.app-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100%;
+}
+
+/* Header adjustments (optional - can be removed if buttons are fully floating) */
+header {
+  padding: 15px 20px;
+  background-color: var(--header-bg);
+  color: var(--header-text);
+  display: flex; 
+  justify-content: center; /* Center title now */
+  align-items: center;
+  border-bottom: 1px solid var(--header-border);
+  width: 100%; 
+  position: sticky; 
+  top: 0;
+  z-index: 100;
+}
+header h1 { font-size: 1.2rem; font-weight: 600; }
+
+/* Floating Action Buttons (Top Right) */
+.floating-actions {
+  position: fixed; /* Changed from flex inside header */
+  top: 15px;
+  right: 20px;
+  display: flex;
+  gap: 10px;
+  z-index: 110; /* Above header */
+}
+
+.icon-button {
+  background-color: var(--agent-message-bg); /* Use a subtle background */
+  color: var(--text-color);
+  border: 1px solid var(--header-border);
+  border-radius: 8px; /* Slightly rounded square */
+  padding: 8px; /* Square padding */
+  cursor: pointer;
+  font-size: 1.2rem; /* Adjust icon size */
+  line-height: 1; /* Ensure icon is centered vertically */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px; /* Fixed width */
+  height: 38px; /* Fixed height */
+  transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
+  position: relative; /* Needed for tooltip */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.icon-button:hover {
+  background-color: var(--system-message-bg);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+}
+
+/* Tooltip Styles */
+.icon-button::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%; /* Position above the button */
+  left: 50%;
+  transform: translateX(-50%) translateY(-5px); /* Center and add small gap */
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+  pointer-events: none; /* Don't block hover on button */
+}
+
+.icon-button:hover::after {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Specific styles for streaming toggle states */
+.streaming-toggle.enabled {
+  /* Default state is fine, or add specific "enabled" look */
+  /* Example: border-color: green; */
+}
+
+.streaming-toggle.disabled {
+  opacity: 0.6; /* Make it look a bit faded when off */
+  /* Example: border-color: red; */
+}
+
+.container { /* Main chat content area */
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1; 
+  width: 100%;
+  max-width: 1350px; /* Tripled from a 900px baseline, doubled current 1350px */
+  margin: 0 auto; 
+  padding: 0 30px; /* More horizontal padding */
+  overflow: hidden;
+}
+
+.agent-selection-container {
+  padding: 15px 0; /* Padding around agent selector within the main content area */
+  /* border-bottom: 1px solid var(--header-border); No border needed if visually separated */
+}
+
+.agent-selection {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: 400px; /* Limit width of selector itself */
+  margin: 0 auto; /* Center selector */
+}
+
+.agent-selection label {
+  margin-right: 10px;
+  font-weight: 500;
+  color: var(--text-color);
+}
+
+.agent-selection select {
+  flex-grow: 1;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--agent-select-border);
+  background-color: var(--agent-select-bg);
+  color: var(--text-color);
+  font-size: 0.95rem;
+}
+
+.chat-messages {
+  flex-grow: 1;
+  padding: 20px 0; 
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 15px; /* Slightly increased gap */
+  scrollbar-width: none; /* Hides scrollbar for Firefox */
+  -ms-overflow-style: none;  /* Hides scrollbar for IE and Edge */
+}
+
+/* Scrollbar styling */
+.chat-messages::-webkit-scrollbar {
+  /* width: 8px; */ /* Or use 0 if you want to completely remove its space */
+  display: none; /* Hides scrollbar for WebKit browsers */
+}
+
+/* Generic message bubble styling */
+.message-bubble {
+  padding: 10px 15px;
+  border-radius: 18px;
+  max-width: 95%; 
+  word-wrap: break-word;
+  line-height: 1.4;
+  /* Common styles for all bubbles, specific styles below will override/add */
+}
+
+.system-message,
+.user-message,
+.agent-message,
+.tool-message, /* Keep for now if used elsewhere, or remove if fully deprecated */
+.tool-call-message,
+.tool-result-message {
+  /* These were previously on .system-message, .user-message etc. */
+  /* Now mostly handled by .message-bubble, specific alignments and backgrounds below */
+}
+
+.system-message {
+  background-color: var(--system-message-bg);
+  color: var(--system-message-text);
+  align-self: center;
+  font-size: 0.85rem;
+  text-align: center;
+  margin: 10px 0;
+}
+
+.user-message {
+  background-color: var(--user-message-bg);
+  color: var(--user-message-text);
+  align-self: flex-end;
+  border-bottom-right-radius: 6px;
+}
+
+.agent-message {
+  background-color: var(--agent-message-bg);
+  color: var(--agent-message-text);
+  align-self: flex-start;
+  border-bottom-left-radius: 6px;
+}
+
+.tool-message {
+  background-color: var(--tool-message-bg);
+  color: var(--tool-message-text);
+  align-self: flex-start;
+  border: 1px solid var(--tool-message-border);
+  font-size: 0.9rem;
+  padding: 12px 18px;
+  border-radius: 8px;
+}
+
+.tool-message strong { font-weight: 600; margin-right: 5px; }
+.tool-message .tool-event {
+  margin-top: 8px;
+  padding-left: 10px;
+  border-left: 2px solid var(--tool-message-border);
+  font-size: 0.85rem;
+  opacity: 0.9;
+}
+
+.tool-call-message,
+.tool-result-message {
+  background-color: var(--system-message-bg); /* Default to system, specific below */
+  color: var(--system-message-text);
+  align-self: center; /* Or flex-start if preferred for tool messages */
+  border: 1px solid var(--header-border);
+  font-size: 0.9rem;
+  /* padding: 12px 18px; /* Already on message-bubble */
+  /* border-radius: 8px; /* Already on message-bubble */
+}
+
+.tool-call-message {
+  background-color: var(--tool-call-message-bg);
+  color: var(--tool-call-message-text);
+  border-color: var(--tool-call-message-border);
+}
+
+.tool-result-message {
+  background-color: var(--tool-result-message-bg);
+  color: var(--tool-result-message-text);
+  border-color: var(--tool-result-message-border);
+}
+
+.tool-call-message pre,
+.tool-result-message pre {
+  background-color: var(--bg-color); /* Use main background for contrast */
+  color: var(--text-color);
+  border: 1px solid var(--header-border);
+  padding: 8px;
+  margin-top: 8px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  white-space: pre-wrap; /* Allow wrapping */
+  word-break: break-all; /* Break long strings */
+}
+
+pre {
+  background-color: var(--agent-message-bg); 
+  border: 1px solid var(--agent-select-border);
+  padding: 12px;
+  border-radius: 8px;
+  margin: 8px 0;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+  font-size: 0.9rem;
+  overflow-x: auto;
+  color: var(--text-color);
+}
+pre code { font-family: inherit; background: none; padding: 0; }
+
+/* Floating Chat Input Area */
+.chat-input-container {
+  padding: 20px 30px; /* Match container padding */
+  background-color: var(--input-container-bg);
+  width: 100%; 
+  max-width: 1350px; /* Match container width */
+  margin: 0 auto; 
+  position: sticky; 
+  bottom: 0;
+  z-index: 50;
+}
+
+/* Agent selector now lives near the input */
+.agent-selector-bottom {
+  display: flex;
+  justify-content: center; /* Center the selector */
+  margin-bottom: 10px; /* Space above input */
+}
+
+.agent-selector-bottom select {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--agent-select-border);
+  background-color: var(--agent-select-bg);
+  color: var(--text-color);
+  font-size: 0.9rem;
+  max-width: 300px; /* Limit width */
+}
+
+.chat-input {
+  display: flex;
+  align-items: center;
+  background-color: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 24px;
+  padding: 8px 10px;
+  box-shadow: 0 4px 12px var(--input-shadow);
+}
+
+#user-input {
+  flex-grow: 1;
+  padding: 10px 15px; /* Padding inside textarea */
+  border: none; /* Remove default border, parent has it */
+  border-radius: 20px; 
+  resize: none;
+  font-family: inherit;
+  font-size: 1rem;
+  background-color: transparent; /* Take parent bg */
+  color: var(--input-text);
+  margin-right: 10px;
+  min-height: 24px; /* Minimum height */
+  max-height: 120px; /* Prevent excessive growth */
+  overflow-y: auto; /* Allow scroll if content too long */
+}
+#user-input:focus { outline: none; }
+
+#send-button {
+  padding: 10px 18px;
+  background-color: var(--button-bg);
+  color: var(--button-text);
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+}
+#send-button:disabled { background-color: #cccccc; color: #666666; cursor: not-allowed; }
+#send-button:hover:not(:disabled) { background-color: var(--button-hover-bg); transform: translateY(-1px); }
+
+.status-bar {
+  padding: 10px 20px;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--status-bar-text);
+  background-color: var(--status-bar-bg);
+  /* border-top: 1px solid var(--agent-select-border); Remove if not needed */
+  width: 100%; /* Full width footer */
+}
+
+.typing { display: flex; align-items: center; }
+.typing span:first-child { margin-right: 4px; }
+.typing-dots { display: inline-block; animation: typingDots 1.5s infinite steps(4, end); }
+@keyframes typingDots { 0%, 20% { content: ""; } 40% { content: "."; } 60% { content: ".."; } 80%, 100% { content: "..."; } }
+
+/* For agent messages containing lists, allow them to take even more width if needed */
+.agent-message ul,
+.agent-message ol,
+.agent-message pre {
+  max-width: none; /* Override the parent agent-message max-width for these elements */
+  /* Alternatively, you could set a specific wider max-width like 98% or 100% if needed */
+}

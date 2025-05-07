@@ -4,9 +4,7 @@ Uses our web_adapter to provide compatibility with ADK CLI web functionality.
 """
 
 import asyncio
-import logging
 import os
-import tempfile
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import List, Optional
@@ -58,17 +56,6 @@ def web_command(
     Example:
         code-agent web path/to/agents_dir
     """
-    # Set up logging
-    if log_to_tmp:
-        log_file = tempfile.NamedTemporaryFile(prefix="code_agent_web_", suffix=".log", delete=False, mode="w")
-        logging.basicConfig(
-            filename=log_file.name,
-            level=getattr(logging, log_level.upper()),
-            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        )
-        console.print(f"[bold blue]Logging to {log_file.name}[/bold blue]")
-    else:
-        logging.basicConfig(level=getattr(logging, log_level.upper()))
 
     # Create an async function to run the web server
     async def run_web_server():

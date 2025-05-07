@@ -5,13 +5,15 @@ This module adapts our Typer-based CLI to work with ADK CLI web server patterns 
 It handles agent loading, session management, and FastAPI configuration for web and API server commands.
 """
 
+import json
 import logging
+import sys  # Import sys
 import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import List, Optional
 
-from fastapi import Body, FastAPI, HTTPException, Request
+from fastapi import Body, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -20,7 +22,30 @@ from starlette.types import Lifespan
 
 from code_agent.adapters.adk_adapter import ADK_AVAILABLE, adk_adapter
 
+# Explicitly get logger for this module
 logger = logging.getLogger(__name__)
+# --- Force Handler and Level ---
+# Check if handlers are already configured to avoid duplicates if possible
+if not logger.handlers:
+    logger.setLevel(logging.DEBUG)  # Set level directly on this logger
+    handler = logging.StreamHandler(sys.stdout)  # Ensure output goes to stdout
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    # Optional: Prevent messages propagating to the root logger
+    # if you suspect duplicate messages from root/uvicorn handlers.
+    # logger.propagate = False
+# --- End Force Handler and Level ---
+
+
+# Define a custom serializer function for json.dumps
+def json_serializer_default(obj):
+    # Add checks for known custom types if they have better representations
+    # Example:
+    # if type(obj).__name__ == 'ConfigureShellApprovalOutput':
+    #     return {'status': getattr(obj, 'status', str(obj))}
+    # Fallback for any object json doesn't know
+    return str(obj)
 
 
 # Define request/response models for API
@@ -268,7 +293,7 @@ def create_web_app(
         agent_id: str,
         request: ChatRequest = Body(...),
     ):
-        """Chat with an agent with streaming response."""
+        """Stream chat with an agent using SSE."""
         agent_path = Path(agents_dir) / agent_id
         agent_file = agent_path / "agent.py"
 
@@ -276,71 +301,163 @@ def create_web_app(
             raise HTTPException(status_code=404, detail=f"Agent not found: {agent_id}")
 
         try:
-            # Load the agent
             agent = adk_adapter.load_agent(agent_path)
             if not agent:
                 raise HTTPException(status_code=500, detail="Failed to load agent")
 
-            # Generate a session ID if not provided
             session_id = request.session_id or str(uuid.uuid4())
-
-            # Create user ID (fixed for now)
             user_id = "web_user"
 
-            # Create or get session
-            session = None
+            current_session = None
             if ADK_AVAILABLE and adk_adapter.session_service:
                 if request.session_id:
                     try:
-                        session = adk_adapter.session_service.get_session(app_name=agent_id, user_id=user_id, session_id=session_id)
+                        current_session = adk_adapter.session_service.get_session(app_name=agent_id, user_id=user_id, session_id=session_id)
                     except Exception:
-                        # If session doesn't exist, create a new one
-                        session = None
+                        current_session = None
+                if not current_session:
+                    current_session = adk_adapter.create_session(app_name=agent_id, user_id=user_id)
+                    session_id = current_session.id
 
-                if not session:
-                    session = adk_adapter.create_session(app_name=agent_id, user_id=user_id)
-                    session_id = session.id
-
-            # Create content
             content = adk_adapter.create_content(request.message)
-
-            # Get runner
             runner = adk_adapter.get_runner(agent, agent_id)
 
             if not runner:
-                raise HTTPException(status_code=501, detail="Streaming not supported without ADK Runner")
+                raise HTTPException(status_code=500, detail="Agent runner not available")
 
-            # Define async generator for streaming
             async def event_generator():
+                sse_session_id = f"data: [SESSION_ID]{session_id}[/SESSION_ID]\\n\\n"
+                logger.debug(f"Yielding SSE data: {sse_session_id!r}")  # Log yielded data
+                yield sse_session_id
                 try:
+                    logger.debug("EVENT_GENERATOR: Entered try block, starting runner loop.")
                     async for event in runner.run_async(user_id=user_id, session_id=session_id, new_message=content):
+                        # DETAILED LOGGING HERE (using DEBUG level)
+                        logger.debug(f"WEB_ADAPTER received event ID: {event.id}, Author: {event.author}")
                         if event.content and event.content.parts:
-                            if text := "".join(part.text or "" for part in event.content.parts):
-                                if event.author != "user":  # Skip echoing user message
-                                    # Format as server-sent event
-                                    yield f"data: {text}\n\n"
+                            logger.debug(f"Event {event.id} has {len(event.content.parts)} parts.")
+                            for i, part in enumerate(event.content.parts):
+                                part_info = {}
+                                if hasattr(part, "text") and part.text:
+                                    part_info["text"] = part.text
+                                if hasattr(part, "function_call") and part.function_call:
+                                    part_info["function_call_name"] = part.function_call.name
+                                    part_info["function_call_args"] = part.function_call.args
+                                if hasattr(part, "function_response") and part.function_response:
+                                    part_info["function_response_name"] = part.function_response.name
+                                    # Safely access response, which might be a dict or other structure
+                                    part_info["function_response_data"] = getattr(part.function_response, "response", str(part.function_response))
+                                logger.debug(f"Event {event.id}, Part {i}: {part_info}")  # Changed to debug
+                        else:
+                            logger.debug(f"Event {event.id} has no content or no parts.")  # Changed to debug
 
-                    # End with session ID
-                    yield f"data: [SESSION_ID]{session_id}[/SESSION_ID]\n\n"
-                    yield "data: [DONE]\n\n"
+                        function_calls_from_method = event.get_function_calls()
+                        logger.debug(f"Event {event.id} - get_function_calls() result: {function_calls_from_method}")  # Changed to debug
+
+                        function_responses_from_method = event.get_function_responses()
+                        logger.debug(f"Event {event.id} - get_function_responses() result: {function_responses_from_method}")  # Changed to debug
+                        # END DETAILED LOGGING
+
+                        if event.author == "user":  # Don\'t stream back user\'s own input
+                            continue
+
+                        # Stream Function Calls
+                        # Use the already fetched function_calls_from_method to avoid calling again
+                        if function_calls_from_method:
+                            for fc in function_calls_from_method:
+                                args_for_json = fc.args if isinstance(fc.args, dict) else str(fc.args)
+                                payload_dict = {"type": "tool_call", "tool_name": fc.name, "tool_args": args_for_json, "event_id": event.id}
+                                json_payload = json.dumps(payload_dict)
+                                sse_data = f"data: {json_payload}\\n\\n"
+                                logger.debug(f"Yielding SSE data: {sse_data!r}")  # Log yielded data
+                                yield sse_data
+
+                        # Stream Function Responses
+                        # Use the already fetched function_responses_from_method
+                        if function_responses_from_method:
+                            for fr in function_responses_from_method:
+                                raw_result_data = fr.response  # Get the raw response data
+
+                                payload_dict = {
+                                    "type": "tool_result",
+                                    "tool_name": fr.name,
+                                    "result": raw_result_data,  # Put raw data here
+                                    "event_id": event.id,
+                                }
+                                # Use the default handler in json.dumps
+                                try:
+                                    # This will call json_serializer_default for nested unknown objects
+                                    json_payload = json.dumps(payload_dict, default=json_serializer_default)
+                                except Exception as dump_err:
+                                    logger.error(f"Failed to dump tool_result payload: {dump_err}")
+                                    # Fallback: try dumping just the string representation
+                                    try:
+                                        safe_payload = payload_dict.copy()
+                                        safe_payload["result"] = str(raw_result_data)
+                                        json_payload = json.dumps(safe_payload)
+                                    except Exception as final_dump_err:
+                                        logger.error(f"Final fallback dump failed: {final_dump_err}")
+                                        error_info = {
+                                            "type": "tool_result",
+                                            "tool_name": fr.name,
+                                            "result": f"[Serialization Error: {final_dump_err}]",
+                                            "event_id": event.id,
+                                        }
+                                        json_payload = json.dumps(error_info)
+
+                                sse_data = f"data: {json_payload}\\n\\n"
+                                logger.debug(f"Yielding SSE data: {sse_data!r}")
+                                yield sse_data
+
+                        # Stream Text Content
+                        text_content = ""
+                        if event.content and event.content.parts:
+                            # Collect text from parts that are explicitly text
+                            text_content = "".join(part.text or "" for part in event.content.parts if hasattr(part, "text") and part.text)
+
+                        if text_content:  # Only send if there\'s actual text
+                            json_str = '{"type": "agent", "text": "test content"}'
+                            # Revert to actual text_content for production:
+                            payload_dict = {"type": "agent", "text": text_content, "author": event.author, "event_id": event.id}
+                            json_payload = json.dumps(payload_dict)
+                            sse_data = f"data: {json_payload}\\n\\n"
+                            logger.debug(f"Yielding SSE data: {sse_data!r}")  # Log yielded data
+                            yield sse_data
+
+                    sse_done = "data: [DONE]\\n\\n"
+                    logger.debug(f"Yielding SSE data: {sse_done!r}")  # Log yielded data
+                    yield sse_done
                 except Exception as e:
-                    logger.exception(f"Error in streaming: {e}")
-                    yield f"data: [ERROR]{e!s}[/ERROR]\n\n"
-                    yield "data: [DONE]\n\n"
+                    logger.exception(f"Error during agent streaming: {e}")
+                    error_payload = {"type": "system", "text": f"Error during agent streaming: {e!s}"}
+                    sse_error = f"data: {json.dumps(error_payload)}\\n\\n"  # Send error as JSON
+                    # Keep the old marker format too for compatibility?
+                    # yield f"data: [ERROR]{str(e)}[/ERROR]\\n\\n"
+                    logger.debug(f"Yielding SSE data: {sse_error!r}")  # Log yielded data
+                    yield sse_error
 
-            return StreamingResponse(
-                event_generator(),
-                media_type="text/event-stream",
-            )
+            return StreamingResponse(event_generator(), media_type="text/event-stream")
 
-        except HTTPException:
+        except HTTPException:  # Re-raise HTTPExceptions directly
             raise
         except Exception as e:
-            logger.exception(f"Error in streaming chat endpoint: {e}")
-            raise HTTPException(
-                status_code=500,
-                detail=f"Failed to process streaming chat request: {e!s}",
-            )
+            logger.exception(f"Error in stream_chat_with_agent for agent {agent_id}: {e}")
+            # For non-HTTP exceptions, raise a generic 500 or handle as appropriate
+            raise HTTPException(status_code=500, detail=f"Internal server error: {e!s}")
+
+    @app.head("/api/chat/{agent_id}/stream")
+    async def head_stream_chat_with_agent(agent_id: str):
+        """Endpoint to check if streaming is available via HEAD request."""
+        # Minimal check: if the agent_id implies a valid agent directory, return 200
+        # This doesn't fully validate the agent like the POST does, but it's a common pattern
+        # for HEAD requests used for capability checking.
+        agent_path = Path(agents_dir) / agent_id / "agent.py"
+        if not agent_path.exists():
+            # Optionally, you could raise HTTPException(status_code=404) here
+            # but for a simple HEAD check, just not returning 200 might be enough
+            # or let the frontend interpret non-200 as "not supported"
+            return Response(status_code=404)  # Or 405 if preferred for method mismatch on resource
+        return Response(status_code=200)
 
     # Error handler
     @app.exception_handler(Exception)
