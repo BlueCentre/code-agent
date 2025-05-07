@@ -2,8 +2,8 @@
 This module contains the commands for the run sub-app.
 """
 
+import asyncio
 import importlib.util
-import json
 import logging
 import sys
 import traceback
@@ -21,38 +21,62 @@ from code_agent.config import get_config, initialize_config
 # Import ADK components if available
 try:
     from google.adk.artifacts.in_memory_artifact_service import InMemoryArtifactService
-
-    # Try importing the memory service
-    from google.adk.memory.in_memory_memory_service import InMemoryMemoryService
     from google.adk.sessions.in_memory_session_service import InMemorySessionService
+    from google.adk.sessions.session import Session
+
+    # Some modules might be missing in the current ADK version
+    try:
+        from google.adk.memory.in_memory_memory_service import InMemoryMemoryService
+    except ImportError:
+        InMemoryMemoryService = None
+
+    # Adapt to available Content/Part classes
+    try:
+        from google.adk.genai.types import Content, Part
+    except ImportError:
+        # Alternative imports if genai module is not available
+        try:
+            from google.adk.models.types import Content, Part
+        except ImportError:
+            # Fallback to a minimal implementation if needed
+            from dataclasses import dataclass
+
+            @dataclass
+            class Part:
+                text: str = None
+
+            @dataclass
+            class Content:
+                role: str = "user"
+                parts: list = None
+
+                def __post_init__(self):
+                    if self.parts is None:
+                        self.parts = []
 
     ADK_INSTALLED = True
-    # Placeholder is no longer needed here if import succeeds
-    # InMemoryMemoryService = None # type: ignore
-except ImportError:
+except ImportError as e:
     # Set all to None if ANY import fails
     InMemoryArtifactService = None  # type: ignore
     InMemorySessionService = None  # type: ignore
-    InMemoryMemoryService = None  # type: ignore # Keep this for the check below
+    InMemoryMemoryService = None  # type: ignore
+    Content = None  # type: ignore
+    Part = None  # type: ignore
+    Session = None  # type: ignore
     ADK_INSTALLED = False
+    print(f"Failed to import ADK: {e}")
 
-# Import our custom session service
-# from code_agent.services.memory_service import FileSystemMemoryService # Old import
-# from code_agent.services.memory_service import MemoryServiceWrapper # Not the wrapper
-from code_agent.adk.json_memory_service import JsonFileMemoryService  # Import the correct one
+# Import pydantic for input file validation
+from pydantic import BaseModel
 
-# Import helpers from utils
 from code_agent.cli.utils import (
     _resolve_agent_path_str,
     operation_complete,
     operation_error,
-    operation_warning,
     run_cli,
     setup_logging,
     step_progress,
-    thinking_indicator,
 )
-from code_agent.services.session_service import FileSystemSessionService
 
 logger = logging.getLogger(__name__)  # Define logger at module level
 
@@ -68,8 +92,14 @@ SESSION_ID_HELP = "The session ID to continue or view history for."
 LEVEL_HELP = "Verbosity level to set (0-3, QUIET, NORMAL, VERBOSE, DEBUG)."
 
 
+# Model for replaying a sequence of queries with initial state
+class InputFile(BaseModel):
+    state: dict[str, object]
+    queries: list[str]
+
+
 # Create module-level singletons for argument types to avoid B008
-INSTRUCTION_ARG = typer.Argument(help=INSTRUCTION_HELP)
+INSTRUCTION_ARG = typer.Argument(help=INSTRUCTION_HELP, default="")  # Default to empty string for interactive mode
 # Use Optional[Path] and handle None/existence check in the command
 AGENT_PATH_ARG = typer.Argument(
     help=AGENT_PATH_HELP,
@@ -80,22 +110,27 @@ AGENT_PATH_ARG = typer.Argument(
 )
 
 
+# Helper function to run the agent asynchronously
+async def _run_agent_async(runner, user_id, session_id, content, console):
+    """Run the agent asynchronously and print the output."""
+    async for event in runner.run_async(user_id=user_id, session_id=session_id, new_message=content):
+        if event.content and event.content.parts:
+            text = "".join(part.text or "" for part in event.content.parts)
+            if text:
+                console.print(f"[dim][{event.author}]:[/dim] {text}")
+
+
 # --- Run Command ---
-
-
-# Define the run command function separately
-# We will register it with the main app in main.py
 def run_command(
     instruction: Annotated[
-        str,
-        INSTRUCTION_ARG,
+        str,  # Not optional
+        typer.Argument(help=INSTRUCTION_HELP),
     ],
-    # Correct the type hint for agent_path and default value assignment
+    # Agent path is a required positional argument, not optional
     agent_path: Annotated[
-        Optional[Path],  # Make Path optional
-        # Remove default from Argument, it will be set via function default
-        AGENT_PATH_ARG,
-    ] = AGENT_PATH_DEFAULT,  # Assign default value here using =
+        Path,  # Not optional to avoid confusing typer
+        typer.Argument(help=AGENT_PATH_HELP),
+    ],
     session_id: Annotated[
         Optional[str],
         typer.Option("--session-id", "-s", help=SESSION_ID_HELP),
@@ -146,10 +181,30 @@ def run_command(
             help="Maximum number of tokens to generate. Overrides config file.",
         ),
     ] = None,
-    save_session_cli: Annotated[
+    save_session: Annotated[
         bool,
         typer.Option("--save-session", help="Save the conversation session to a file."),
     ] = False,
+    replay: Annotated[
+        Optional[Path],
+        typer.Option(
+            exists=True,
+            dir_okay=False,
+            file_okay=True,
+            resolve_path=True,
+            help="The json file that contains the initial state of the session and user queries. A new session will be created using this state. And user queries are run against the newly created session. Users cannot continue to interact with the agent.",
+        ),
+    ] = None,
+    resume: Annotated[
+        Optional[Path],
+        typer.Option(
+            exists=True,
+            dir_okay=False,
+            file_okay=True,
+            resolve_path=True,
+            help="The json file that contains a previously saved session (by --save-session option). The previous session will be re-displayed. And user can continue to interact with the agent.",
+        ),
+    ] = None,
     verbose: Annotated[
         bool,
         typer.Option(
@@ -162,8 +217,20 @@ def run_command(
 ):
     """
     Run a Code Agent powered by ADK.
+
+    This command lets you interact with an agent, either by starting a new conversation,
+    replaying a recorded session, or resuming a previous session.
+
+    Examples:
+        code-agent run "Write a function to calculate the Fibonacci sequence" path/to/my_agent
+        code-agent run "Say hello" path/to/my_agent --provider ollama
+        code-agent run "-" path/to/my_agent --interactive  # Start directly in interactive mode with a dash placeholder
     """
     console = Console()
+
+    if replay and resume:
+        console.print("[bold red]Error:[/bold red] The --replay and --resume options cannot be used together.")
+        raise typer.Exit(code=1)
 
     try:
         # --- Configuration and Logging Setup ---
@@ -198,222 +265,270 @@ def run_command(
         # --- Agent Path Resolution ---
         resolved_agent_path_str = _resolve_agent_path_str(agent_path, cfg)
         if not resolved_agent_path_str:
-            # Error message printed by _resolve_agent_path_str
+            console.print("[bold red]Error:[/bold red] No agent path specified and no default agent_path in config.")
+            console.print("Please specify an agent path: [yellow]code-agent run --help[/yellow]")
             raise typer.Exit(code=1)
-        resolved_agent_path = Path(resolved_agent_path_str)  # Path object for loading
+
+        # Convert to Path object for easier handling
+        resolved_agent_path = Path(resolved_agent_path_str)
+        logging.debug(f"Resolved agent path: {resolved_agent_path}")
 
         # --- Agent Loading ---
-        console.print(f"[bold cyan]Running agent[/bold cyan] with instruction: '[italic]{instruction}[/italic]'")
-        # Print provider info using the correct config attribute
-        # Check if provider attribute exists, otherwise fallback might be needed (e.g., default_provider)
-        provider_display = getattr(cfg, "provider", cfg.default_provider)  # Attempt to get effective provider, fallback to default
-        model_display = getattr(cfg, "model", cfg.default_model)  # Attempt to get effective model, fallback to default
-        step_progress(console, f"[dim]Provider: {provider_display}[/dim]")
-        step_progress(console, f"[dim]Model: {model_display}[/dim]")
+        # This approach to dynamic loading allows the user to specify an agent.py
+        # file directly or a module directory containing agent.py
+        with step_progress(console, f"Loading agent from {resolved_agent_path}"):
+            # Check if the path is a directory or file
+            if resolved_agent_path.is_dir():
+                agent_dir = resolved_agent_path
+                agent_file = "agent.py"  # Default filename
+                agent_module_path_str = str(agent_dir / agent_file)
+                agent_name = agent_dir.name  # Use directory name as module name
+            else:
+                # Path is a file, assume it's a Python module
+                agent_dir = resolved_agent_path.parent
+                agent_file = resolved_agent_path.name
+                agent_module_path_str = str(resolved_agent_path)
+                agent_name = agent_dir.name  # Use parent directory name as module name
 
-        agent_to_run = None
-        try:
-            with thinking_indicator(console, "Loading agent..."):
-                # Dynamically load the agent module
-                spec = None
-                agent_module = None
+            # Add agent directory to path
+            agent_parent_dir = str(agent_dir.parent)
+            if agent_parent_dir not in sys.path:
+                sys.path.append(agent_parent_dir)
+                logging.debug(f"Added {agent_parent_dir} to sys.path")
 
-                if resolved_agent_path.is_file() and resolved_agent_path.suffix == ".py":
-                    module_name = resolved_agent_path.stem
-                    # Use importlib.util.spec_from_file_location for robust loading
-                    spec = importlib.util.spec_from_file_location(module_name, resolved_agent_path)
-                    if spec and spec.loader:
-                        agent_module = importlib.util.module_from_spec(spec)
-                        # Add module to sys.modules BEFORE executing
-                        sys.modules[module_name] = agent_module
-                        spec.loader.exec_module(agent_module)
-                    else:
-                        raise ImportError(f"Could not create module spec for {resolved_agent_path}")
-
-                elif resolved_agent_path.is_dir():
-                    # Assume it's a package directory
-                    # Add parent directory to path to allow direct import
-                    parent_dir = str(resolved_agent_path.parent)
-                    if parent_dir not in sys.path:
-                        sys.path.insert(0, parent_dir)  # Insert at beginning
-
-                    module_name = resolved_agent_path.name
+            # Load agent module
+            try:
+                if agent_file == "agent.py":
+                    # Standard case with agent.py in agent_dir
                     try:
-                        # Attempt to import the directory as a package
-                        agent_module = importlib.import_module(module_name)
-                    except ImportError as e:
-                        # Re-raise the original ImportError but chain the context
-                        raise ImportError(f"Could not import agent package '{module_name}' from {resolved_agent_path}: {e}") from e
-                    finally:
-                        # Clean up sys.path if needed, though generally safe to leave
-                        # if parent_dir in sys.path and sys.path[0] == parent_dir:
-                        #     sys.path.pop(0)
-                        pass
+                        # Try importing as a Python module
+                        # Use the correct path for importing
+                        if "." in agent_name or "-" in agent_name:
+                            # For names with dots or dashes, use spec_from_file_location instead of import_module
+                            agent_spec = importlib.util.spec_from_file_location(f"{agent_name}.agent", agent_module_path_str)
+                            if not agent_spec or not agent_spec.loader:
+                                raise ImportError(f"Failed to load agent module spec from {agent_module_path_str}")
+                            agent_module = importlib.util.module_from_spec(agent_spec)
+                            agent_spec.loader.exec_module(agent_module)
+                            logging.debug(f"Successfully loaded {agent_module_path_str} from file path")
+                        else:
+                            # For regular module names, use import_module
+                            agent_module = importlib.import_module(f"{agent_name}.agent")
+                            logging.debug(f"Successfully imported {agent_name}.agent as a module")
+                    except (ImportError, ModuleNotFoundError):
+                        # Fall back to loading from file path
+                        agent_spec = importlib.util.spec_from_file_location(f"{agent_name}.agent", agent_module_path_str)
+                        if not agent_spec or not agent_spec.loader:
+                            raise ImportError(f"Failed to load agent module spec from {agent_module_path_str}")
+                        agent_module = importlib.util.module_from_spec(agent_spec)
+                        agent_spec.loader.exec_module(agent_module)
+                        logging.debug(f"Successfully loaded {agent_module_path_str} from file path")
                 else:
-                    raise ImportError(f"Agent path is neither a Python file nor a directory: {resolved_agent_path}")
+                    # Custom file name case
+                    agent_spec = importlib.util.spec_from_file_location(f"{agent_name}.custom", agent_module_path_str)
+                    if not agent_spec or not agent_spec.loader:
+                        raise ImportError(f"Failed to load agent module spec from {agent_module_path_str}")
+                    agent_module = importlib.util.module_from_spec(agent_spec)
+                    agent_spec.loader.exec_module(agent_module)
+                    logging.debug(f"Successfully loaded custom file {agent_module_path_str}")
 
-                # --- Get Agent Instance (Revert to previous working logic) ---
-                if hasattr(agent_module, "root_agent"):
-                    agent_to_run = agent_module.root_agent
-                    operation_warning(console, f"[dim]Found 'agent.root_agent' structure in {resolved_agent_path.name}.[/dim]")
-                elif hasattr(agent_module, "agent"):
-                    potential_agent = agent_module.agent
-                    # Previous check: Look for expected attributes like name/tools
-                    if hasattr(potential_agent, "name") and hasattr(potential_agent, "tools"):
-                        agent_to_run = potential_agent
-                        operation_warning(console, f"[dim]Found top-level 'agent' variable in {resolved_agent_path.name} and using it.[/dim]")
-                        operation_warning(console, "Consider renaming to 'root_agent' for clarity.")
-                    # Check if agent_module.agent contains root_agent (less common)
-                    elif hasattr(potential_agent, "root_agent"):
-                        agent_to_run = potential_agent.root_agent
-                        # operation_warning(console, f"[dim]Found 'agent.root_agent' structure in {resolved_agent_path.name}.[/dim]")
-                    else:
-                        # If root_agent doesn't exist, try 'agent'
-                        raise AttributeError(f"Module {resolved_agent_path} has 'agent' but not 'root_agent'. Please expose 'root_agent'.")
-                else:
-                    # Look for common factory functions or patterns if needed
-                    operation_error(console, f"Could not find 'root_agent' or a suitable 'agent' variable in the module: {resolved_agent_path.name}")
-                    raise ImportError(f"Could not find 'root_agent' or 'agent' in the module: {resolved_agent_path.name}")
-
+                # Check for root_agent in the module
+                agent_to_run = getattr(agent_module, "root_agent", None)
                 if not agent_to_run:
-                    # Should have been caught above, but double check
-                    raise ImportError("Failed to load a valid agent instance.")
+                    # Provide a more helpful error message
+                    raise ImportError(f"No 'root_agent' found in {agent_module_path_str}. " f"Please ensure this file defines a variable named 'root_agent'.")
 
                 operation_complete(
                     console, f"[dim]Agent '{getattr(agent_to_run, 'name', 'Unnamed Agent')}' loaded successfully from {resolved_agent_path.name}.[/dim]"
                 )
 
-        except (ImportError, AttributeError) as e:
-            operation_error(console, f"Failed to load agent: {e}")
-            # Chain the original exception
-            raise typer.Exit(code=1) from e
-        except Exception as e:
-            # Catch any other unexpected loading errors
-            operation_error(console, f"An unexpected error occurred during agent loading: {e}")
-            logger.error(traceback.format_exc())  # - Logger should be defined
-            # Chain the original exception
-            raise typer.Exit(code=1) from e
+            except (ImportError, AttributeError) as e:
+                operation_error(console, f"Failed to load agent: {e}")
+                # Show more detailed instructions for common errors
+                if "No module named" in str(e) and agent_name in str(e):
+                    operation_error(console, "Hint: Make sure your agent directory has an __init__.py file and proper Python module structure.")
+
+                # Chain the original exception
+                raise typer.Exit(code=1) from e
+            except Exception as e:
+                # Catch any other unexpected loading errors
+                operation_error(console, f"An unexpected error occurred during agent loading: {e}")
+                logger.error(traceback.format_exc())  # - Logger should be defined
+                # Chain the original exception
+                raise typer.Exit(code=1) from e
 
         # --- Instantiate Services ---
-        # Session Service (using FileSystemSessionService)
+        # Session Service
         sessions_dir_path = Path(cfg.sessions_dir).expanduser()
         sessions_dir_str = str(sessions_dir_path)
-        # Ensure directory exists (FileSystemSessionService might do this, but good practice)
+        # Ensure directory exists
         try:
             sessions_dir_path.mkdir(parents=True, exist_ok=True)
         except OSError as e:
             operation_error(console, f"Failed to create sessions directory {sessions_dir_str}: {e}")
-            raise typer.Exit(code=1)  # noqa: B904
+            raise typer.Exit(code=1)
 
-        logging.debug(f"Initializing FileSystemSessionService. Sessions dir: {sessions_dir_str}")
-        file_system_session_service = FileSystemSessionService(sessions_dir=sessions_dir_str)
-
-        # Memory Service (using JsonFileMemoryService)
-        # Place memory store inside the sessions directory for organization
-        memory_file_path = sessions_dir_path / "memory_store.json"
-        memory_file_path_str = str(memory_file_path)
-        logging.info(f"Using JSON memory store file: {memory_file_path_str}")
-        json_memory_service = JsonFileMemoryService(filepath=memory_file_path_str)
-
-        # Artifact Service (using default InMemory for now)
-        # If needed, instantiate a specific one here
+        logging.debug(f"Initializing session service. Sessions dir: {sessions_dir_str}")
         artifact_service = InMemoryArtifactService()
-        logging.debug("Using default InMemoryArtifactService.")
+        session_service = InMemorySessionService()
 
-        # --- Execute Agent via run_cli --- #
-        run_output = None  # Initialize run_output
-        final_session_id = None  # Initialize final_session_id
-        try:
-            # Prepare arguments for run_cli
-            run_cli_args = {
-                "agent": agent_to_run,
-                "app_name": cfg.app_name,  # Use app_name from config
-                "user_id": cfg.user_id,  # Use user_id from config
-                "initial_instruction": instruction,
-                "session_id": session_id,
-                "interactive": interactive,
-                "show_timestamps": show_timestamps,
-                # Pass the instantiated services
-                "session_service": file_system_session_service,
-                "memory_service": json_memory_service,
-                "artifact_service": artifact_service,
-            }
+        # Set app_name and user_id
+        app_name = agent_name
+        user_id = "user_id"  # Default user ID
 
-            # Run the agent using the utility function
-            run_output = run_cli(**run_cli_args)
+        # Create an ADK runner to execute the agent
+        from google.adk.runners import Runner
 
-            # --- Session Saving Logic ---
-            # Determine the session ID used (either provided or created)
-            # Make final_session_id determination more robust
-            if isinstance(run_output, dict):
-                final_session_id = run_output.get("session_id")
-            elif isinstance(run_output, str):
-                final_session_id = run_output  # Assume string output is the session ID
+        runner = Runner(
+            app_name=app_name,
+            agent=agent_to_run,
+            artifact_service=artifact_service,
+            session_service=session_service,
+        )
+
+        # Create session based on CLI options
+        if replay:
+            # Replay mode - load initial state and queries from file
+            console.print(f"[bold blue]Replaying session from {replay}[/bold blue]")
+            try:
+                with open(replay, "r", encoding="utf-8") as f:
+                    input_file = InputFile.model_validate_json(f.read())
+
+                from datetime import datetime
+
+                # Add current time to state
+                input_file.state["_time"] = datetime.now()
+
+                # Create new session with the loaded state
+                session = session_service.create_session(app_name=app_name, user_id=user_id, state=input_file.state)
+
+                # Run the agent with each query
+                for query in input_file.queries:
+                    console.print(f"[dim][user]:[/dim] {query}")
+                    content = Content(role="user", parts=[Part(text=query)])
+
+                    # Run the agent and print output
+                    asyncio.run(_run_agent_async(runner, session.user_id, session.id, content, console))
+
+                # If the user wants interactive mode after replay, run interactively
+                if interactive:
+                    console.print("\n[bold blue]Entering interactive mode...[/bold blue]")
+                    # Call run_cli with the existing session
+                    run_cli(
+                        agent=agent_to_run,
+                        app_name=app_name,
+                        artifact_service=artifact_service,
+                        session_service=session_service,
+                        session=session,
+                        interactive=True,
+                        show_timestamps=show_timestamps,
+                    )
+
+            except Exception as e:
+                operation_error(console, f"Failed to replay session: {e}")
+                raise typer.Exit(code=1) from e
+
+        elif resume:
+            # Resume mode - load previous session and continue interactively
+            console.print(f"[bold blue]Resuming session from {resume}[/bold blue]")
+            try:
+                # Load the session from the file
+                with open(resume, "r") as f:
+                    loaded_session = Session.model_validate_json(f.read())
+
+                # Create a new session
+                session = session_service.create_session(app_name=app_name, user_id=user_id)
+
+                # Replay the events in the loaded session
+                for event in loaded_session.events:
+                    session_service.append_event(session, event)
+                    content = event.content
+                    if not content or not content.parts or not content.parts[0].text:
+                        continue
+                    if event.author == "user":
+                        console.print(f"[dim][user]:[/dim] {content.parts[0].text}")
+                    else:
+                        console.print(f"[dim][{event.author}]:[/dim] {content.parts[0].text}")
+
+                # Continue interactively
+                run_cli(
+                    agent=agent_to_run,
+                    app_name=app_name,
+                    artifact_service=artifact_service,
+                    session_service=session_service,
+                    session=session,
+                    interactive=True,
+                    show_timestamps=show_timestamps,
+                )
+            except Exception as e:
+                operation_error(console, f"Failed to resume session: {e}")
+                raise typer.Exit(code=1) from e
+        else:
+            # Normal mode - create new session and run with the instruction
+            logging.debug(f"Creating new session with app_name={app_name}, user_id={user_id}")
+            session = session_service.create_session(app_name=app_name, user_id=user_id)
+
+            # Check if instruction is empty or a dash placeholder for interactive mode
+            if not instruction.strip() or instruction == "-":
+                # When placeholder is used, treat it as interactive mode
+                # even if --interactive flag wasn't explicitly set
+                interactive = True
+                console.print("\n[bold blue]Starting interactive session...[/bold blue]")
+                run_cli(
+                    agent=agent_to_run,
+                    app_name=app_name,
+                    artifact_service=artifact_service,
+                    session_service=session_service,
+                    session=session,
+                    interactive=True,
+                    show_timestamps=show_timestamps,
+                )
             else:
-                final_session_id = session_id  # Fallback to initial ID if run_output is None or unexpected type
+                # Process the instruction normally
+                console.print(f"[dim][user]:[/dim] {instruction}")
+                content = Content(role="user", parts=[Part(text=instruction)])
 
-            # If still no ID after checks, use the one from run_cli_args if it was provided
-            if not final_session_id and run_cli_args.get("session_id"):
-                final_session_id = run_cli_args["session_id"]
+                # Run the agent and print output
+                asyncio.run(_run_agent_async(runner, session.user_id, session.id, content, console))
 
-            if final_session_id:
-                # This is the last of the two print statements that look like:
-                # Session ID: 0f6e2c63-76fc-494b-95fc-b9d0319004e0
-                console.print(f"[dim]Session ID: {final_session_id}[/dim]")
+                # If interactive mode is enabled, continue interaction
+                if interactive:
+                    console.print("\n[bold blue]Entering interactive mode...[/bold blue]")
+                    run_cli(
+                        agent=agent_to_run,
+                        app_name=app_name,
+                        artifact_service=artifact_service,
+                        session_service=session_service,
+                        session=session,
+                        interactive=True,
+                        show_timestamps=show_timestamps,
+                    )
 
-                # Check if saving is requested via CLI flag
-                should_save = save_session_cli
-                # If not via CLI, check config (assuming a config setting like `save_sessions_by_default`)
-                # if not should_save and hasattr(cfg, 'save_sessions_by_default') and cfg.save_sessions_by_default:
-                #     should_save = True
+        # Handle session saving if requested
+        if save_session:
+            final_session_id = session.id
+            if not final_session_id:
+                custom_session_id = typer.prompt("Enter a session ID to save")
+                final_session_id = custom_session_id
 
-                if should_save:
-                    sessions_dir_path = Path(cfg.sessions_dir).expanduser()
-                    sessions_dir_str = str(sessions_dir_path)
+            session_path = sessions_dir_path / f"{final_session_id}.session.json"
 
-                    # Ensure the directory exists
-                    try:
-                        sessions_dir_path.mkdir(parents=True, exist_ok=True)
-                    except OSError as e:
-                        operation_error(console, f"Failed to create sessions directory {sessions_dir_str} for saving: {e}")
-                        # Don't exit, just report error and continue
-                        should_save = False  # Prevent attempting save
+            # Fetch the session again to get all the details
+            session = session_service.get_session(
+                app_name=session.app_name,
+                user_id=session.user_id,
+                session_id=session.id,
+            )
 
-                    if should_save:
-                        save_path = sessions_dir_path / f"{final_session_id}.session.json"
-                        try:
-                            # Fetch the complete session data using the service
-                            # Note: get_session might return None if the session ended abruptly
-                            # Use the *final* session ID determined above
-                            session_data = file_system_session_service.get_session(app_name=cfg.app_name, user_id=cfg.user_id, session_id=final_session_id)
+            with open(session_path, "w") as f:
+                f.write(session.model_dump_json(indent=2, exclude_none=True))
 
-                            if session_data:
-                                # Convert Session object to dict before saving
-                                session_dict = session_data.model_dump(mode="json")
-                                with open(save_path, "w", encoding="utf-8") as f:
-                                    json.dump(session_dict, f, indent=4)
-                                operation_complete(console, f"Session saved to: {save_path}")
-                            else:
-                                operation_warning(console, f"Could not retrieve session data for ID {final_session_id} to save.")
+            console.print(f"[bold green]Session saved to {session_path}[/bold green]")
 
-                        except Exception as e:
-                            operation_error(console, f"Failed to save session {final_session_id} to {save_path}: {e}")
-                            logging.error(f"Saving Traceback:\n{traceback.format_exc()}")
-            elif save_session_cli:
-                operation_warning(console, "--save-session flag was used, but no final session ID was determined. Cannot save.")
-
-        except Exception as e:
-            operation_error(console, f"An error occurred during agent execution: {e}")
-            logging.error(f"Execution Traceback:\n{traceback.format_exc()}")
-            raise typer.Exit(code=1)  # noqa: B904
-
-    except typer.Exit as e:
-        # Let Typer Exit exceptions propagate naturally
-        raise e
     except Exception as e:
-        # Catch-all for other unexpected errors during the run process
+        # Catch any uncaught exceptions
         operation_error(console, f"An unexpected error occurred: {e}")
-        logger.error(traceback.format_exc())  # Log the full traceback # - Logger should be defined
+        logger.error(traceback.format_exc())
         raise typer.Exit(code=1) from e
 
 

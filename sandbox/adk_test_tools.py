@@ -12,8 +12,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # Then import the modules after path is set up
 import google.adk as adk
-
-from code_agent.adk.tools import create_apply_edit_tool, create_delete_file_tool, create_read_file_tool
+from google.adk.tools import create_apply_edit_tool, create_delete_file_tool, create_read_file_tool
 
 
 def create_mock_tool_context():

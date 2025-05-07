@@ -65,6 +65,7 @@ DISCLAIMER: This repo and the tool itself is 99.95% built by LLM models such as 
 - **README.md**: Project overview, installation, and usage instructions
 - **docs/**: Detailed documentation about architecture, implementation, and specific features
 - **docs/COVERAGE_VERIFICATION.md**: Guide for verifying test coverage
+- **docs/testing_adk_cli_e2e.md**: End-to-end testing details for CLI with Google ADK, including Ollama integration challenges
 
 ## Features
 
@@ -341,6 +342,11 @@ Code Agent includes integration with [Ollama](https://ollama.ai/) to run open-so
    - Complete privacy - all data stays on your machine
    - No usage costs
    - Customizable with fine-tuning options
+
+5. **Google ADK Integration Status**:
+   - The Google ADK integration for Ollama (`OllamaLlm` in `code_agent/agents/ollama/adk_integration.py`) is **experimental** and not fully functional due to compatibility challenges with Google ADK version 0.4.0.
+   - See `docs/testing_adk_cli_e2e.md` for details on the challenges encountered during integration testing.
+   - Using Ollama via direct API integration (without ADK) is fully functional and recommended for production use.
 
 ## Development & Contributing
 

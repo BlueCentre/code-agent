@@ -1,0 +1,29 @@
+name: "Groq"
+description: "Agent using Groq's fast inference for open models"
+id: "groq"
+default_model: "llama3-70b-8192"
+requires:
+  - api_key: "GROQ_API_KEY"
+files:
+  agent.py: |
+    from google.adk.agents import Agent
+
+    root_agent = Agent(
+        model='{model_name}',
+        name='root_agent',
+        description='A helpful assistant powered by Groq.',
+        instruction='Answer user questions to the best of your knowledge',
+    )
+  __init__.py: |
+    from . import agent
+  .env: |
+    # Groq configuration
+    GROQ_API_KEY={api_key}
+setup_instructions: |
+  Your Groq agent has been created with fast inference capabilities.
+  
+  To use your agent:
+    code-agent run "Your query here" {agent_folder} --provider groq
+    
+  Make sure your API key is correct in the .env file or set it in your environment:
+    export GROQ_API_KEY=your_key_here 

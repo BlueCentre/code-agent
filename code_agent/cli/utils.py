@@ -39,8 +39,8 @@ def _resolve_agent_path_str(agent_path_cli: Optional[Path], cfg: CodeAgentSettin
     else:
         # Default to current directory if neither CLI nor config provides a path
         console.print("[yellow]Warning:[/yellow] No agent path provided via CLI or config. Defaulting to current directory '.'")
-        resolved_path = Path(".")
-        logging.debug("Defaulting agent path to current directory '.'")
+        resolved_path = Path(".").absolute()  # Use absolute() instead of just Path(".")
+        logging.debug(f"Defaulting agent path to current directory: {resolved_path}")
 
     # Perform existence check now
     if resolved_path:
@@ -170,9 +170,15 @@ def operation_warning(console: Console, message: str):
     console.print(f"[bold yellow]![/bold yellow] {message}")
 
 
+@contextmanager
 def step_progress(console: Console, message: str):
-    """Display a step in progress."""
-    console.print(f"[bold cyan]→[/bold cyan] {message}")
+    """Display a step in progress and return a context manager."""
+    try:
+        console.print(f"[bold cyan]→[/bold cyan] {message}")
+        yield
+    finally:
+        # Nothing to do on exit
+        pass
 
 
 # --- Agent Execution Logic ---

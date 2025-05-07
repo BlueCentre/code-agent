@@ -1,0 +1,31 @@
+name: "Vertex AI"
+description: "Agent using Google Cloud Vertex AI (requires GCP project)"
+id: "vertex_ai"
+default_model: "gemini-2.0-flash"
+requires:
+  - project: "GOOGLE_CLOUD_PROJECT"
+  - region: "GOOGLE_CLOUD_LOCATION"
+files:
+  agent.py: |
+    from google.adk.agents import Agent
+
+    root_agent = Agent(
+        model='{model_name}',
+        name='root_agent',
+        description='A helpful assistant powered by Vertex AI.',
+        instruction='Answer user questions to the best of your knowledge',
+    )
+  __init__.py: |
+    from . import agent
+  .env: |
+    GOOGLE_GENAI_USE_VERTEXAI=1
+    GOOGLE_CLOUD_PROJECT={google_cloud_project}
+    GOOGLE_CLOUD_LOCATION={google_cloud_region}
+setup_instructions: |
+  Your Vertex AI agent has been created with Google Cloud integration.
+  
+  To use your agent:
+    code-agent run "Your query here" {agent_folder}
+    
+  Make sure you have the appropriate permissions in your Google Cloud project.
+  If you need to change the project or region, edit the .env file in {agent_folder}. 

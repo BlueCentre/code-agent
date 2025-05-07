@@ -1,0 +1,29 @@
+name: "OpenAI"
+description: "Agent using OpenAI models (GPT-4, etc.)"
+id: "openai"
+default_model: "gpt-4o"
+requires:
+  - api_key: "OPENAI_API_KEY"
+files:
+  agent.py: |
+    from google.adk.agents import Agent
+
+    root_agent = Agent(
+        model='{model_name}',
+        name='root_agent',
+        description='A helpful assistant powered by OpenAI.',
+        instruction='Answer user questions to the best of your knowledge',
+    )
+  __init__.py: |
+    from . import agent
+  .env: |
+    # OpenAI configuration
+    OPENAI_API_KEY={api_key}
+setup_instructions: |
+  Your OpenAI agent has been created.
+  
+  To use your agent:
+    code-agent run "Your query here" {agent_folder} --provider openai
+    
+  Make sure your API key is correct in the .env file or set it in your environment:
+    export OPENAI_API_KEY=your_key_here 

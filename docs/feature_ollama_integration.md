@@ -4,12 +4,10 @@ This document explains how to use the integration with [Ollama](https://ollama.a
 
 ## Overview
 
-Ollama is a tool that allows you to run large language models (LLMs) locally on your own machine. This integration allows you to use Code Agent to:
+Ollama is a tool that allows you to run large language models (LLMs) locally on your own machine. The Code Agent provides two ways to use Ollama:
 
-1. List available Ollama models.
-2. Chat with Ollama models directly via a dedicated command.
-
-*(Note: You can also use Ollama models within the main `code-agent chat` command by specifying the provider, e.g., `code-agent chat --provider ollama --model llama3`)*
+1. **Direct Provider** (Recommended) - A direct HTTP client that communicates with Ollama without using Google ADK
+2. **ADK Integration** (Experimental) - Integration with Google ADK (which may have compatibility issues)
 
 ## Prerequisites
 
@@ -17,9 +15,75 @@ Ollama is a tool that allows you to run large language models (LLMs) locally on 
 2. Start Ollama service: `ollama serve`
 3. Pull models you want to use:
    ```bash
-   ollama pull llama3
+   ollama pull llama3.2
    ollama pull codellama:13b
    ```
+
+## Using the Direct Provider
+
+The most reliable way to use Ollama is through the `OllamaDirectProvider` class. This bypasses potential compatibility issues with Google ADK.
+
+### Example Usage
+
+```python
+from code_agent.agents.ollama import OllamaDirectProvider
+
+# Initialize provider with your model and Ollama URL
+provider = OllamaDirectProvider(
+    model="llama3.2:latest",  # Use any model you've pulled in Ollama
+    base_url="http://localhost:11434"
+)
+
+# Generate text (works reliably)
+response = provider.generate("What is your name?")
+print(response)
+
+# List available models
+models = provider.list_models()
+for model in models:
+    print(f"- {model.get('name')}")
+```
+
+See `docs/example_ollama_direct_usage.py` for a complete working example.
+
+## Experimental ADK Integration 
+
+The Code Agent CLI also includes experimental integration with Google ADK. This method is less reliable due to compatibility issues with ADK's model registry.
+
+### Configuration
+
+To use Ollama with the ADK integration:
+
+1. Configure your `~/.config/code-agent/config.yaml`:
+   ```yaml
+   default_provider: "ollama"
+   default_model: "llama3:latest"  # Must match an installed model
+   
+   ollama:
+     url: "http://localhost:11434"
+   ```
+
+2. When running commands, specify the provider:
+   ```bash
+   code-agent run "Your query" --provider ollama
+   ```
+
+**Note**: If you encounter model errors, use the Direct Provider approach instead.
+
+## Commands for Managing Ollama
+
+You can manage your Ollama installation directly with these commands:
+
+```bash
+# List models 
+ollama list
+
+# Pull a model
+ollama pull llama3
+
+# Run Ollama (if it's not already running)
+ollama serve
+```
 
 ## Commands
 

@@ -1,0 +1,19 @@
+{
+  "project_context": {
+    "name": "",
+    "description": "",
+    "language": "",
+    "framework": "",
+    "repositories": [],
+    "files": []
+  },
+  "user_profile": {
+    "name": "",
+    "role": "",
+    "preferences": {
+      "style_guide": "",
+      "testing_framework": "",
+      "documentation_format": ""
+    }
+  }
+} 

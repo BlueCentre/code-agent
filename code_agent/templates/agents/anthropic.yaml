@@ -1,0 +1,29 @@
+name: "Anthropic"
+description: "Agent using Anthropic models (Claude, etc.)"
+id: "anthropic"
+default_model: "claude-3-sonnet-20240229"
+requires:
+  - api_key: "ANTHROPIC_API_KEY"
+files:
+  agent.py: |
+    from google.adk.agents import Agent
+
+    root_agent = Agent(
+        model='{model_name}',
+        name='root_agent',
+        description='A helpful assistant powered by Anthropic Claude.',
+        instruction='Answer user questions to the best of your knowledge',
+    )
+  __init__.py: |
+    from . import agent
+  .env: |
+    # Anthropic configuration
+    ANTHROPIC_API_KEY={api_key}
+setup_instructions: |
+  Your Anthropic Claude agent has been created.
+  
+  To use your agent:
+    code-agent run "Your query here" {agent_folder} --provider anthropic
+    
+  Make sure your API key is correct in the .env file or set it in your environment:
+    export ANTHROPIC_API_KEY=your_key_here 

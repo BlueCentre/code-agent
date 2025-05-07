@@ -17,16 +17,26 @@ dependencies = [
     "typer>=0.12.3", # Required for CLI
     "shellingham>=1.5.0", # Required for typer shell completion
     "rich>=13.7.1", # Required for typer rich formatting
-    "litellm>=1.39.2", # Required to support multiple LLM providers
-    #"vllm>=0.8.5-post1",
     "opentelemetry-api>=1.31.0",
-    "pyyaml>=6.0.1", # Required for ADK
-    "google-cloud-aiplatform>=1.70.0", # Required for Vertex AI
-    "google-generativeai>=0.7.0", # Required for Gemini
+    "google-cloud-aiplatform>=1.87.0", # Required for Vertex AI
+    # "google-generativeai>=0.7.0", # Required for Gemini ("google-genai>=1.12.1")?
+    "google-genai>=1.12.1", # Required for Gemini
+    "google-adk==0.4.0",
     "pydantic>=2.7.4", # Required for Pydantic
     "requests>=2.31.0", # Required for litellm
     "python-dotenv>=1.0.0",
-    "google-adk==0.4.0",
+    "fastapi>=0.111.0", # Required for web server
+    "uvicorn>=0.34.0", # Required for serving FastAPI
+    "PyYAML>=6.0.2", # Required for ADK
+    # ADK extensions
+    "anthropic>=0.43.0",                    # For anthropic model support
+    "beautifulsoup4>=3.2.2",                # For load_web_page tool.
+    "crewai[tools];python_version>='3.10'", # For CrewaiTool
+    "docker>=7.0.0",                        # For ContainerCodeExecutor
+    "langgraph>=0.2.60",                    # For LangGraphAgent
+    "litellm>=1.63.14",                     # For LiteLLM support
+    "llama-index-readers-file>=0.4.0",      # for retrieval usings LlamaIndex.
+    "lxml>=5.3.0",                          # For load_web_page tool.
 ]
 
 [project.urls]
@@ -103,10 +113,9 @@ omit = [
     "*/__pycache__/*",
     "*/site-packages/*",
     "*/.venv/*",
-    "code_agent/agent/cli_runner/*",
-    "code_agent/agent/software_engineer/*",
-    "code_agent/agent/software_engineer_lite/*",
-    "code_agent/agent/travel-concierge/*"
+    "custom_agents/*",
+    "scripts/*",
+    "sandbox/*"
 ]
 
 [tool.coverage.report]

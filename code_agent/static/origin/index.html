@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Agent Web Interface</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Code Agent Web Interface</h1>
+        </header>
+        
+        <div class="agent-selection">
+            <label for="agent-select">Select Agent:</label>
+            <select id="agent-select">
+                <option value="" disabled selected>Loading agents...</option>
+            </select>
+        </div>
+        
+        <div class="chat-container">
+            <div class="chat-messages" id="chat-messages">
+                <div class="system-message">Welcome to Code Agent! Select an agent to begin.</div>
+            </div>
+            
+            <div class="chat-input">
+                <textarea id="user-input" placeholder="Type your message here..." rows="3"></textarea>
+                <button id="send-button" disabled>Send</button>
+            </div>
+        </div>
+        
+        <div class="status-bar">
+            <span id="status">Initializing...</span>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html> 
