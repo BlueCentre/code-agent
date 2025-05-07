@@ -5,8 +5,6 @@ import logging
 from google.adk.agents import LlmAgent
 from google.adk.models.lite_llm import LiteLlm
 
-# from google.adk.tools import load_memory
-# from code_agent.agents.ollama.adk_integration import OllamaLlm
 from . import prompt
 
 # Use relative imports from the 'software_engineer' sibling directory
@@ -51,18 +49,20 @@ logger = logging.getLogger(__name__)
 # --- Agent Definition ---
 
 # Endpoint URL provided by your vLLM deployment
-api_base_url = "http://localhost:11434/v1"
+# api_base_url = "http://localhost:11434" # # Actually does not work as documented on ADK.
+# api_base_url = "http://localhost:11434/v1" # Use this for hosted vLLM if defaults do not work.
 
 # Model name as recognized by *your* vLLM endpoint configuration
+# model_name_at_endpoint = "ollama_chat/llama3.2"  # Actually does not work as documented on ADK.
 model_name_at_endpoint = "hosted_vllm/llama3.2"  # Example from vllm_test.py
 
 # Note: Using custom ripgrep-based codebase search in tools/code_search.py
 
-# REF: https://ai.google.dev/gemini-api/docs/rate-limits
+# REF: https://google.github.io/adk-docs/agents/models/#using-open-local-models-via-litellm
 root_agent = LlmAgent(
     model=LiteLlm(
         model=model_name_at_endpoint,
-        api_base=api_base_url,
+        # api_base=api_base_url, # Some reason this is not needed.
     ),
     name="root_agent",
     description="An AI software engineer assistant that helps with various software development tasks",
